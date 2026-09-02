@@ -52,14 +52,17 @@ for (const item of pages) {
       await expect(page.getByText("Dengeli optimum %50", { exact: false })).toBeVisible();
       await expect(page.getByText("Güncel dinamik %50", { exact: false })).toBeVisible();
       await expect(page.getByText("Optimum", { exact: false }).first()).toBeVisible();
-      await expect(page.getByTestId("monthly-budget-usd")).toContainText("$");
+      await expect(page.getByTestId("monthly-budget-usd")).toContainText("$1.000");
+      await expect(page.getByTestId("monthly-budget-try")).toContainText("₺");
       await expect(page.getByText("S&P 500 / ABD hisseleri", { exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Bugünün alım gücüyle hedef", exact: true })).toBeVisible();
     }
     if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
     if (item.path === "/backtest") {
-      await expect(page.getByTestId("exact-invested")).toContainText("₺3.000.000");
+      await expect(page.getByTestId("exact-invested")).toContainText("$60.000");
       await expect(page.getByRole("columnheader", { name: "Reel USD getiri", exact: true })).toBeVisible();
       await expect(page.getByText("ABD TÜFE koruma eşiği", { exact: true })).toBeVisible();
+      await expect(page.getByRole("cell", { name: "%25 eşit sepet", exact: true })).toBeVisible();
     }
     await page.locator("html[data-theme]").waitFor({ state: "attached" });
     await page.screenshot({ path: `artifacts/ui/${item.shot}.png`, fullPage: false });

@@ -35,5 +35,6 @@ export const NEUTRAL_WEIGHTS: AssetClassRecord = {
   turkishEquity: 0.2,
 };
 
-export const DEFAULT_MONTHLY_BUDGET = 50_000;
+export const DEFAULT_MONTHLY_BUDGET_USD = 1_000;
+export const DEFAULT_TARGET_USD = 500_000;
 export const MONTHLY_TURNOVER_CAP = 0.1;

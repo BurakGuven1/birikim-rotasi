@@ -48,7 +48,7 @@ Bitcoin sinyali fiyat bileşenine ek olarak BTC/M2 tarihsel yüzdesini (%30), 20
 
 ## Backtest ve USD ölçümü
 
-Her takvim ayında bir gözlem ve aynı TL katkı tutarı kullanılır. Katkı, ilgili tarihteki USD/TRY kuruyla dolara çevrilir. S&P 500, altın ve Bitcoin doğal USD fiyatıyla; BIST 100 ise her gözlemde tarihsel USD/TRY kuruna bölünerek USD bazında ölçülür. Seçimler tam 12/36/60/120 ortak takvim ayına karşılık gelir; daha eski veri yalnızca SMA200 ısınması için tutulur. Dinamik stratejinin tahsis fonksiyonuna yalnızca o ay ve öncesindeki fiyat/M2 dilimi verilir; gelecek gözlem erişilemez.
+Her takvim ayında bir gözlem ve aynı USD katkı tutarı kullanılır; varsayılan katkı `$1.000/ay`dır. S&P 500, altın ve Bitcoin doğal USD fiyatıyla; BIST 100 ise her gözlemde tarihsel USD/TRY kuruna bölünerek USD bazında ölçülür. Seçimler tam 12/36/60/120 ortak takvim ayına karşılık gelir; daha eski veri yalnızca SMA200 ısınması için tutulur. Dinamik stratejinin tahsis fonksiyonuna yalnızca o ay ve öncesindeki fiyat/M2 dilimi verilir; gelecek gözlem erişilemez. `%25 eşit sepet`, dört sınıfa her ay eşit dolar ayıran bağımsız kıyastır.
 
 Ek kıyaslar üç ayrı soruyu yanıtlar:
 
@@ -56,7 +56,11 @@ Ek kıyaslar üç ayrı soruyu yanıtlar:
 - **Maksimum statik:** 5 yüzde puanlık tüm statik kombinasyonlar arasından dönem sonu değeri en yüksek olan geçmiş dağılım.
 - **Teorik üst sınır:** Her aylık katkının o tarihten dönem sonuna en çok yükselecek varlığa gittiğini varsayar. Gelecek bilgisi kullandığından uygulanabilir strateji veya tahmin değildir; yalnızca üst sınır kıyasıdır.
 
-Toplam yatırılan para ve son değer USD olarak gösterilir. “USD getiri” son değer ile tarihsel kurdan çevrilmiş dolar katkılarını karşılaştırır. “Reel USD getiri”, her dolar katkısının FRED `CPIAUCSL` endeksiyle dönem sonuna taşınmış satın alma gücü eşiğine göre hesaplanır. Yıllık TWR, maksimum düşüş ve yıllıklandırılmış volatilite yeni katkıları getiri kabul etmeyen zaman ağırlıklı aylık getirilerden hesaplanır. Vergi, spread, tüm ürün masraf oranları ve farklı piyasa tatilleri tam modellenmediğinden sonuçlar karar desteğidir.
+Toplam yatırılan para ve son değer USD olarak gösterilir. “USD getiri” son değer ile sabit dolar katkılarının toplamını karşılaştırır. “Reel USD getiri”, her dolar katkısının FRED `CPIAUCSL` endeksiyle dönem sonuna taşınmış satın alma gücü eşiğine göre hesaplanır. Yıllık TWR, maksimum düşüş ve yıllıklandırılmış volatilite yeni katkıları getiri kabul etmeyen zaman ağırlıklı aylık getirilerden hesaplanır. Vergi, spread, tüm ürün masraf oranları ve farklı piyasa tatilleri tam modellenmediğinden sonuçlar karar desteğidir.
+
+## Enflasyona bağlı USD hedefi
+
+Varsayılan hedef bugünün alım gücüyle `$500.000`dır. Gelecekte ekranda karşılaştırılan nominal hedef `500.000 × (1 + son 12 aylık ABD TÜFE)^yıl` olarak büyütülür. Hedef süresi hesabı sıfır başlangıcı, aylık `$1.000` katkının sabit kaldığını ve gösterilen nominal getiri varsayımını kullanır; kayıtlı mevcut portföy bu kaba süreye dahil değildir. Beş yılda gereken aylık katkı aynı hareketli hedefe göre hesaplanır; bir getiri vaadi değildir.
 
 ## Aylık Plan hibrit dağılımı
 

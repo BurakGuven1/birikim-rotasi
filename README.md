@@ -62,10 +62,10 @@ Anahtarları sohbet, Git veya uygulama ekranına göndermeyin. `.env.local` Git 
 
 ## Sayfalar
 
-- **Aylık Plan:** S&P 500, altın, Bitcoin ve USD'ye çevrilmiş BIST 100 üzerinde 1/3/5/10 yıllık dengeli optimum uzlaşısı ile güncel dinamik modelin %50/%50 birleşimi; aylık bütçenin canlı TL/USD karşılığı ve her alımın iki para birimindeki tutarı.
+- **Aylık Plan:** Varsayılan sabit `$1.000/ay`; S&P 500, altın, Bitcoin ve USD'ye çevrilmiş BIST 100 üzerinde 1/3/5/10 yıllık dengeli optimum uzlaşısı ile güncel dinamik modelin %50/%50 birleşimi. `$500.000` hedefi bugünün alım gücüyle tutulur ve ABD TÜFE ile büyütülür.
 - **Piyasa:** ücretsiz güncel/gecikmeli fiyatlar ve kaynak durumu.
 - **Portföyüm:** FIFO maliyet, komisyon, gerçekleşmiş/gerçekleşmemiş kâr ve grafikler.
-- **Backtest:** sabit TL katkıyı her ayın tarihsel USD/TRY kuruyla çeviren tam 12/36/60/120 aylık DCA; USD toplam/reel getiri, ABD TÜFE koruma eşiği, BTC/M2 + SMA dinamik, dengeli optimum, maksimum statik, teorik üst sınır ve tek-varlık kıyasları.
+- **Backtest:** Tam 12/36/60/120 ay boyunca aynı USD katkısını kullanır; USD toplam/reel getiri, ABD TÜFE koruma eşiği, `%25 eşit sepet`, BTC/M2 + SMA dinamik, dengeli optimum, maksimum statik, teorik üst sınır ve tek-varlık kıyasları.
 - **Varlık Detayı:** mum/çizgi, SMA40, SMA200, ATH düşüşü, sinyal ve dönemsel performans.
 - **Metodoloji:** karar sırası, satış koruması ve sınırlamalar.
 - **Ayarlar:** aylık tutar, risk kontrolü ve veri kaynağı durumu.

@@ -10,7 +10,6 @@ import {
   runAllocationBacktest,
   runDcaBacktest,
   runPerfectForesightBacktest,
-  valueAtOrBefore,
   type BacktestResult,
 } from "@/lib/domain/backtest";
 import { buildAllocation } from "@/lib/domain/allocation";
@@ -18,6 +17,7 @@ import { ASSET_CLASSES, ASSET_LABELS } from "@/lib/domain/config";
 import { deriveBitcoinMacroSignal, derivePriceSignal } from "@/lib/domain/signals";
 import type { AssetClass, AssetClassRecord, PricePoint } from "@/lib/domain/types";
 import { formatMoney, formatPercent, formatUnsignedPercent } from "@/lib/format";
+import { settingsRepository } from "@/lib/storage/settings-repository";
 
 const assets: Record<AssetClass, { symbol: string; label: string; color: string }> = {
   foreignEquity: { symbol: "SP500", label: "S&P 500", color: "#315f9d" },
@@ -59,7 +59,7 @@ function WeightLegend({ weights }: { weights: AssetClassRecord }) {
 
 export function BacktestDashboard() {
   const [period, setPeriod] = useState("5y");
-  const [contribution, setContribution] = useState(50_000);
+  const [contribution, setContribution] = useState(1_000);
   const [results, setResults] = useState<StrategyEntry[]>([]);
   const [oracleChoices, setOracleChoices] = useState<OracleChoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,20 +95,17 @@ export function BacktestDashboard() {
       const series = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [assetClass, monthly(rawSeries[assetClass])])) as Record<AssetClass, PricePoint[]>;
       const [m2, cpi] = await Promise.all([m2Promise, cpiPromise]);
       const maxPeriods = periodMonths[period];
-      const contributionForDate = (date: string) => {
-        const rate = valueAtOrBefore(fxHistory, date);
-        if (!rate) throw new Error(`${date.slice(0, 7)} için USD/TRY kuru bulunamadı.`);
-        return contribution / rate;
-      };
       const inRealUsd = (result: BacktestResult) => applyUsdInflation(result, cpi);
       const singles = ASSET_CLASSES.map((assetClass) => ({
         name: assets[assetClass].label,
         color: assets[assetClass].color,
-        result: inRealUsd(runDcaBacktest({ monthlyContribution: contribution, contributionForDate, prices: series[assetClass], maxPeriods })),
+        result: inRealUsd(runDcaBacktest({ monthlyContribution: contribution, prices: series[assetClass], maxPeriods })),
       }));
       const neutralWeights: AssetClassRecord = { foreignEquity: .35, commodity: .25, bitcoin: .2, turkishEquity: .2 };
-      const neutral = inRealUsd(runAllocationBacktest({ monthlyContribution: contribution, contributionForDate, series, maxPeriods, allocate: () => neutralWeights }));
-      const dynamic = inRealUsd(runAllocationBacktest({ monthlyContribution: contribution, contributionForDate, series, maxPeriods, allocate: (history) => {
+      const equalWeights: AssetClassRecord = { foreignEquity: .25, commodity: .25, bitcoin: .25, turkishEquity: .25 };
+      const neutral = inRealUsd(runAllocationBacktest({ monthlyContribution: contribution, series, maxPeriods, allocate: () => neutralWeights }));
+      const equal = inRealUsd(runAllocationBacktest({ monthlyContribution: contribution, series, maxPeriods, allocate: () => equalWeights }));
+      const dynamic = inRealUsd(runAllocationBacktest({ monthlyContribution: contribution, series, maxPeriods, allocate: (history) => {
         const cutoff = history.foreignEquity.at(-1)?.date ?? "";
         const signalEntries = ASSET_CLASSES.map((assetClass) => {
           const available = weekly(rawSeries[assetClass].filter((point) => point.date <= cutoff));
@@ -121,15 +118,16 @@ export function BacktestDashboard() {
         const confidence = Object.fromEntries(signalEntries.map(([assetClass, signal]) => [assetClass, signal.confidence])) as AssetClassRecord;
         return Object.fromEntries(buildAllocation({ monthlyBudget: contribution, signals, confidence }).items.map((item) => [item.assetClass, item.weight])) as AssetClassRecord;
       } }));
-      const balanced = optimizeStaticAllocation({ monthlyContribution: contribution, contributionForDate, series, objective: "balanced", maxPeriods });
-      const maximum = optimizeStaticAllocation({ monthlyContribution: contribution, contributionForDate, series, objective: "maximumReturn", maxPeriods });
-      const oracle = runPerfectForesightBacktest({ monthlyContribution: contribution, contributionForDate, series, maxPeriods });
+      const balanced = optimizeStaticAllocation({ monthlyContribution: contribution, series, objective: "balanced", maxPeriods });
+      const maximum = optimizeStaticAllocation({ monthlyContribution: contribution, series, objective: "maximumReturn", maxPeriods });
+      const oracle = runPerfectForesightBacktest({ monthlyContribution: contribution, series, maxPeriods });
       setOracleChoices(oracle.monthlyChoices);
       setResults([
         { name: "BTC/M2 + SMA dinamik", result: dynamic, color: "#c2414b", dash: "7 4", primary: true },
         { name: "Dengeli optimum", result: inRealUsd(balanced.result), weights: balanced.weights, color: "#0f766e", dash: "3 3", primary: true },
         { name: "Maksimum statik", result: inRealUsd(maximum.result), weights: maximum.weights, color: "#c46a16", dash: "10 4", primary: true },
         { name: "Teorik üst sınır", result: inRealUsd(oracle.result), weights: oracle.weights, color: "#7c3aed", dash: "2 3", primary: true },
+        { name: "%25 eşit sepet", result: equal, weights: equalWeights, color: "#64748b", dash: "5 5" },
         { name: "Sabit nötr sepet", result: neutral, weights: neutralWeights, color: "#152030" },
         ...singles,
       ]);
@@ -142,6 +140,7 @@ export function BacktestDashboard() {
     }
   }, [contribution, period]);
 
+  useEffect(() => { void settingsRepository.get().then((settings) => setContribution(settings.monthlyBudgetUsd)); }, []);
   useEffect(() => { void Promise.resolve().then(run); }, [run]);
 
   const chartData = results[0]?.result.series.map((point, index) => Object.fromEntries([
@@ -164,12 +163,12 @@ export function BacktestDashboard() {
   }, [oracleChoices]);
   const firstDate = results[0]?.result.series.at(0)?.date.slice(0, 7);
   const lastDate = results[0]?.result.series.at(-1)?.date.slice(0, 7);
-  const nominalTryInvested = contribution * (results[0]?.result.series.length ?? 0);
+  const exactUsdInvested = contribution * (results[0]?.result.series.length ?? 0);
 
   return <div>
-    <PageHeader eyebrow="Geçmiş performans · USD bazlı" title="Düzenli alım backtesti" description="Her ay sabit TL katkıyı o tarihin USD/TRY kuruyla dolara çevirir; S&P 500, altın, Bitcoin ve dolar bazlı BIST 100’ü ABD enflasyon eşiğiyle karşılaştırır." actions={<><select className="select" value={period} onChange={(event) => setPeriod(event.target.value)} aria-label="Backtest dönemi"><option value="1y">1 yıl</option><option value="3y">3 yıl</option><option value="5y">5 yıl</option><option value="10y">10 yıl</option></select><input className="input" type="number" min="1000" step="1000" value={contribution} onChange={(event) => setContribution(Number(event.target.value))} aria-label="Aylık TL katkısı" /><button className="button primary" onClick={() => void run()}>Hesapla</button></>} />
+    <PageHeader eyebrow="Geçmiş performans · sabit USD" title="Düzenli alım backtesti" description="Her ay aynı dolar katkısını kullanır; S&P 500, altın, Bitcoin ve dolar bazlı BIST 100’ü ABD enflasyon eşiğiyle karşılaştırır." actions={<><select className="select" value={period} onChange={(event) => setPeriod(event.target.value)} aria-label="Backtest dönemi"><option value="1y">1 yıl</option><option value="3y">3 yıl</option><option value="5y">5 yıl</option><option value="10y">10 yıl</option></select><input className="input" type="number" min="1" step="50" value={contribution} onChange={(event) => setContribution(Number(event.target.value))} aria-label="Aylık USD katkısı" /><button className="button primary" onClick={() => void run()}>Hesapla</button></>} />
     {loading ? <Card><EmptyState title="Backtest hesaplanıyor" description="Geçmiş fiyatlar ücretsiz kaynaklardan alınıyor." /></Card> : error ? <Card><EmptyState title="Backtest tamamlanamadı" description={error} /></Card> : <>
-      <div className="notice"><p><strong>{firstDate}–{lastDate}</strong> · tam <strong>{results[0]?.result.series.length} aylık alım</strong> · <strong data-testid="exact-invested">{formatMoney(nominalTryInvested)} / {formatMoney(results[0]?.result.totalInvested ?? 0, "USD")} yatırım</strong>. TL katkılar tarihsel kurdan çevrilir; sonuçlar ve getiriler USD bazındadır.</p></div>
+      <div className="notice"><p><strong>{firstDate}–{lastDate}</strong> · tam <strong>{results[0]?.result.series.length} aylık alım</strong> · her ay <strong>{formatMoney(contribution, "USD")}</strong> · <strong data-testid="exact-invested">{formatMoney(exactUsdInvested, "USD")} yatırım</strong>. Bütün stratejiler aynı sabit USD nakit akışıyla karşılaştırılır.</p></div>
       <div className="grid grid-4 section-gap">{results.filter((entry) => entry.primary).map((entry) => <Card className="metric-card" key={entry.name}><div className="metric-label">{entry.name}</div><div className="metric-value">{formatMoney(entry.result.finalValue, "USD")}</div><div className="metric-meta"><span className={(entry.result.realReturn ?? 0) >= 0 ? "positive" : "negative"}>{formatPercent(entry.result.realReturn ?? 0)} ABD enflasyonu sonrası</span> · {formatPercent(entry.result.totalReturn)} USD getiri</div></Card>)}</div>
       <Card className="section-gap"><div className="card-title"><div><h2>USD portföy değeri karşılaştırması</h2><p>Gri kesikli çizgi, her tarihsel dolar katkısının ABD TÜFE ile korunması için gereken değeri gösterir</p></div></div><div className="chart-box" style={{ height: 420 }}><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData}><CartesianGrid stroke="var(--border)" vertical={false} /><XAxis dataKey="date" tick={{ fill: "var(--muted)", fontSize: 11 }} /><YAxis tickFormatter={(value) => `$${Math.round(value / 1000)}K`} tick={{ fill: "var(--muted)", fontSize: 11 }} /><Tooltip formatter={(value) => formatMoney(Number(value), "USD")} /><Legend /><Line dataKey="ABD TÜFE koruma eşiği" stroke="#7b8794" strokeWidth={2} strokeDasharray="4 5" dot={false} isAnimationActive={false} />{results.map((entry) => <Line key={entry.name} dataKey={entry.name} stroke={entry.color} strokeWidth={entry.primary ? 2.8 : 1.25} strokeDasharray={entry.dash} dot={false} isAnimationActive={false} />)}</LineChart></ResponsiveContainer></div></Card>
       <div className="grid grid-3 section-gap">
@@ -177,7 +176,7 @@ export function BacktestDashboard() {
       </div>
       <Card className="section-gap"><div className="card-title"><div><h2>Teorik en iyi alımlar hangi yıllarda nereye giderdi?</h2><p>Her ayın katkısı, o tarihten dönem sonuna en çok yükselecek sınıfa yönlendirilmiştir. Bu gelecek bilgisi kullanan, uygulanabilir olmayan bir üst sınırdır.</p></div></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Yıl</th>{ASSET_CLASSES.map((assetClass) => <th className="number" key={assetClass}>{ASSET_LABELS[assetClass]}</th>)}</tr></thead><tbody>{yearlyChoices.map((row) => <tr key={row.year}><td><strong>{row.year}</strong></td>{ASSET_CLASSES.map((assetClass) => <td className="number" key={assetClass}>{formatUnsignedPercent(row.weights[assetClass], 0)}</td>)}</tr>)}</tbody></table></div></Card>
       <Card className="section-gap"><div className="card-title"><div><h2>Strateji ölçümleri</h2><p>USD bazlıdır; ABD TÜFE sonrası reel getiri ayrıca gösterilir. Vergi ve ürün maliyetleri dahil değildir.</p></div></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Strateji</th><th className="number">Yatırılan (USD)</th><th className="number">Son değer (USD)</th><th className="number">USD getiri</th><th className="number">Reel USD getiri</th><th className="number">Yıllık TWR</th><th className="number">Maks. düşüş</th><th className="number">Volatilite</th></tr></thead><tbody>{results.map((entry) => <tr key={entry.name}><td><strong>{entry.name}</strong></td><td className="number">{formatMoney(entry.result.totalInvested, "USD")}</td><td className="number">{formatMoney(entry.result.finalValue, "USD")}</td><td className="number">{formatPercent(entry.result.totalReturn)}</td><td className={`number ${(entry.result.realReturn ?? 0) >= 0 ? "positive" : "negative"}`}>{formatPercent(entry.result.realReturn ?? 0)}</td><td className="number">{formatPercent(entry.result.annualizedReturn)}</td><td className="number negative">{formatPercent(entry.result.maximumDrawdown)}</td><td className="number">{formatPercent(entry.result.volatility)}</td></tr>)}</tbody></table></div></Card>
-      <div className="notice section-gap"><p><strong>Okuma notu:</strong> USD getiri, tarihsel kurdan dolara çevrilen toplam katkıyla son değeri karşılaştırır. Reel USD getiri, her katkının FRED ABD TÜFE endeksiyle bugün korunması gereken tutarı aşma oranıdır. Yıllık TWR, maksimum düşüş ve volatilite yeni para girişlerini getiri sanmadan hesaplanır. BTC/M2 + SMA dinamik yalnızca o tarihte mevcut veriyi kullanır; optimumlar geriye dönük, teorik üst sınır ise gelecek bilgisiyle hesaplanır.</p></div>
+      <div className="notice section-gap"><p><strong>Okuma notu:</strong> USD getiri, sabit dolar katkılarının toplamıyla son değeri karşılaştırır. Reel USD getiri, her katkının FRED ABD TÜFE endeksiyle bugün korunması gereken tutarı aşma oranıdır. Yıllık TWR, maksimum düşüş ve volatilite yeni para girişlerini getiri sanmadan hesaplanır. BTC/M2 + SMA dinamik yalnızca o tarihte mevcut veriyi kullanır; optimumlar geriye dönük, teorik üst sınır ise gelecek bilgisiyle hesaplanır.</p></div>
     </>}
   </div>;
 }

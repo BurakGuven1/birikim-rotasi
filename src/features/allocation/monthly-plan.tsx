@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CircleHelp, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowRight, CircleHelp, RefreshCw, ShieldCheck, Target } from "lucide-react";
 import { Card, PageHeader } from "@/components/ui";
 import { buildHybridAllocation } from "@/lib/domain/allocation";
-import { convertTrySeriesToUsd, optimizeBalancedConsensus, valueAtOrBefore } from "@/lib/domain/backtest";
-import { ASSET_CLASSES, DEFAULT_MONTHLY_BUDGET, NEUTRAL_WEIGHTS } from "@/lib/domain/config";
+import { convertTrySeriesToUsd, optimizeBalancedConsensus } from "@/lib/domain/backtest";
+import { ASSET_CLASSES, DEFAULT_MONTHLY_BUDGET_USD, DEFAULT_TARGET_USD, NEUTRAL_WEIGHTS } from "@/lib/domain/config";
+import { inflationAdjustedTarget, monthsToInflationAdjustedGoal, requiredMonthlyContributionForHorizon, trailingYearInflation } from "@/lib/domain/goal";
 import { deriveBitcoinMacroSignal, derivePriceSignal, type PriceSignal } from "@/lib/domain/signals";
 import type { AssetClass, AssetClassRecord, PricePoint } from "@/lib/domain/types";
 import { formatMoney, formatUnsignedPercent } from "@/lib/format";
@@ -37,7 +38,9 @@ function monthlyPoints(points: PricePoint[]) {
 }
 
 export function MonthlyPlan() {
-  const [budget, setBudget] = useState(DEFAULT_MONTHLY_BUDGET);
+  const [budgetUsd, setBudgetUsd] = useState(DEFAULT_MONTHLY_BUDGET_USD);
+  const [targetUsd, setTargetUsd] = useState(DEFAULT_TARGET_USD);
+  const [usdInflation, setUsdInflation] = useState(0.03);
   const [signals, setSignals] = useState<Partial<Record<AssetClass, PriceSignal>>>({});
   const [balancedWeights, setBalancedWeights] = useState<AssetClassRecord>({ ...NEUTRAL_WEIGHTS });
   const [balancedPeriods, setBalancedPeriods] = useState<number[]>([]);
@@ -49,6 +52,12 @@ export function MonthlyPlan() {
     setLoading(true);
     setModelWarning("");
     const m2Promise = fetch("/api/market/macro-history?series=M2SL")
+      .then(async (response) => {
+        const payload = await response.json() as { points?: PricePoint[] };
+        return response.ok && payload.points ? payload.points : [];
+      })
+      .catch(() => [] as PricePoint[]);
+    const cpiPromise = fetch("/api/market/macro-history?series=CPIAUCSL")
       .then(async (response) => {
         const payload = await response.json() as { points?: PricePoint[] };
         return response.ok && payload.points ? payload.points : [];
@@ -87,7 +96,9 @@ export function MonthlyPlan() {
       ...rawTrySeries,
       turkishEquity: convertTrySeriesToUsd(rawTrySeries.turkishEquity, fxHistoryPayload.points),
     };
-    const m2 = await m2Promise;
+    const [m2, cpi] = await Promise.all([m2Promise, cpiPromise]);
+    const latestInflation = trailingYearInflation(cpi);
+    if (latestInflation != null) setUsdInflation(Math.max(0, latestInflation));
     const signalEntries = ASSET_CLASSES.map((assetClass) => {
       const weekly = weeklyPoints(rawSeries[assetClass]);
       const signal = assetClass === "bitcoin"
@@ -100,7 +111,6 @@ export function MonthlyPlan() {
       const series = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [assetClass, monthlyPoints(rawSeries[assetClass])])) as Record<AssetClass, PricePoint[]>;
       const consensus = optimizeBalancedConsensus({
         monthlyContribution: 1,
-        contributionForDate: (date) => 1 / (valueAtOrBefore(fxHistoryPayload.points!, date) ?? 1),
         series,
       });
       setBalancedWeights(consensus.weights);
@@ -116,24 +126,34 @@ export function MonthlyPlan() {
   }, []);
 
   useEffect(() => {
-    void settingsRepository.get().then((settings) => setBudget(settings.monthlyBudget));
+    void settingsRepository.get().then((settings) => {
+      setBudgetUsd(settings.monthlyBudgetUsd);
+      setTargetUsd(settings.targetUsd);
+    });
     void Promise.resolve().then(load);
   }, [load]);
 
   const allocation = useMemo(() => {
     const score = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [assetClass, signals[assetClass]?.score ?? 0])) as AssetClassRecord;
     const confidence = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [assetClass, signals[assetClass]?.confidence ?? 0.25])) as AssetClassRecord;
-    return buildHybridAllocation({ monthlyBudget: budget, signals: score, confidence, balancedWeights });
-  }, [balancedWeights, budget, signals]);
+    return buildHybridAllocation({ monthlyBudget: budgetUsd, signals: score, confidence, balancedWeights });
+  }, [balancedWeights, budgetUsd, signals]);
+
+  const goal = useMemo(() => {
+    const targetInFiveYears = inflationAdjustedTarget(targetUsd, usdInflation, 5);
+    const requiredForFiveYears = requiredMonthlyContributionForHorizon({ targetToday: targetUsd, years: 5, annualReturn: 0.08, annualInflation: usdInflation });
+    const monthsAtEightPercent = monthsToInflationAdjustedGoal({ monthlyContribution: budgetUsd, targetToday: targetUsd, annualReturn: 0.08, annualInflation: usdInflation });
+    return { targetInFiveYears, requiredForFiveYears, monthsAtEightPercent };
+  }, [budgetUsd, targetUsd, usdInflation]);
 
   return <div>
     <PageHeader eyebrow={monthLabel} title="Bu ayın birikim rotası" description="Çok dönemli dengeli optimum ile güncel piyasa sinyali eşit ağırlıkla birleştirilir. Bu bir karar desteğidir; kazanç garantisi değildir." actions={<button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={17} />{loading ? "Modeller hesaplanıyor" : "Yenile"}</button>} />
     <div className="split-hero">
       <Card className="hero-panel">
         <span className="pill"><ShieldCheck size={14} />İki model uzlaşısı</span>
-        <p className="hero-amount">{formatMoney(budget)}</p>
-        <p className="metric-meta" data-testid="monthly-budget-usd">{usdTryRate ? formatMoney(budget / usdTryRate, "USD") : "USD karşılığı alınamadı"}</p>
-        <p className="muted">Bu ay portföye eklenecek toplam tutar · canlı USD/TRY karşılığı</p>
+        <p className="hero-amount" data-testid="monthly-budget-usd">{formatMoney(budgetUsd, "USD")}</p>
+        <p className="metric-meta" data-testid="monthly-budget-try">{usdTryRate ? formatMoney(budgetUsd * usdTryRate) : "TL karşılığı alınamadı"}</p>
+        <p className="muted">Bu ay portföye eklenecek sabit dolar katkısı · canlı TL karşılığı</p>
         <div className="chart-legend">
           <span>Dengeli optimum <strong>%50</strong></span>
           <span>Güncel dinamik <strong>%50</strong></span>
@@ -153,7 +173,15 @@ export function MonthlyPlan() {
     </div>
     {modelWarning ? <div className="notice section-gap"><p><strong>Veri notu:</strong> {modelWarning}</p></div> : null}
     <Card className="section-gap">
-      <div className="card-title"><div><h2>Uygulanabilir alış listesi</h2><p>Tutarlar tam {formatMoney(budget)} olacak şekilde yuvarlandı; dolar karşılıkları canlı USD/TRY ile gösterilir</p></div></div>
+      <div className="card-title"><div><h2>Bugünün alım gücüyle hedef</h2><p><Target size={17} style={{ display: "inline", marginRight: 6 }} />{formatMoney(targetUsd, "USD")} hedefi ABD enflasyonuyla birlikte büyür; aşağıdaki %8 getiri yalnızca planlama varsayımıdır</p></div></div>
+      <div className="grid grid-3">
+        <div><div className="metric-label">5 yıl sonraki nominal hedef</div><div className="metric-value">{formatMoney(goal.targetInFiveYears, "USD")}</div><div className="metric-meta">Güncel ABD TÜFE: {formatUnsignedPercent(usdInflation, 1)}</div></div>
+        <div><div className="metric-label">$1.000/ay ile tahmini süre</div><div className="metric-value">{goal.monthsAtEightPercent ? `${(goal.monthsAtEightPercent / 12).toFixed(1)} yıl` : "100+ yıl"}</div><div className="metric-meta">Sıfır başlangıç · sabit katkı · yıllık nominal %8 varsayımı</div></div>
+        <div><div className="metric-label">5 yılda hedef için gereken</div><div className="metric-value">{formatMoney(goal.requiredForFiveYears, "USD")}</div><div className="metric-meta">Sıfır başlangıç · aylık katkı · %8 getiri ve güncel TÜFE varsayımı</div></div>
+      </div>
+    </Card>
+    <Card className="section-gap">
+      <div className="card-title"><div><h2>Uygulanabilir alış listesi</h2><p>Tutarlar tam {formatMoney(budgetUsd, "USD")} olacak şekilde yuvarlandı; TL karşılıkları canlı USD/TRY ile gösterilir</p></div></div>
       {allocation.items.map((item, index) => {
         const detail = signals[item.assetClass];
         const balanced = allocation.balancedWeights[item.assetClass];
@@ -177,7 +205,7 @@ export function MonthlyPlan() {
           <div><div className="allocation-name">{item.label}</div><div className="allocation-note">Optimum {formatUnsignedPercent(balanced, 0)} · Dinamik {formatUnsignedPercent(dynamic, 0)} · Nötr {formatUnsignedPercent(item.neutralWeight, 0)}</div></div>
           <div className="progress"><span style={{ width: `${item.weight * 100}%`, background: `var(--chart-${index + 1})` }} /></div>
           <strong>{formatUnsignedPercent(item.weight, 1)}</strong>
-          <div className="number"><strong>{formatMoney(item.amount)}</strong><div className="confidence">{usdTryRate ? formatMoney(item.amount / usdTryRate, "USD") : "USD karşılığı yok"} · Fırsat {item.signal >= 0 ? "+" : ""}{Math.round(item.signal * 100)}/100 · Veri güveni {formatUnsignedPercent(item.confidence, 0)}</div></div>
+          <div className="number"><strong>{formatMoney(item.amount, "USD")}</strong><div className="confidence">{usdTryRate ? formatMoney(item.amount * usdTryRate) : "TL karşılığı yok"} · Fırsat {item.signal >= 0 ? "+" : ""}{Math.round(item.signal * 100)}/100 · Veri güveni {formatUnsignedPercent(item.confidence, 0)}</div></div>
           <details style={{ gridColumn: "1 / -1" }}><summary className="muted">{summary}</summary><div className="muted"><p><strong>Karar:</strong> {action}</p><p><strong>Hesap:</strong> Dengeli optimum {formatUnsignedPercent(balanced, 1)} × %50 + güncel dinamik {formatUnsignedPercent(dynamic, 1)} × %50 = ham {formatUnsignedPercent(rawBlend, 1)}; sınıf risk sınırları uygulandıktan sonra nihai {formatUnsignedPercent(item.weight, 1)}. {modelEffect}</p><p><strong>Güncel göstergeler:</strong> {detail?.reasons.join(" ") ?? "Canlı geçmiş veri alınamadığı için dinamik taraf nötr ağırlığa yaklaştırıldı."}</p></div></details>
         </div>;
       })}
