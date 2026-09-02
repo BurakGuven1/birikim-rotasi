@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { useMarketQuotes } from "@/lib/hooks/use-market-quotes";
 import { formatDateTime, formatMoney, formatPercent } from "@/lib/format";
+import { MacroIndicators } from "./macro-indicators";
 
 const assets = [
   { symbol: "BTC", name: "Bitcoin", currency: "USD" as const },
@@ -30,6 +31,7 @@ export function MarketGrid() {
         </Link>;
       })}
     </div>}
+    <MacroIndicators />
     <div className="notice section-gap"><p>Bu ekran yatırım emri üretmez. “Güncel” rozeti yalnızca sağlayıcıdan alınan verinin yaşını belirtir; lisanslı borsa gerçek zaman verisi anlamına gelmez.</p></div>
   </div>;
 }

@@ -89,8 +89,8 @@
 - Consumes: `MarketSnapshot` ve `PricePoint` domain tipleri.
 
 - [ ] Sağlayıcı sırası, timeout, bozuk cevap ve eski önbellek davranışı için sahte fetch testleri yaz.
-- [ ] Binance/CoinGecko BTC adaptörleri ile anahtarsız quote/history akışını uygula.
-- [ ] Yahoo-compatible, Stooq, TCMB ve FRED adaptörlerini ekle.
+- [x] Binance BTC adaptörü ve EODHD anahtarlı yedeği ile quote/history akışını uygula.
+- [x] EODHD, Alpha Vantage, Yahoo-compatible, Stooq ve FRED adaptörlerini ekle.
 - [ ] Kaynak önceliği, son başarılı bellek önbelleği ve güncellik sınıflandırmasını uygula.
 - [ ] Zod doğrulamalı API route'larını ekle ve servis testlerini geçir.
 - [ ] Veri katmanını commit et.

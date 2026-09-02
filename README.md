@@ -41,10 +41,10 @@ Uygulamayı denemek için **DEMO portföyü yükle** seçeneği kullanılabilir.
 
 | Özellik | API anahtarı olmadan | Ücretsiz anahtarla |
 | --- | --- | --- |
-| BTC güncel fiyatı | Binance Public, CoinGecko keyless | CoinGecko Demo limiti daha kararlı |
-| Hisse/ETF/BIST/emtia fiyatları | Anahtarsız Yahoo-compatible uç ve Stooq yedeği | Alpha Vantage temel oran kapsamı için hazır ayar |
-| USD/TRY | Yahoo-compatible ve TCMB günlük kur yedeği | EVDS makro kapsamı için hazır ayar |
-| FRED makro serileri | Resmî grafik CSV indirmesi | Resmî API erişimi |
+| BTC güncel fiyatı | Binance Public | EODHD yedeği |
+| Hisse/ETF/BIST/emtia fiyatları | Yahoo-compatible uç ve Stooq yedeği | EODHD ana kaynak, Alpha Vantage ABD yedeği |
+| USD/TRY | Yahoo-compatible uç | EODHD döviz yedeği |
+| FRED makro serileri | Resmî grafik CSV indirmesi | Resmî API üzerinden M2, CPI ve reel faiz |
 | Portföy takibi, kâr/zarar ve grafikler | Tam çalışır | Değişmez |
 | Fiyat/SMA backtesti | Tam çalışır | Değişmez |
 
@@ -56,8 +56,7 @@ Uygulamayı denemek için **DEMO portföyü yükle** seçeneği kullanılabilir.
 
 - [FRED API Keys](https://fredaccount.stlouisfed.org/apikeys)
 - [Alpha Vantage Free API Key](https://www.alphavantage.co/support/#api-key)
-- [TCMB EVDS giriş/kayıt](https://evds2.tcmb.gov.tr/index.php?/evds/login)
-- [CoinGecko Developer Dashboard](https://www.coingecko.com/en/developers/dashboard)
+- [EODHD API Keys](https://eodhd.com/developer/api-keys)
 
 Anahtarları sohbet, Git veya uygulama ekranına göndermeyin. `.env.local` Git tarafından yok sayılır. Değişiklikten sonra geliştirme sunucusunu yeniden başlatın.
 

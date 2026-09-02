@@ -1,13 +1,13 @@
 import type { MarketSnapshot, PricePoint } from "../domain/types";
+import { alphaVantageProvider } from "./alpha-vantage";
 import { binanceProvider } from "./binance";
-import { coinGeckoProvider } from "./coingecko";
+import { eodhdProvider } from "./eodhd";
 import type { MarketDataProvider } from "./provider";
 import { stooqProvider } from "./stooq";
-import { tcmbProvider } from "./tcmb";
 import { yahooProvider } from "./yahoo";
 
 const quoteCache = new Map<string, MarketSnapshot>();
-const providers = [binanceProvider, coinGeckoProvider, tcmbProvider, yahooProvider, stooqProvider];
+const providers = [binanceProvider, eodhdProvider, alphaVantageProvider, yahooProvider, stooqProvider];
 
 export async function resolveQuote(symbol: string, candidates: MarketDataProvider[], cached?: MarketSnapshot): Promise<MarketSnapshot> {
   const errors: string[] = [];
@@ -49,10 +49,10 @@ export async function getHistory(symbol: string, range = "5y"): Promise<{ points
 export function getProviderStatus() {
   return [
     { name: "Binance Public", active: true, keyRequired: false, coverage: "BTC anlık fiyat ve geçmiş" },
-    { name: "CoinGecko", active: true, keyRequired: false, enhanced: Boolean(process.env.COINGECKO_DEMO_API_KEY), coverage: "BTC yedek fiyat/geçmiş" },
-    { name: "Yahoo-compatible", active: true, keyRequired: false, coverage: "Hisse, ETF, BIST, emtia ve kur" },
-    { name: "TCMB", active: true, keyRequired: false, enhanced: Boolean(process.env.TCMB_EVDS_API_KEY), coverage: "USD/TRY ve EVDS makro" },
-    { name: "FRED", active: true, keyRequired: false, enhanced: Boolean(process.env.FRED_API_KEY), coverage: "Makro CSV; anahtarla API" },
-    { name: "Alpha Vantage", active: Boolean(process.env.ALPHA_VANTAGE_API_KEY), keyRequired: true, coverage: "İsteğe bağlı temel oranlar" },
+    { name: "EODHD", active: Boolean(process.env.EODHD_API_KEY), keyRequired: true, coverage: "Hisse, ETF, BIST, emtia, döviz ve kripto yedeği" },
+    { name: "Alpha Vantage", active: Boolean(process.env.ALPHA_VANTAGE_API_KEY), keyRequired: true, coverage: "ABD hisse ve ETF fiyat yedeği" },
+    { name: "FRED", active: Boolean(process.env.FRED_API_KEY), keyRequired: true, coverage: "M2, CPI ve 10 yıllık reel faiz" },
+    { name: "Yahoo-compatible", active: true, keyRequired: false, coverage: "Anahtarlı servisler başarısızsa fiyat yedeği" },
+    { name: "Stooq", active: true, keyRequired: false, coverage: "Gün sonu geçmiş fiyat yedeği" },
   ];
 }

@@ -8,10 +8,9 @@ import { formatMoney } from "@/lib/format";
 
 interface ProviderStatus { name: string; active: boolean; keyRequired: boolean; enhanced?: boolean; coverage: string }
 const keyLinks = [
+  { name: "EODHD", env: "EODHD_API_KEY", href: "https://eodhd.com/developer/api-keys" },
   { name: "FRED", env: "FRED_API_KEY", href: "https://fredaccount.stlouisfed.org/apikeys" },
   { name: "Alpha Vantage", env: "ALPHA_VANTAGE_API_KEY", href: "https://www.alphavantage.co/support/#api-key" },
-  { name: "TCMB EVDS", env: "TCMB_EVDS_API_KEY", href: "https://evds2.tcmb.gov.tr/index.php?/evds/login" },
-  { name: "CoinGecko Demo", env: "COINGECKO_DEMO_API_KEY", href: "https://www.coingecko.com/en/developers/dashboard" },
 ];
 
 export function SettingsPanel() {

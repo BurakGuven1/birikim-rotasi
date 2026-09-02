@@ -15,11 +15,10 @@ Birikim Rotası, kullanıcının yatırım işlemlerini yalnızca kendi bilgisay
 
 ## Ücretsiz veri stratejisi
 
-- BTC güncel fiyatı: Binance public market data; CoinGecko keyless ve isteğe bağlı Demo anahtarı yedekleri.
-- Hisse, ETF, BIST, emtia ve kur: anahtarsız Yahoo-compatible chart/quote adaptörü; Stooq, TCMB günlük kur ve yerel son başarılı veri yedekleri.
-- Makro seriler: anahtarsız FRED grafik CSV indirmeleri; kullanıcı FRED anahtarı eklerse resmi API.
-- Temel oranlar: isteğe bağlı ücretsiz Alpha Vantage anahtarı ve manuel doğrulanmış girişler.
-- EVDS: isteğe bağlı ücretsiz anahtarla Türkiye makro serileri.
+- BTC güncel fiyatı: Binance public market data; EODHD anahtarlı yedek.
+- Hisse, ETF, BIST, emtia ve kur: EODHD anahtarlı ana kaynak; Alpha Vantage, Yahoo-compatible, Stooq ve yerel son başarılı veri yedekleri.
+- Makro seriler: FRED anahtarıyla resmî API; anahtar yoksa resmî grafik CSV indirmeleri.
+- Temel oranlar: güvenilir ve tarihli veri mevcutsa Alpha Vantage veya manuel doğrulanmış girişler.
 - KAP/Borsa İstanbul tarafında kırılgan HTML scraping yapılmayacak. Otomatik erişilemeyen değerlemeler kaynak URL'si, veri tarihi ve son kullanma tarihiyle manuel girilecek.
 - Gerçek zaman lisansı gerektiren piyasalarda uygulama “anlık” iddiası kullanmayacak; son güncelleme ve gecikme açıkça gösterilecek. Sağlayıcı başarısızsa veri uydurulmayacak.
 

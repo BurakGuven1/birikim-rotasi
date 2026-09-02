@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { resolveQuote } from "./market-service";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { getHistory, getProviderStatus, getQuote, resolveQuote } from "./market-service";
 import type { MarketDataProvider } from "./provider";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 describe("resolveQuote", () => {
   it("falls back to the next provider after a provider error", async () => {
@@ -33,5 +38,79 @@ describe("resolveQuote", () => {
     });
     expect(result.status).toBe("stale");
     expect(result.source).toContain("önbellek");
+  });
+
+  it("uses authenticated EODHD quotes and maps internal symbols", async () => {
+    vi.stubEnv("EODHD_API_KEY", "test-eodhd-key");
+    vi.stubEnv("ALPHA_VANTAGE_API_KEY", "");
+    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+      const url = String(input);
+      if (!url.includes("eodhd.com/api/real-time/VOO.US")) throw new Error(`Unexpected URL: ${url}`);
+      return new Response(JSON.stringify({
+        code: "VOO.US",
+        timestamp: Math.floor(Date.now() / 1000),
+        close: 701.25,
+        previousClose: 695,
+        change_p: 0.8993,
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    });
+
+    const quote = await getQuote("VOO");
+
+    expect(quote).toMatchObject({ price: 701.25, currency: "USD", source: "EODHD", changePercent: 0.8993 });
+  });
+
+  it("uses EODHD end-of-day history with OHLCV values", async () => {
+    vi.stubEnv("EODHD_API_KEY", "test-eodhd-key");
+    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+      const url = String(input);
+      if (!url.includes("eodhd.com/api/eod/VOO.US")) throw new Error(`Unexpected URL: ${url}`);
+      return new Response(JSON.stringify([
+        { date: "2026-08-31", open: 696, high: 702, low: 695, close: 701.25, volume: 4_000_000 },
+      ]), { status: 200, headers: { "content-type": "application/json" } });
+    });
+
+    const history = await getHistory("VOO", "1y");
+
+    expect(history.source).toBe("EODHD");
+    expect(history.points).toEqual([{ date: "2026-08-31T00:00:00Z", open: 696, high: 702, low: 695, close: 701.25, volume: 4_000_000 }]);
+  });
+
+  it("falls back to Alpha Vantage when EODHD is not configured", async () => {
+    vi.stubEnv("EODHD_API_KEY", "");
+    vi.stubEnv("ALPHA_VANTAGE_API_KEY", "test-alpha-key");
+    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+      const url = String(input);
+      if (!url.includes("alphavantage.co/query") || !url.includes("function=GLOBAL_QUOTE")) throw new Error(`Unexpected URL: ${url}`);
+      return new Response(JSON.stringify({
+        "Global Quote": {
+          "01. symbol": "BND",
+          "05. price": "75.4200",
+          "07. latest trading day": "2026-09-01",
+          "08. previous close": "75.0000",
+          "10. change percent": "0.5600%",
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    });
+
+    const quote = await getQuote("BND");
+
+    expect(quote).toMatchObject({ price: 75.42, currency: "USD", source: "Alpha Vantage", changePercent: 0.56 });
+  });
+
+  it("reports only the configured provider stack", () => {
+    vi.stubEnv("EODHD_API_KEY", "test-eodhd-key");
+    vi.stubEnv("ALPHA_VANTAGE_API_KEY", "test-alpha-key");
+    const statuses = getProviderStatus();
+
+    expect(statuses.map((provider) => provider.name)).toEqual([
+      "Binance Public",
+      "EODHD",
+      "Alpha Vantage",
+      "FRED",
+      "Yahoo-compatible",
+      "Stooq",
+    ]);
+    expect(statuses.find((provider) => provider.name === "EODHD")?.active).toBe(true);
   });
 });

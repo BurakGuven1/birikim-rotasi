@@ -13,6 +13,13 @@ async function stubMarketApi(page: import("@playwright/test").Page) {
       const points = Array.from({ length: 260 }, (_, index) => ({ date: new Date(Date.UTC(2021, 0, 1 + index * 7)).toISOString(), open: 95 + index * .2, high: 102 + index * .2, low: 92 + index * .2, close: 98 + index * .2, volume: 1000 + index }));
       await route.fulfill({ contentType: "application/json", body: JSON.stringify({ points, source: "E2E doğrulama verisi" }) }); return;
     }
+    if (url.pathname.endsWith("/macro")) {
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify([
+        { id: "M2SL", label: "ABD M2 para arzı", value: 23218, change: 0.054, unit: "Milyar $", asOf: "2026-07-01T00:00:00Z", status: "delayed", source: "FRED API" },
+        { id: "CPIAUCSL", label: "ABD tüketici fiyat endeksi", value: 332.813, change: 0.033, unit: "Endeks", asOf: "2026-07-01T00:00:00Z", status: "delayed", source: "FRED API" },
+        { id: "DFII10", label: "ABD 10 yıllık reel faiz", value: 2.44, change: 0.62, unit: "%", asOf: "2026-08-31T00:00:00Z", status: "fresh", source: "FRED API" },
+      ]) }); return;
+    }
     await route.fulfill({ contentType: "application/json", body: JSON.stringify([{ name: "Test", active: true, keyRequired: false, coverage: "E2E" }]) });
   });
 }
@@ -36,6 +43,7 @@ for (const item of pages) {
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto(item.path, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
+    if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
     await page.locator("html[data-theme]").waitFor({ state: "attached" });
     await page.screenshot({ path: `artifacts/ui/${item.shot}.png`, fullPage: false });
     expect(errors).toEqual([]);
