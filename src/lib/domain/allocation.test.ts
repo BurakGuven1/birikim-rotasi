@@ -41,13 +41,16 @@ describe("buildAllocation", () => {
 });
 
 describe("hybrid monthly allocation", () => {
-  it("uses an equal blend of the balanced consensus and current dynamic model", () => {
+  it("uses the balanced consensus as 70% core and the dynamic model as 30% tilt", () => {
     const balanced = { foreignEquity: 0.3, commodity: 0.3, bitcoin: 0.15, turkishEquity: 0.25 };
     const dynamic = { foreignEquity: 0.4, commodity: 0.2, bitcoin: 0.25, turkishEquity: 0.15 };
 
     const result = blendAllocationWeights(balanced, dynamic);
 
-    expect(result).toEqual({ foreignEquity: 0.35, commodity: 0.25, bitcoin: 0.2, turkishEquity: 0.2 });
+    expect(result.foreignEquity).toBeCloseTo(0.33, 8);
+    expect(result.commodity).toBeCloseTo(0.27, 8);
+    expect(result.bitcoin).toBeCloseTo(0.18, 8);
+    expect(result.turkishEquity).toBeCloseTo(0.22, 8);
   });
 
   it("enforces the live purchase limits after blending", () => {
@@ -79,7 +82,7 @@ describe("hybrid monthly allocation", () => {
       balancedWeights: { foreignEquity: 0.25, commodity: 0.35, bitcoin: 0.3, turkishEquity: 0.1 },
     });
 
-    expect(result.items.map((item) => item.weight)).toEqual([0.3, 0.3, 0.25, 0.15]);
+    expect(result.items.map((item) => item.weight)).toEqual([0.28, 0.32, 0.27, 0.13]);
     expect(result.items.reduce((sum, item) => sum + item.amount, 0)).toBe(50_000);
     expect(result.dynamicWeights).toEqual({ foreignEquity: 0.35, commodity: 0.25, bitcoin: 0.2, turkishEquity: 0.2 });
   });

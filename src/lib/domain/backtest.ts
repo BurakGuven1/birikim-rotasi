@@ -132,6 +132,43 @@ export function runAllocationBacktest({ monthlyContribution, series, allocate, m
   };
 }
 
+export function runWalkForwardAllocationBacktest({ monthlyContribution, series, allocate, maxPeriods, contributionForDate }: AllocationBacktestInput): BacktestResult {
+  const aligned = alignMonthlySeries(series);
+  const length = aligned.foreignEquity.length;
+  const startIndex = maxPeriods ? Math.max(0, length - maxPeriods) : 0;
+  const units = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [assetClass, 0])) as AssetClassRecord;
+  const output: BacktestResult["series"] = [];
+  const returns: number[] = [];
+  let invested = 0;
+  let previousValue = 0;
+
+  for (let index = startIndex; index < length; index += 1) {
+    const history = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [assetClass, aligned[assetClass].slice(0, index)])) as Record<AssetClass, PricePoint[]>;
+    const weights = allocate(history);
+    const valueBeforeContribution = ASSET_CLASSES.reduce((sum, assetClass) => sum + units[assetClass] * aligned[assetClass][index].close, 0);
+    if (index > startIndex && previousValue > 0) returns.push(valueBeforeContribution / previousValue - 1);
+    const contribution = contributionAt(monthlyContribution, contributionForDate, aligned.foreignEquity[index].date, index - startIndex);
+    ASSET_CLASSES.forEach((assetClass) => {
+      const price = aligned[assetClass][index].close;
+      if (price > 0) units[assetClass] += contribution * weights[assetClass] / price;
+    });
+    const value = ASSET_CLASSES.reduce((sum, assetClass) => sum + units[assetClass] * aligned[assetClass][index].close, 0);
+    invested += contribution;
+    previousValue = value;
+    output.push({ date: aligned.foreignEquity[index].date, invested, value });
+  }
+
+  const finalValue = output.at(-1)?.value ?? 0;
+  return {
+    totalInvested: invested,
+    units: ASSET_CLASSES.reduce((sum, assetClass) => sum + units[assetClass], 0),
+    finalValue,
+    totalReturn: invested ? finalValue / invested - 1 : 0,
+    ...returnMetrics(returns),
+    series: output,
+  };
+}
+
 interface StaticOptimizationInput {
   monthlyContribution: number;
   series: Record<AssetClass, PricePoint[]>;

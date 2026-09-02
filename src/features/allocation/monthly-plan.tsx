@@ -147,7 +147,7 @@ export function MonthlyPlan() {
   }, [budgetUsd, targetUsd, usdInflation]);
 
   return <div>
-    <PageHeader eyebrow={monthLabel} title="Bu ayın birikim rotası" description="Çok dönemli dengeli optimum ile güncel piyasa sinyali eşit ağırlıkla birleştirilir. Bu bir karar desteğidir; kazanç garantisi değildir." actions={<button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={17} />{loading ? "Modeller hesaplanıyor" : "Yenile"}</button>} />
+    <PageHeader eyebrow={monthLabel} title="Bu ayın birikim rotası" description="Çok dönemli dengeli optimum %70 ana tabanı, güncel piyasa sinyali %30 küçük ayarlayıcıyı oluşturur. Bu bir karar desteğidir; kazanç garantisi değildir." actions={<button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={17} />{loading ? "Modeller hesaplanıyor" : "Yenile"}</button>} />
     <div className="split-hero">
       <Card className="hero-panel">
         <span className="pill"><ShieldCheck size={14} />İki model uzlaşısı</span>
@@ -155,15 +155,15 @@ export function MonthlyPlan() {
         <p className="metric-meta" data-testid="monthly-budget-try">{usdTryRate ? formatMoney(budgetUsd * usdTryRate) : "TL karşılığı alınamadı"}</p>
         <p className="muted">Bu ay portföye eklenecek sabit dolar katkısı · canlı TL karşılığı</p>
         <div className="chart-legend">
-          <span>Dengeli optimum <strong>%50</strong></span>
-          <span>Güncel dinamik <strong>%50</strong></span>
+          <span>Dengeli optimum <strong>%70</strong></span>
+          <span>Güncel dinamik <strong>%30</strong></span>
           <span>Veri güveni <strong>{formatUnsignedPercent(allocation.confidence, 0)}</strong></span>
           <span>Model para birimi <strong>USD</strong></span>
           <span>Satış <strong>kapalı</strong></span>
         </div>
       </Card>
       <Card>
-        <div className="card-title"><div><h2>Hibrit dağılım özeti</h2><p>İki modelin eşit birleşiminden çıkan uygulanabilir oranlar</p></div></div>
+        <div className="card-title"><div><h2>Hibrit dağılım özeti</h2><p>%70 dengeli ana taban ve %30 dinamik ayardan çıkan uygulanabilir oranlar</p></div></div>
         <div className="progress" style={{ height: 18, display: "flex" }} aria-label="Önerilen hibrit varlık sınıfı dağılımı">
           {allocation.items.map((item, index) => <span key={item.assetClass} title={`${item.label} ${formatUnsignedPercent(item.weight)}`} style={{ width: `${item.weight * 100}%`, background: `var(--chart-${index + 1})` }} />)}
         </div>
@@ -186,7 +186,7 @@ export function MonthlyPlan() {
         const detail = signals[item.assetClass];
         const balanced = allocation.balancedWeights[item.assetClass];
         const dynamic = allocation.dynamicWeights[item.assetClass];
-        const rawBlend = (balanced + dynamic) / 2;
+        const rawBlend = balanced * 0.7 + dynamic * 0.3;
         const deltaPoints = (item.weight - item.neutralWeight) * 100;
         const isMore = deltaPoints > 0.75;
         const isLess = deltaPoints < -0.75;
@@ -206,7 +206,7 @@ export function MonthlyPlan() {
           <div className="progress"><span style={{ width: `${item.weight * 100}%`, background: `var(--chart-${index + 1})` }} /></div>
           <strong>{formatUnsignedPercent(item.weight, 1)}</strong>
           <div className="number"><strong>{formatMoney(item.amount, "USD")}</strong><div className="confidence">{usdTryRate ? formatMoney(item.amount * usdTryRate) : "TL karşılığı yok"} · Fırsat {item.signal >= 0 ? "+" : ""}{Math.round(item.signal * 100)}/100 · Veri güveni {formatUnsignedPercent(item.confidence, 0)}</div></div>
-          <details style={{ gridColumn: "1 / -1" }}><summary className="muted">{summary}</summary><div className="muted"><p><strong>Karar:</strong> {action}</p><p><strong>Hesap:</strong> Dengeli optimum {formatUnsignedPercent(balanced, 1)} × %50 + güncel dinamik {formatUnsignedPercent(dynamic, 1)} × %50 = ham {formatUnsignedPercent(rawBlend, 1)}; sınıf risk sınırları uygulandıktan sonra nihai {formatUnsignedPercent(item.weight, 1)}. {modelEffect}</p><p><strong>Güncel göstergeler:</strong> {detail?.reasons.join(" ") ?? "Canlı geçmiş veri alınamadığı için dinamik taraf nötr ağırlığa yaklaştırıldı."}</p></div></details>
+          <details style={{ gridColumn: "1 / -1" }}><summary className="muted">{summary}</summary><div className="muted"><p><strong>Karar:</strong> {action}</p><p><strong>Hesap:</strong> Dengeli optimum {formatUnsignedPercent(balanced, 1)} × %70 + güncel dinamik {formatUnsignedPercent(dynamic, 1)} × %30 = ham {formatUnsignedPercent(rawBlend, 1)}; sınıf risk sınırları uygulandıktan sonra nihai {formatUnsignedPercent(item.weight, 1)}. {modelEffect}</p><p><strong>Güncel göstergeler:</strong> {detail?.reasons.join(" ") ?? "Canlı geçmiş veri alınamadığı için dinamik taraf nötr ağırlığa yaklaştırıldı."}</p></div></details>
         </div>;
       })}
     </Card>

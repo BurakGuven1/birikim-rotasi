@@ -60,7 +60,7 @@ export function averageAllocationWeights(weights: AssetClassRecord[]): AssetClas
 export function blendAllocationWeights(
   balanced: AssetClassRecord,
   dynamic: AssetClassRecord,
-  dynamicShare = 0.5,
+  dynamicShare = 0.3,
 ): AssetClassRecord {
   const share = clamp(dynamicShare, 0, 1);
   const requested = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [

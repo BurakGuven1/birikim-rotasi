@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyUsdInflation, convertTrySeriesToUsd, maxDrawdown, optimizeBalancedConsensus, optimizeStaticAllocation, runAllocationBacktest, runDcaBacktest, runPerfectForesightBacktest } from "./backtest";
+import { applyUsdInflation, convertTrySeriesToUsd, maxDrawdown, optimizeBalancedConsensus, optimizeStaticAllocation, runAllocationBacktest, runDcaBacktest, runPerfectForesightBacktest, runWalkForwardAllocationBacktest } from "./backtest";
 
 describe("backtest", () => {
   it("buys only at each historical timestamp without seeing the next price", () => {
@@ -33,6 +33,25 @@ describe("backtest", () => {
     });
     expect(seenLengths).toEqual([1, 2, 3]);
     expect(result.totalInvested).toBe(300);
+  });
+
+  it("uses earlier observations as walk-forward history without investing before the requested window", () => {
+    const points = [10, 11, 12, 13].map((close, index) => ({ date: `2026-0${index + 1}-01`, close }));
+    const seenLengths: number[] = [];
+
+    const result = runWalkForwardAllocationBacktest({
+      monthlyContribution: 100,
+      series: { foreignEquity: points, commodity: points, bitcoin: points, turkishEquity: points },
+      maxPeriods: 2,
+      allocate: (history) => {
+        seenLengths.push(history.foreignEquity.length);
+        return { foreignEquity: 0.35, commodity: 0.25, bitcoin: 0.2, turkishEquity: 0.2 };
+      },
+    });
+
+    expect(seenLengths).toEqual([2, 3]);
+    expect(result.series.map((point) => point.date)).toEqual(["2026-03-01", "2026-04-01"]);
+    expect(result.totalInvested).toBe(200);
   });
 
   it("does not count new monthly deposits as portfolio return or volatility", () => {

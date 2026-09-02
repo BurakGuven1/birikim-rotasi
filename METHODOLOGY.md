@@ -48,13 +48,9 @@ Bitcoin sinyali fiyat bileşenine ek olarak BTC/M2 tarihsel yüzdesini (%30), 20
 
 ## Backtest ve USD ölçümü
 
-Her takvim ayında bir gözlem ve aynı USD katkı tutarı kullanılır; varsayılan katkı `$1.000/ay`dır. S&P 500, altın ve Bitcoin doğal USD fiyatıyla; BIST 100 ise her gözlemde tarihsel USD/TRY kuruna bölünerek USD bazında ölçülür. Seçimler tam 12/36/60/120 ortak takvim ayına karşılık gelir; daha eski veri yalnızca SMA200 ısınması için tutulur. Dinamik stratejinin tahsis fonksiyonuna yalnızca o ay ve öncesindeki fiyat/M2 dilimi verilir; gelecek gözlem erişilemez. `%25 eşit sepet`, dört sınıfa her ay eşit dolar ayıran bağımsız kıyastır.
+Her takvim ayında bir gözlem ve aynı USD katkı tutarı kullanılır; varsayılan katkı `$1.000/ay`dır. S&P 500, altın ve Bitcoin doğal USD fiyatıyla; BIST 100 ise her gözlemde tarihsel USD/TRY kuruna bölünerek USD bazında ölçülür. Seçimler tam 12/36/60/120 ortak takvim ayına karşılık gelir.
 
-Ek kıyaslar üç ayrı soruyu yanıtlar:
-
-- **Dengeli optimum:** Her varlık sınıfını %10–%50 aralığında tutan 5 yüzde puanlık statik kombinasyonlar arasından getiri/oynaklık/maksimum düşüş dengesi en yüksek olan geçmiş dağılım.
-- **Maksimum statik:** 5 yüzde puanlık tüm statik kombinasyonlar arasından dönem sonu değeri en yüksek olan geçmiş dağılım.
-- **Teorik üst sınır:** Her aylık katkının o tarihten dönem sonuna en çok yükselecek varlığa gittiğini varsayar. Gelecek bilgisi kullandığından uygulanabilir strateji veya tahmin değildir; yalnızca üst sınır kıyasıdır.
+Ana karşılaştırma **Aylık plan · %70/%30 walk-forward** satırıdır. Her alım ayında dengeli optimum tabanı yalnızca önceki aya kadar bilinen ortak fiyat geçmişinde 1/3/5/10 yıllık uygun pencerelerle yeniden hesaplanır; dinamik sinyal de aynı tarih kesimindeki fiyat ve geciktirilmiş M2 verisini kullanır. Seçilen 12/36/60/120 aylık dönemden eski gözlemler yalnızca model eğitimi ve SMA200 ısınması içindir, bu aylarda katkı yatırılmış sayılmaz. Sonuçta %70 dengeli taban ile %30 dinamik ayar birleştirilir. Kafa karıştıran geriye dönük maksimum statik, teorik üst sınır, eşit ve nötr sepetler kullanıcı arayüzünden kaldırılmıştır; tek-varlık satırları sade kıyas olarak korunur.
 
 Toplam yatırılan para ve son değer USD olarak gösterilir. “USD getiri” son değer ile sabit dolar katkılarının toplamını karşılaştırır. “Reel USD getiri”, her dolar katkısının FRED `CPIAUCSL` endeksiyle dönem sonuna taşınmış satın alma gücü eşiğine göre hesaplanır. Yıllık TWR, maksimum düşüş ve yıllıklandırılmış volatilite yeni katkıları getiri kabul etmeyen zaman ağırlıklı aylık getirilerden hesaplanır. Vergi, spread, tüm ürün masraf oranları ve farklı piyasa tatilleri tam modellenmediğinden sonuçlar karar desteğidir.
 
@@ -64,12 +60,12 @@ Varsayılan hedef bugünün alım gücüyle `$500.000`dır. Gelecekte ekranda ka
 
 ## Aylık Plan hibrit dağılımı
 
-Aylık uygulanabilir alış listesi iki modelin eşit ağırlıklı uzlaşısıdır:
+Aylık uygulanabilir alış listesinde dengeli optimum ana model, dinamik sinyal küçük ayarlayıcıdır:
 
-- **%50 çok dönemli dengeli optimum:** S&P 500, altın, Bitcoin ve USD bazlı BIST 100'ün son 1, 3, 5 ve 10 yıllık ortak geçmişinde ayrı ayrı hesaplanan risk ayarlı dengeli optimum ağırlıkların ortalaması.
-- **%50 güncel dinamik:** Fiyat/SMA sinyalleri ile veri güveni; Bitcoin için ayrıca 45 gün geciktirilmiş BTC/M2 yüzdesi ve haftalık SMA200 rejimi.
+- **%70 çok dönemli dengeli optimum:** S&P 500, altın, Bitcoin ve USD bazlı BIST 100'ün son 1, 3, 5 ve 10 yıllık ortak geçmişinde ayrı ayrı hesaplanan risk ayarlı dengeli optimum ağırlıkların ortalaması.
+- **%30 güncel dinamik:** Fiyat/SMA sinyalleri ile veri güveni; Bitcoin için ayrıca 45 gün geciktirilmiş BTC/M2 yüzdesi ve haftalık SMA200 rejimi.
 
-İki ağırlık önce aritmetik olarak birleştirilir, ardından canlı alış sınırları uygulanır. Bu nedenle ekranda ham %50/%50 hesabı ile nihai oran ayrı gösterilir. “Daha fazla” ve “daha az” ifadeleri önceki aya değil, varlık sınıfının nötr uzun vadeli ağırlığına göredir. Daha az alım bir satış önerisi değildir. Tarihsel optimum geçmişe aşırı uyum gösterebilir; hibrit yöntem bu riski azaltmayı amaçlar fakat ortadan kaldırmaz ve getiri garantisi vermez.
+İki ağırlık önce %70/%30 oranıyla birleştirilir, ardından canlı alış sınırları uygulanır. Bu nedenle ekranda ham hesap ile nihai oran ayrı gösterilir. “Daha fazla” ve “daha az” ifadeleri önceki aya değil, varlık sınıfının nötr uzun vadeli ağırlığına göredir. Daha az alım bir satış önerisi değildir. Walk-forward test geriye bakış riskini azaltır fakat ortadan kaldırmaz ve getiri garantisi vermez.
 
 ## Satış davranışı
 

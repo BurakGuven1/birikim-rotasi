@@ -49,8 +49,8 @@ for (const item of pages) {
     await page.goto(item.path, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
     if (item.path === "/") {
-      await expect(page.getByText("Dengeli optimum %50", { exact: false })).toBeVisible();
-      await expect(page.getByText("Güncel dinamik %50", { exact: false })).toBeVisible();
+      await expect(page.getByText("Dengeli optimum %70", { exact: true })).toBeVisible();
+      await expect(page.getByText("Güncel dinamik %30", { exact: true })).toBeVisible();
       await expect(page.getByText("Optimum", { exact: false }).first()).toBeVisible();
       await expect(page.getByTestId("monthly-budget-usd")).toContainText("$1.000");
       await expect(page.getByTestId("monthly-budget-try")).toContainText("₺");
@@ -62,7 +62,10 @@ for (const item of pages) {
       await expect(page.getByTestId("exact-invested")).toContainText("$60.000");
       await expect(page.getByRole("columnheader", { name: "Reel USD getiri", exact: true })).toBeVisible();
       await expect(page.getByText("ABD TÜFE koruma eşiği", { exact: true })).toBeVisible();
-      await expect(page.getByRole("cell", { name: "%25 eşit sepet", exact: true })).toBeVisible();
+      await expect(page.getByRole("cell", { name: "Aylık plan · %70/%30 walk-forward", exact: true })).toBeVisible();
+      await expect(page.getByRole("cell", { name: "%25 eşit sepet", exact: true })).toHaveCount(0);
+      await expect(page.getByRole("cell", { name: "Maksimum statik", exact: true })).toHaveCount(0);
+      await expect(page.getByRole("cell", { name: "Teorik üst sınır", exact: true })).toHaveCount(0);
     }
     await page.locator("html[data-theme]").waitFor({ state: "attached" });
     await page.screenshot({ path: `artifacts/ui/${item.shot}.png`, fullPage: false });
