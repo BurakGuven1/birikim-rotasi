@@ -10,7 +10,8 @@ async function stubMarketApi(page: import("@playwright/test").Page) {
       await route.fulfill({ contentType: "application/json", body: JSON.stringify(payload) }); return;
     }
     if (url.pathname.endsWith("/macro-history")) {
-      const points = Array.from({ length: 180 }, (_, index) => ({ date: new Date(Date.UTC(2011, index, 1)).toISOString(), close: 10_000 + index * 70 }));
+      const isCpi = url.searchParams.get("series") === "CPIAUCSL";
+      const points = Array.from({ length: 180 }, (_, index) => ({ date: new Date(Date.UTC(2011, index, 1)).toISOString(), close: isCpi ? 225 + index * .6 : 10_000 + index * 70 }));
       await route.fulfill({ contentType: "application/json", body: JSON.stringify({ points, source: "FRED E2E" }) }); return;
     }
     if (url.pathname.endsWith("/history")) {
@@ -47,8 +48,19 @@ for (const item of pages) {
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto(item.path, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
+    if (item.path === "/") {
+      await expect(page.getByText("Dengeli optimum %50", { exact: false })).toBeVisible();
+      await expect(page.getByText("Güncel dinamik %50", { exact: false })).toBeVisible();
+      await expect(page.getByText("Optimum", { exact: false }).first()).toBeVisible();
+      await expect(page.getByTestId("monthly-budget-usd")).toContainText("$");
+      await expect(page.getByText("S&P 500 / ABD hisseleri", { exact: true })).toBeVisible();
+    }
     if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
-    if (item.path === "/backtest") await expect(page.getByTestId("exact-invested")).toContainText("₺3.000.000");
+    if (item.path === "/backtest") {
+      await expect(page.getByTestId("exact-invested")).toContainText("₺3.000.000");
+      await expect(page.getByRole("columnheader", { name: "Reel USD getiri", exact: true })).toBeVisible();
+      await expect(page.getByText("ABD TÜFE koruma eşiği", { exact: true })).toBeVisible();
+    }
     await page.locator("html[data-theme]").waitFor({ state: "attached" });
     await page.screenshot({ path: `artifacts/ui/${item.shot}.png`, fullPage: false });
     expect(errors).toEqual([]);

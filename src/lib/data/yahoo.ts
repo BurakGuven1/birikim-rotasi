@@ -9,7 +9,8 @@ interface YahooResult { meta: { regularMarketPrice: number; chartPreviousClose?:
 type YahooChart = { chart: { result: YahooResult[] | null; error: unknown } };
 
 async function getChart(symbol: string, range: string, interval: string): Promise<YahooResult> {
-  const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol(symbol))}?range=${range}&interval=${interval}&events=div%2Csplits`, { headers: { "User-Agent": "Mozilla/5.0 Birikim-Rotasi/1.0" }, signal: AbortSignal.timeout(10_000) });
+  const period = range === "max" ? `period1=0&period2=${Math.floor(Date.now() / 1000)}` : `range=${range}`;
+  const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol(symbol))}?${period}&interval=${interval}&events=div%2Csplits`, { headers: { "User-Agent": "Mozilla/5.0 Birikim-Rotasi/1.0" }, signal: AbortSignal.timeout(10_000) });
   if (!response.ok) throw new Error(`Yahoo ${response.status}`);
   const payload = await response.json() as YahooChart;
   const result = payload.chart.result?.[0];

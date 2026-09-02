@@ -36,4 +36,17 @@ describe("deriveBitcoinMacroSignal", () => {
     expect(combined.weeklySma200).toBeGreaterThan(0);
     expect(combined.reasons.join(" ")).toContain("BTC/M2");
   });
+
+  it("does not describe a high BTC/M2 percentile as historically cheap", () => {
+    const weeklyPrices = Array.from({ length: 220 }, (_, index) => ({
+      date: new Date(Date.UTC(2022, 0, 2 + index * 7)).toISOString(),
+      close: 100 + index,
+    }));
+    const m2 = weeklyPrices.map((point) => ({ date: point.date, close: 100 }));
+
+    const signal = deriveBitcoinMacroSignal(weeklyPrices, m2);
+
+    expect(signal.m2Percentile).toBeGreaterThan(0.65);
+    expect(signal.reasons.join(" ")).toContain("tarihsel olarak ucuz görünmüyor");
+  });
 });

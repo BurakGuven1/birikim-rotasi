@@ -14,8 +14,6 @@ Tablolar basit fiyat değişimidir; vergi ve yatırımcıya özel işlem maliyet
 | Altın (GC=F) | +%24,3 | +%127,5 | +%143,4 | +%236,3 |
 | Gümüş (SI=F) | +%59,5 | +%170,4 | +%171,0 | +%247,4 |
 | S&P 500 | +%19,3 | +%69,5 | +%69,2 | +%252,6 |
-| Nasdaq Composite | +%23,1 | +%86,6 | +%71,1 | +%401,0 |
-| Dünya hisseleri (VT) | +%22,5 | +%72,7 | +%65,1 | +%224,3 |
 | BIST 100, USD'ye çevrilmiş | +%7,2 | -%2,7 | +%65,5 | +%14,6 |
 
 ### TL bazında toplam değişim
@@ -26,8 +24,6 @@ Tablolar basit fiyat değişimidir; vergi ve yatırımcıya özel işlem maliyet
 | Altın | +%45,8 | +%311,4 | +%1.314,5 | +%5.388,9 |
 | Gümüş | +%87,1 | +%388,9 | +%1.474,8 | +%5.570,2 |
 | S&P 500 | +%39,9 | +%206,5 | +%883,2 | +%5.654,3 |
-| Nasdaq Composite | +%44,4 | +%237,5 | +%894,1 | +%8.076,3 |
-| Dünya hisseleri | +%43,7 | +%212,3 | +%859,4 | +%5.192,5 |
 | BIST 100 | +%25,7 | +%76,0 | +%862,1 | +%1.769,6 |
 
 USD/TRY aynı dönemlerde sırasıyla yaklaşık `%17,3`, `%80,8`, `%481,1` ve `%1.532,0` yükselmiştir. Çok yüksek TL getirilerinin önemli bölümü varlığın reel üretiminden değil, TL'nin dolar karşısındaki değer kaybından gelir; bu nedenle hem TL hem USD görünümü zorunludur.
@@ -40,16 +36,13 @@ USD/TRY aynı dönemlerde sırasıyla yaklaşık `%17,3`, `%80,8`, `%481,1` ve `
 | Altın | %16,8 | -%25,1 |
 | Gümüş | %34,5 | -%51,4 |
 | S&P 500 | %18,1 | -%33,9 |
-| Nasdaq Composite | %22,2 | -%36,4 |
-| Dünya hisseleri | %17,2 | -%34,2 |
 | BIST 100 (TL) | %25,3 | -%31,8 |
 
-BTC'nin yüksek geçmiş getirisi çok daha yüksek oynaklık ve düşüşle birlikte gelmiştir. Bu, BTC'yi dışlamak için değil, `%5–%35` sınırı ve katkıyla dengeleme kullanmak için gerekçedir. Gümüş de altından belirgin daha oynaktır; emtia bütçesinde altının ana, gümüşün tamamlayıcı olması bu bulguyla uyumludur.
+BTC'nin yüksek geçmiş getirisi çok daha yüksek oynaklık ve düşüşle birlikte gelmiştir. Bu, BTC'yi dışlamak için değil, `%5–%45` sınırı ve katkıyla dengeleme kullanmak için gerekçedir. Gümüş de altından belirgin daha oynaktır; emtia bütçesinde altının ana, gümüşün tamamlayıcı olması bu bulguyla uyumludur.
 
 ## Değerleme ve resmi karşılaştırmalar
 
 - [S&P Dow Jones Indices](https://www.spglobal.com/spdji/en/indices/equity/sp-500/) 31 Temmuz 2026 itibarıyla S&P 500 fiyat getirisini yıllıklandırılmış olarak 3 yılda `%17,74`, 5 yılda `%11,25`, 10 yılda `%13,17`; 10 yıllık yıllıklandırılmış riski `%15,34` yayımladı.
-- [MSCI ACWI](https://www.msci.com/indexes/index/892400/msci-acwi-index) 30 Haziran 2026 itibarıyla yaklaşık `23,64` F/K bildirdi. 30 Nisan 2026 factsheet'inde ileri F/K `18,07`, PD/DD `3,72` idi. Tarihler farklı olduğundan aynı-an karşılaştırması gibi kullanılmamalıdır.
 - [FRED DFII10](https://fred.stlouisfed.org/series/DFII10) ABD 10 yıllık piyasa bazlı reel faiz için kullanılacak resmi seridir. Altın sinyalinde nominal faizden basitçe CPI çıkarılmaz.
 - Borsa İstanbul gerçek zaman veriyi [lisanslı dağıtıcılar](https://www.borsaistanbul.com/tr/veriler/veri-yayini/veri-dagitici-kuruluslar) üzerinden yayar. Güvenilir ücretsiz tarihsel BIST F/K/PD-DD otomasyonu bulunmadığında kaynak URL'li manuel giriş tercih edilmelidir.
 
@@ -63,7 +56,7 @@ Aşağıdaki yıllık nominal USD varsayımları tahmin değil, stres testi gird
 
 | Sınıf | Kötümser | Temel | İyimser |
 | --- | ---: | ---: | ---: |
-| Geniş dünya hisseleri | %1 | %5 | %8 |
+| S&P 500 / ABD hisseleri | %1 | %5 | %8 |
 | Altın ağırlıklı emtia | -%2 | %2,5 | %6 |
 | Bitcoin | -%20 | %8 | %20 |
 | Türk hisseleri, USD bazında | -%5 | %3 | %10 |
@@ -72,4 +65,4 @@ Ufuk uzadıkça tek yıllık oranı kesin şekilde bileşiklemek sahte hassasiye
 
 ## Sonuç
 
-Nötr `%35 yabancı hisse / %25 emtia / %20 BTC / %20 Türk hisse` dağılımı araştırmayla çelişmemektedir. Geçmiş lideri otomatik büyütmek yerine geniş fon çekirdeği, altın ağırlıklı emtia, sınırlandırılmış BTC ve USD bazında izlenen Türk hisseleri birlikte kullanılır. HALKB varsayılan evrene eklenmez; işveren ve yatırımın aynı kuruma bağlanması yoğunlaşma riskini artırır.
+Nötr `%35 S&P 500 / %25 emtia / %20 BTC / %20 Türk hisse` dağılımı araştırmayla çelişmemektedir. Geçmiş lideri otomatik büyütmek yerine S&P 500 çekirdeği, altın ağırlıklı emtia, sınırlandırılmış BTC ve USD bazında izlenen Türk hisseleri birlikte kullanılır. HALKB varsayılan evrene eklenmez; işveren ve yatırımın aynı kuruma bağlanması yoğunlaşma riskini artırır.

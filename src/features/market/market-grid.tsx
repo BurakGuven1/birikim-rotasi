@@ -11,9 +11,7 @@ const assets = [
   { symbol: "BTC", name: "Bitcoin", currency: "USD" as const },
   { symbol: "GOLD", name: "Altın", currency: "USD" as const },
   { symbol: "SILVER", name: "Gümüş", currency: "USD" as const },
-  { symbol: "VT", name: "Dünya Hisseleri", currency: "USD" as const },
-  { symbol: "VOO", name: "S&P 500 ETF", currency: "USD" as const },
-  { symbol: "QQQM", name: "Nasdaq 100 ETF", currency: "USD" as const },
+  { symbol: "SP500", name: "S&P 500", currency: "USD" as const },
   { symbol: "BIST100", name: "BIST 100", currency: "TRY" as const },
   { symbol: "USDTRY", name: "Dolar / TL", currency: "TRY" as const },
 ];

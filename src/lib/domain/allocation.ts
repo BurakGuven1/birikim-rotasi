@@ -10,6 +10,10 @@ interface AllocationInput {
   generatedAt?: string;
 }
 
+interface HybridAllocationInput extends AllocationInput {
+  balancedWeights: AssetClassRecord;
+}
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function normalizeWithinBounds(
@@ -37,6 +41,33 @@ function normalizeWithinBounds(
     });
   }
   return result;
+}
+
+export function normalizeAllocationWeights(requested: AssetClassRecord): AssetClassRecord {
+  const minimums = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [assetClass, ALLOCATION_CONSTRAINTS[assetClass].min])) as AssetClassRecord;
+  const maximums = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [assetClass, ALLOCATION_CONSTRAINTS[assetClass].max])) as AssetClassRecord;
+  return normalizeWithinBounds(requested, minimums, maximums);
+}
+
+export function averageAllocationWeights(weights: AssetClassRecord[]): AssetClassRecord {
+  if (weights.length === 0) return { ...NEUTRAL_WEIGHTS };
+  return Object.fromEntries(ASSET_CLASSES.map((assetClass) => [
+    assetClass,
+    Number((weights.reduce((sum, current) => sum + current[assetClass], 0) / weights.length).toFixed(6)),
+  ])) as AssetClassRecord;
+}
+
+export function blendAllocationWeights(
+  balanced: AssetClassRecord,
+  dynamic: AssetClassRecord,
+  dynamicShare = 0.5,
+): AssetClassRecord {
+  const share = clamp(dynamicShare, 0, 1);
+  const requested = Object.fromEntries(ASSET_CLASSES.map((assetClass) => [
+    assetClass,
+    balanced[assetClass] * (1 - share) + dynamic[assetClass] * share,
+  ])) as AssetClassRecord;
+  return normalizeAllocationWeights(requested);
 }
 
 export function buildAllocation(input: AllocationInput): AllocationResult {
@@ -97,5 +128,24 @@ export function buildAllocation(input: AllocationInput): AllocationResult {
     items,
     confidence: ASSET_CLASSES.reduce((sum, key) => sum + clamp(input.confidence[key], 0, 1), 0) / ASSET_CLASSES.length,
     generatedAt: input.generatedAt ?? new Date().toISOString(),
+  };
+}
+
+export function buildHybridAllocation(input: HybridAllocationInput): AllocationResult & {
+  balancedWeights: AssetClassRecord;
+  dynamicWeights: AssetClassRecord;
+} {
+  const dynamic = buildAllocation(input);
+  const dynamicWeights = Object.fromEntries(dynamic.items.map((item) => [item.assetClass, item.weight])) as AssetClassRecord;
+  const blended = blendAllocationWeights(input.balancedWeights, dynamicWeights);
+  const displayWeights = ASSET_CLASSES.map((assetClass) => Number(blended[assetClass].toFixed(6)));
+  displayWeights[displayWeights.length - 1] = Number((1 - displayWeights.slice(0, -1).reduce((sum, value) => sum + value, 0)).toFixed(6));
+  const amounts = displayWeights.map((weight) => Math.round(input.monthlyBudget * weight));
+  amounts[0] += input.monthlyBudget - amounts.reduce((sum, value) => sum + value, 0);
+  return {
+    ...dynamic,
+    items: dynamic.items.map((item, index) => ({ ...item, weight: displayWeights[index], amount: amounts[index] })),
+    balancedWeights: input.balancedWeights,
+    dynamicWeights,
   };
 }

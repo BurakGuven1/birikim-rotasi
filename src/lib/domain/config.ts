@@ -8,7 +8,7 @@ export const ASSET_CLASSES: AssetClass[] = [
 ];
 
 export const ASSET_LABELS: Record<AssetClass, string> = {
-  foreignEquity: "Yabancı hisse / fon",
+  foreignEquity: "S&P 500 / ABD hisseleri",
   commodity: "Emtia / değerli maden",
   bitcoin: "Bitcoin",
   turkishEquity: "Türk hisse / fon",

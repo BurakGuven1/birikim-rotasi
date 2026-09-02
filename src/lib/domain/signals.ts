@@ -81,7 +81,11 @@ export function deriveBitcoinMacroSignal(weeklyPrices: PricePoint[], m2Series: P
   if (priceOnly.fallingKnife) score = Math.min(score, 0.25);
   const reasons = [
     ...priceOnly.reasons,
-    `BTC/M2 tarihsel yüzdesi %${(m2Percentile * 100).toFixed(0)}; düşük yüzde göreli ucuzluğu destekler (M2 verisi 45 gün gecikmeli kullanıldı).`,
+    m2Percentile <= 0.35
+      ? `BTC/M2 tarihsel yüzdesi %${(m2Percentile * 100).toFixed(0)}; düşük dilim göreli ucuzluğu destekliyor (M2 verisi 45 gün gecikmeli kullanıldı).`
+      : m2Percentile >= 0.65
+        ? `BTC/M2 tarihsel yüzdesi %${(m2Percentile * 100).toFixed(0)}; yüksek dilim tarihsel olarak ucuz görünmüyor (M2 verisi 45 gün gecikmeli kullanıldı).`
+        : `BTC/M2 tarihsel yüzdesi %${(m2Percentile * 100).toFixed(0)}; gösterge nötr bölgede (M2 verisi 45 gün gecikmeli kullanıldı).`,
     `Fiyat 200 haftalık ortalamanın %${((closes.at(-1)! / weeklySma200! - 1) * 100).toFixed(1)} ${aboveSma200 ? "üzerinde" : "altında"}.`,
   ];
   if (crossedAboveSma200) reasons.push("200 haftalık ortalama son 12 haftada yukarı aşıldı.");

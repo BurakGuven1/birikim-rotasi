@@ -9,7 +9,7 @@ import type { MarketSnapshot, PricePoint } from "@/lib/domain/types";
 import { formatDateTime, formatMoney, formatPercent } from "@/lib/format";
 import { CandlestickChart } from "./candlestick-chart";
 
-const names: Record<string, string> = { BTC: "Bitcoin", GOLD: "Altın", SILVER: "Gümüş", VT: "Dünya Hisseleri", VOO: "S&P 500 ETF", QQQM: "Nasdaq 100 ETF", BIST100: "BIST 100", USDTRY: "Dolar / TL" };
+const names: Record<string, string> = { BTC: "Bitcoin", GOLD: "Altın", SILVER: "Gümüş", SP500: "S&P 500", VT: "Dünya Hisseleri", VOO: "S&P 500 ETF", QQQM: "Nasdaq 100 ETF", BIST100: "BIST 100", USDTRY: "Dolar / TL" };
 
 export function AssetDetail({ symbol }: { symbol: string }) {
   const [quote, setQuote] = useState<MarketSnapshot>();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAllocation } from "./allocation";
+import { averageAllocationWeights, blendAllocationWeights, buildAllocation, buildHybridAllocation } from "./allocation";
 
 describe("buildAllocation", () => {
   it("keeps neutral weights and distributes the complete budget when signals are neutral", () => {
@@ -37,5 +37,50 @@ describe("buildAllocation", () => {
     const bitcoin = result.items.find((item) => item.assetClass === "bitcoin")!;
     expect(bitcoin.weight).toBeGreaterThan(0.35);
     expect(bitcoin.weight).toBeLessThanOrEqual(0.45);
+  });
+});
+
+describe("hybrid monthly allocation", () => {
+  it("uses an equal blend of the balanced consensus and current dynamic model", () => {
+    const balanced = { foreignEquity: 0.3, commodity: 0.3, bitcoin: 0.15, turkishEquity: 0.25 };
+    const dynamic = { foreignEquity: 0.4, commodity: 0.2, bitcoin: 0.25, turkishEquity: 0.15 };
+
+    const result = blendAllocationWeights(balanced, dynamic);
+
+    expect(result).toEqual({ foreignEquity: 0.35, commodity: 0.25, bitcoin: 0.2, turkishEquity: 0.2 });
+  });
+
+  it("enforces the live purchase limits after blending", () => {
+    const concentrated = { foreignEquity: 0, commodity: 0, bitcoin: 1, turkishEquity: 0 };
+
+    const result = blendAllocationWeights(concentrated, concentrated);
+
+    expect(result.bitcoin).toBe(0.45);
+    expect(result.foreignEquity).toBeGreaterThanOrEqual(0.25);
+    expect(result.commodity).toBeGreaterThanOrEqual(0.1);
+    expect(result.turkishEquity).toBeGreaterThanOrEqual(0.1);
+    expect(Object.values(result).reduce((sum, value) => sum + value, 0)).toBeCloseTo(1, 8);
+  });
+
+  it("averages all available backtest horizons instead of trusting one period", () => {
+    const result = averageAllocationWeights([
+      { foreignEquity: 0.4, commodity: 0.2, bitcoin: 0.2, turkishEquity: 0.2 },
+      { foreignEquity: 0.2, commodity: 0.3, bitcoin: 0.4, turkishEquity: 0.1 },
+    ]);
+
+    expect(result).toEqual({ foreignEquity: 0.3, commodity: 0.25, bitcoin: 0.3, turkishEquity: 0.15 });
+  });
+
+  it("turns the hybrid weights into an exact actionable monthly budget", () => {
+    const result = buildHybridAllocation({
+      monthlyBudget: 50_000,
+      signals: { foreignEquity: 0, commodity: 0, bitcoin: 0, turkishEquity: 0 },
+      confidence: { foreignEquity: 1, commodity: 1, bitcoin: 1, turkishEquity: 1 },
+      balancedWeights: { foreignEquity: 0.25, commodity: 0.35, bitcoin: 0.3, turkishEquity: 0.1 },
+    });
+
+    expect(result.items.map((item) => item.weight)).toEqual([0.3, 0.3, 0.25, 0.15]);
+    expect(result.items.reduce((sum, item) => sum + item.amount, 0)).toBe(50_000);
+    expect(result.dynamicWeights).toEqual({ foreignEquity: 0.35, commodity: 0.25, bitcoin: 0.2, turkishEquity: 0.2 });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { maxDrawdown, optimizeStaticAllocation, runAllocationBacktest, runDcaBacktest, runPerfectForesightBacktest } from "./backtest";
+import { applyUsdInflation, convertTrySeriesToUsd, maxDrawdown, optimizeBalancedConsensus, optimizeStaticAllocation, runAllocationBacktest, runDcaBacktest, runPerfectForesightBacktest } from "./backtest";
 
 describe("backtest", () => {
   it("buys only at each historical timestamp without seeing the next price", () => {
@@ -33,6 +33,72 @@ describe("backtest", () => {
     });
     expect(seenLengths).toEqual([1, 2, 3]);
     expect(result.totalInvested).toBe(300);
+  });
+
+  it("does not count new monthly deposits as portfolio return or volatility", () => {
+    const points = [100, 100, 100, 100].map((close, index) => ({ date: `2026-0${index + 1}-01`, close }));
+    const result = runAllocationBacktest({
+      monthlyContribution: 100,
+      series: { foreignEquity: points, commodity: points, bitcoin: points, turkishEquity: points },
+      allocate: () => ({ foreignEquity: 0.25, commodity: 0.25, bitcoin: 0.25, turkishEquity: 0.25 }),
+    });
+
+    expect(result.annualizedReturn).toBe(0);
+    expect(result.volatility).toBe(0);
+    expect(result.maximumDrawdown).toBe(0);
+  });
+
+  it("detects market drawdown even when a new deposit keeps account value rising", () => {
+    const points = [100, 50, 50].map((close, index) => ({ date: `2026-0${index + 1}-01`, close }));
+    const result = runAllocationBacktest({
+      monthlyContribution: 100,
+      series: { foreignEquity: points, commodity: points, bitcoin: points, turkishEquity: points },
+      allocate: () => ({ foreignEquity: 0.25, commodity: 0.25, bitcoin: 0.25, turkishEquity: 0.25 }),
+    });
+
+    expect(result.maximumDrawdown).toBeCloseTo(-0.5, 8);
+  });
+
+  it("supports a fixed TRY deposit converted to a different USD amount each month", () => {
+    const points = [10, 10].map((close, index) => ({ date: `2026-0${index + 1}-01`, close }));
+    const result = runDcaBacktest({
+      monthlyContribution: 100,
+      contributionForDate: (date) => date.startsWith("2026-01") ? 10 : 5,
+      prices: points,
+    });
+
+    expect(result.totalInvested).toBe(15);
+    expect(result.finalValue).toBe(15);
+  });
+
+  it("converts TRY prices with the latest USDTRY rate available on that date", () => {
+    const converted = convertTrySeriesToUsd(
+      [{ date: "2026-01-15T00:00:00Z", close: 1_000 }],
+      [
+        { date: "2026-01-01T00:00:00Z", close: 10 },
+        { date: "2026-02-01T00:00:00Z", close: 20 },
+      ],
+    );
+
+    expect(converted).toEqual([{ date: "2026-01-15T00:00:00Z", close: 100 }]);
+  });
+
+  it("compares the final USD value with the CPI-adjusted purchasing-power hurdle", () => {
+    const result = runDcaBacktest({
+      monthlyContribution: 100,
+      prices: [
+        { date: "2026-01-01T00:00:00Z", close: 10 },
+        { date: "2026-02-01T00:00:00Z", close: 10 },
+      ],
+    });
+    const adjusted = applyUsdInflation(result, [
+      { date: "2026-01-01T00:00:00Z", close: 100 },
+      { date: "2026-02-01T00:00:00Z", close: 110 },
+    ]);
+
+    expect(adjusted.inflationAdjustedInvested).toBeCloseTo(210, 8);
+    expect(adjusted.realReturn).toBeCloseTo(200 / 210 - 1, 8);
+    expect(adjusted.series.at(-1)?.inflationHurdle).toBeCloseTo(210, 8);
   });
 
   it("limits contributions to the exact requested number of months", () => {
@@ -104,6 +170,20 @@ describe("backtest", () => {
     expect(Object.values(optimum.weights).reduce((sum, weight) => sum + weight, 0)).toBeCloseTo(1, 8);
   });
 
+  it("builds the balanced baseline from every complete requested horizon", () => {
+    const points = Array.from({ length: 40 }, (_, index) => ({
+      date: new Date(Date.UTC(2023, index, 1)).toISOString(),
+      close: 100 + index,
+    }));
+    const series = { foreignEquity: points, commodity: points, bitcoin: points, turkishEquity: points };
+
+    const consensus = optimizeBalancedConsensus({ monthlyContribution: 100, series, periods: [12, 36, 60] });
+
+    expect(consensus.periods).toEqual([12, 36]);
+    expect(Object.values(consensus.weights).reduce((sum, weight) => sum + weight, 0)).toBeCloseTo(1, 8);
+    expect(consensus.optimizations).toHaveLength(2);
+  });
+
   it("builds a clearly separate perfect-foresight upper bound", () => {
     const points = (closes: number[]) => closes.map((close, index) => ({ date: `2026-0${index + 1}-01T00:00:00Z`, close }));
     const series = {
@@ -118,5 +198,25 @@ describe("backtest", () => {
     expect(upperBound.result.finalValue).toBeGreaterThanOrEqual(optimizeStaticAllocation({ monthlyContribution: 100, series, objective: "maximumReturn" }).result.finalValue);
     expect(upperBound.monthlyChoices).toHaveLength(4);
     expect(Object.values(upperBound.weights).reduce((sum, weight) => sum + weight, 0)).toBeCloseTo(1, 8);
+  });
+
+  it("weights perfect-foresight allocation percentages by historical USD contribution", () => {
+    const points = (closes: number[]) => closes.map((close, index) => ({ date: `2026-0${index + 1}-01T00:00:00Z`, close }));
+    const series = {
+      foreignEquity: points([100, 400, 400]),
+      commodity: points([100, 100, 100]),
+      bitcoin: points([100, 100, 300]),
+      turkishEquity: points([100, 100, 100]),
+    };
+
+    const upperBound = runPerfectForesightBacktest({
+      monthlyContribution: 1,
+      contributionForDate: (_date, index) => [100, 400, 100][index],
+      series,
+    });
+
+    expect(upperBound.weights.foreignEquity).toBeCloseTo(1 / 3, 8);
+    expect(upperBound.weights.bitcoin).toBeCloseTo(2 / 3, 8);
+    expect(upperBound.monthlyChoices[1].contribution).toBe(400);
   });
 });
