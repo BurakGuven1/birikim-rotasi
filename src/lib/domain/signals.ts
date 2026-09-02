@@ -1,4 +1,5 @@
-import { volatilityNormalizedDistance } from "./indicators";
+import { percentileRank, simpleMovingAverage, volatilityNormalizedDistance } from "./indicators";
+import type { PricePoint } from "./types";
 
 export interface PriceSignal {
   score: number;
@@ -7,6 +8,9 @@ export interface PriceSignal {
   drawdownFromAth: number;
   mediumTrend: number;
   fallingKnife: boolean;
+  weeklySma200?: number;
+  m2Percentile?: number;
+  crossedAboveSma200?: boolean;
   reasons: string[];
 }
 
@@ -40,4 +44,54 @@ export function derivePriceSignal(closes: number[], volatilityScale = 1): PriceS
   ];
   if (fallingKnife) reasons.push("Düşen bıçak filtresi alım artışını sınırladı.");
   return { score: clamp(score), confidence: Math.min(1, valid.length / 200), distanceFromLongAverage, drawdownFromAth, mediumTrend, fallingKnife, reasons };
+}
+
+export function deriveBitcoinMacroSignal(weeklyPrices: PricePoint[], m2Series: PricePoint[]): PriceSignal {
+  const prices = [...weeklyPrices].filter((point) => point.close > 0).sort((a, b) => a.date.localeCompare(b.date));
+  const m2 = [...m2Series].filter((point) => point.close > 0).sort((a, b) => a.date.localeCompare(b.date));
+  const priceOnly = derivePriceSignal(prices.map((point) => point.close), 1.8);
+  if (prices.length < 200 || m2.length < 12) return { ...priceOnly, reasons: [...priceOnly.reasons, "BTC/M2 için yeterli tarihsel veri yok."] };
+
+  let m2Index = 0;
+  let lastM2: PricePoint | undefined;
+  const ratios: number[] = [];
+  prices.forEach((point) => {
+    const priceTime = new Date(point.date).getTime();
+    while (m2Index < m2.length && new Date(m2[m2Index].date).getTime() + 45 * 86_400_000 <= priceTime) {
+      lastM2 = m2[m2Index];
+      m2Index += 1;
+    }
+    if (lastM2) ratios.push(point.close / lastM2.close);
+  });
+  if (ratios.length < 20) return { ...priceOnly, reasons: [...priceOnly.reasons, "BTC/M2 eşleşmesi yetersiz."] };
+
+  const currentRatio = ratios.at(-1)!;
+  const m2Percentile = percentileRank(ratios, currentRatio);
+  const m2ValueScore = clamp((0.5 - m2Percentile) * 2);
+  const closes = prices.map((point) => point.close);
+  const smaSeries = simpleMovingAverage(closes, 200);
+  const weeklySma200 = smaSeries.at(-1)!;
+  const aboveSma200 = closes.at(-1)! >= weeklySma200!;
+  const crossedAboveSma200 = aboveSma200 && closes.slice(-12).some((close, index) => {
+    const sma = smaSeries[smaSeries.length - 12 + index];
+    return sma != null && close <= sma;
+  });
+  const regimeScore = aboveSma200 ? 0.35 : -0.35;
+  let score = priceOnly.score * 0.55 + m2ValueScore * 0.3 + regimeScore * 0.15 + (crossedAboveSma200 ? 0.12 : 0);
+  if (priceOnly.fallingKnife) score = Math.min(score, 0.25);
+  const reasons = [
+    ...priceOnly.reasons,
+    `BTC/M2 tarihsel yüzdesi %${(m2Percentile * 100).toFixed(0)}; düşük yüzde göreli ucuzluğu destekler (M2 verisi 45 gün gecikmeli kullanıldı).`,
+    `Fiyat 200 haftalık ortalamanın %${((closes.at(-1)! / weeklySma200! - 1) * 100).toFixed(1)} ${aboveSma200 ? "üzerinde" : "altında"}.`,
+  ];
+  if (crossedAboveSma200) reasons.push("200 haftalık ortalama son 12 haftada yukarı aşıldı.");
+  return {
+    ...priceOnly,
+    score: clamp(score),
+    confidence: Math.min(priceOnly.confidence, ratios.length / 200),
+    weeklySma200: weeklySma200!,
+    m2Percentile,
+    crossedAboveSma200,
+    reasons,
+  };
 }

@@ -26,4 +26,16 @@ describe("buildAllocation", () => {
     expect(bitcoin.weight).toBeLessThanOrEqual(0.35);
     expect(result.items.reduce((sum, item) => sum + item.weight, 0)).toBeCloseTo(1, 8);
   });
+
+  it("can materially overweight bitcoin when opportunity strength and data confidence are both high", () => {
+    const result = buildAllocation({
+      monthlyBudget: 50_000,
+      signals: { foreignEquity: -0.5, commodity: -0.5, bitcoin: 1, turkishEquity: -0.5 },
+      confidence: { foreignEquity: 1, commodity: 1, bitcoin: 1, turkishEquity: 1 },
+    });
+
+    const bitcoin = result.items.find((item) => item.assetClass === "bitcoin")!;
+    expect(bitcoin.weight).toBeGreaterThan(0.35);
+    expect(bitcoin.weight).toBeLessThanOrEqual(0.45);
+  });
 });

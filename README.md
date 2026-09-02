@@ -62,10 +62,10 @@ Anahtarları sohbet, Git veya uygulama ekranına göndermeyin. `.env.local` Git 
 
 ## Sayfalar
 
-- **Aylık Plan:** dört ana sınıfın tutarı, yüzdesi, güveni ve gerekçesi.
+- **Aylık Plan:** dört ana sınıfın tutarı, yüzdesi, fırsat skoru, veri güveni ve gerekçesi; Bitcoin için BTC/M2 ile haftalık SMA200 desteği.
 - **Piyasa:** ücretsiz güncel/gecikmeli fiyatlar ve kaynak durumu.
 - **Portföyüm:** FIFO maliyet, komisyon, gerçekleşmiş/gerçekleşmemiş kâr ve grafikler.
-- **Backtest:** 1/3/5/10 yıl DCA; sabit nötr, dinamik SMA ve tek-varlık kıyasları.
+- **Backtest:** tam 12/36/60/120 aylık DCA; BTC/M2 + SMA dinamik, dengeli optimum, maksimum statik, teorik üst sınır ve tek-varlık kıyasları.
 - **Varlık Detayı:** mum/çizgi, SMA40, SMA200, ATH düşüşü, sinyal ve dönemsel performans.
 - **Metodoloji:** karar sırası, satış koruması ve sınırlamalar.
 - **Ayarlar:** aylık tutar, risk kontrolü ve veri kaynağı durumu.

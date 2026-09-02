@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getHistory } from "@/lib/data/market-service";
 
-const schema = z.object({ symbol: z.string().min(1).max(30), range: z.enum(["1y", "3y", "5y", "10y"]).default("5y") });
+const schema = z.object({ symbol: z.string().min(1).max(30), range: z.enum(["1y", "3y", "5y", "10y", "max"]).default("5y") });
 
 export async function GET(request: Request) {
   const url = new URL(request.url);

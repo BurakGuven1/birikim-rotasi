@@ -20,7 +20,7 @@ Fiyatı veya kuru bulunmayan varlık güncel değer toplamına uydurma değerle 
 | --- | ---: | ---: | ---: | ---: |
 | Yabancı hisse/fon | %25 | %35 | %50 | 0,12 |
 | Emtia | %10 | %25 | %40 | 0,10 |
-| Bitcoin | %5 | %20 | %35 | 0,12 |
+| Bitcoin | %5 | %20 | %45 | 0,22 |
 | Türk hisse/fon | %10 | %20 | %35 | 0,10 |
 
 Başlangıç isteği şu biçimde hesaplanır:
@@ -44,11 +44,17 @@ Başlangıç fiyat sinyali:
 
 Fiyat uzun ortalamanın en az %10 altında ve orta trend güçlü negatifse düşen bıçak filtresi pozitif sinyali en fazla `+0,30` yapar. Uzun ortalamanın ±%5 çevresi gürültü bandı kabul edilir. Eksik uzun tarih güveni azaltır ve dağılımı nötre yaklaştırır.
 
-BTC/M2, piyasa değeri/M2, reel faiz, F/K ve PD/DD gibi sinyaller ancak tarihli ve güvenilir veri mevcutsa eklenmelidir. Mevcut sürüm bunları bugünkü değerlerle geçmişe taşımadığı için fiyat/SMA backtestini “tam”, çoklu temel-değerleme backtestini “kısmi” olarak sunar.
+Bitcoin sinyali fiyat bileşenine ek olarak BTC/M2 tarihsel yüzdesini (%30), 200 haftalık SMA rejimini (%15) ve son 12 haftadaki yukarı SMA200 geçişini kullanır. FRED M2 gözlemleri yayın gecikmesini azaltmak için 45 gün sonra kullanılabilir kabul edilir. Bununla birlikte FRED serilerinin sonradan revize edilen güncel sürümü kullanıldığı için backtestte sınırlı revizyon yanlılığı kalabilir. F/K ve PD/DD gibi tarihli temel veriler güvenilir ücretsiz seri bulunmadıkça geçmişe taşınmaz.
 
 ## Backtest
 
-Her takvim ayında bir gözlem ve aynı katkı tutarı kullanılır. Dinamik stratejinin tahsis fonksiyonuna yalnızca o ay ve öncesindeki fiyat dilimi verilir; gelecek gözlem erişilemez. Kıyaslar sabit nötr sepet, SMA dinamik sepet, yalnız BTC, yalnız altın, dünya hisseleri ve BIST 100'dür.
+Her takvim ayında bir gözlem ve aynı katkı tutarı kullanılır. Seçimler tam 12/36/60/120 ortak takvim ayına karşılık gelir; daha eski veri yalnızca SMA200 ısınması için tutulur. Dinamik stratejinin tahsis fonksiyonuna yalnızca o ay ve öncesindeki fiyat/M2 dilimi verilir; gelecek gözlem erişilemez.
+
+Ek kıyaslar üç ayrı soruyu yanıtlar:
+
+- **Dengeli optimum:** Her varlık sınıfını %10–%50 aralığında tutan 5 yüzde puanlık statik kombinasyonlar arasından getiri/oynaklık/maksimum düşüş dengesi en yüksek olan geçmiş dağılım.
+- **Maksimum statik:** 5 yüzde puanlık tüm statik kombinasyonlar arasından dönem sonu değeri en yüksek olan geçmiş dağılım.
+- **Teorik üst sınır:** Her aylık katkının o tarihten dönem sonuna en çok yükselecek varlığa gittiğini varsayar. Gelecek bilgisi kullandığından uygulanabilir strateji veya tahmin değildir; yalnızca üst sınır kıyasıdır.
 
 Gösterilen ölçüler toplam yatırılan para, son değer, toplam/yıllıklandırılmış getiri, maksimum düşüş ve yıllıklandırılmış volatilitedir. Vergi, spread, tüm ürün masraf oranları ve farklı piyasa tatilleri tam modellenmediğinden sonuçlar karar desteğidir.
 

@@ -2,7 +2,7 @@ import type { Currency, PricePoint } from "../domain/types";
 import type { MarketDataProvider } from "./provider";
 import { freshnessStatus } from "./provider";
 
-const symbolMap: Record<string, string> = { GOLD: "GC=F", SILVER: "SI=F", BIST100: "XU100.IS", USDTRY: "TRY=X", SP500: "^GSPC", NASDAQ: "^IXIC", WORLD: "VT" };
+const symbolMap: Record<string, string> = { BTC: "BTC-USD", GOLD: "GC=F", SILVER: "SI=F", BIST100: "XU100.IS", USDTRY: "TRY=X", SP500: "^GSPC", NASDAQ: "^IXIC", WORLD: "VT" };
 const yahooSymbol = (symbol: string) => symbolMap[symbol.toUpperCase()] ?? symbol;
 
 interface YahooResult { meta: { regularMarketPrice: number; chartPreviousClose?: number; currency?: string; regularMarketTime?: number }; timestamp?: number[]; indicators: { quote: Array<{ open?: Array<number | null>; high?: Array<number | null>; low?: Array<number | null>; close: Array<number | null>; volume?: Array<number | null> }> } }
@@ -29,7 +29,7 @@ export const yahooProvider: MarketDataProvider = {
     return { price: meta.regularMarketPrice, currency, asOf, source: "Yahoo Finance (anahtarsız)", status: freshnessStatus(asOf), changePercent: previous ? (meta.regularMarketPrice / previous - 1) * 100 : 0 };
   },
   async getHistory(symbol, range = "5y") {
-    const result = await getChart(symbol, range, range === "10y" ? "1wk" : "1d");
+    const result = await getChart(symbol, range, range === "10y" || range === "max" ? "1wk" : "1d");
     const quote = result.indicators.quote[0];
     return (result.timestamp ?? []).flatMap((timestamp, index): PricePoint[] => {
       const close = quote.close[index];

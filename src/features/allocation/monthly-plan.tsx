@@ -6,9 +6,9 @@ import { ArrowRight, CircleHelp, RefreshCw, ShieldCheck } from "lucide-react";
 import { Card, PageHeader } from "@/components/ui";
 import { buildAllocation } from "@/lib/domain/allocation";
 import { DEFAULT_MONTHLY_BUDGET } from "@/lib/domain/config";
-import { derivePriceSignal, type PriceSignal } from "@/lib/domain/signals";
+import { deriveBitcoinMacroSignal, derivePriceSignal, type PriceSignal } from "@/lib/domain/signals";
 import type { AssetClass, AssetClassRecord, PricePoint } from "@/lib/domain/types";
-import { formatMoney, formatPercent } from "@/lib/format";
+import { formatMoney, formatUnsignedPercent } from "@/lib/format";
 import { settingsRepository } from "@/lib/storage/settings-repository";
 
 const proxies: Record<AssetClass, { symbol: string; label: string; scale: number }> = {
@@ -18,12 +18,12 @@ const proxies: Record<AssetClass, { symbol: string; label: string; scale: number
   turkishEquity: { symbol: "BIST100", label: "BIST 100", scale: 1.2 },
 };
 
-function weeklyCloses(points: PricePoint[]) {
-  const byWeek = new Map<string, number>();
+function weeklyPoints(points: PricePoint[]) {
+  const byWeek = new Map<string, PricePoint>();
   points.forEach((point) => {
     const date = new Date(point.date);
     const week = `${date.getUTCFullYear()}-${Math.floor((date.getUTCDate() + 6 + new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).getUTCDay()) / 7)}-${date.getUTCMonth()}`;
-    byWeek.set(week, point.close);
+    byWeek.set(week, point);
   });
   return [...byWeek.values()];
 }
@@ -35,12 +35,22 @@ export function MonthlyPlan() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    const m2Promise = fetch("/api/market/macro-history")
+      .then(async (response) => {
+        const payload = await response.json() as { points?: PricePoint[] };
+        return response.ok && payload.points ? payload.points : [];
+      })
+      .catch(() => [] as PricePoint[]);
     const entries = await Promise.all(Object.entries(proxies).map(async ([assetClass, proxy]) => {
       try {
         const response = await fetch(`/api/market/history?symbol=${proxy.symbol}&range=5y`);
         const payload = await response.json() as { points?: PricePoint[] };
         if (!response.ok || !payload.points) throw new Error("veri yok");
-        return [assetClass, derivePriceSignal(weeklyCloses(payload.points), proxy.scale)] as const;
+        const weekly = weeklyPoints(payload.points);
+        const signal = assetClass === "bitcoin"
+          ? deriveBitcoinMacroSignal(weekly, await m2Promise)
+          : derivePriceSignal(weekly.map((point) => point.close), proxy.scale);
+        return [assetClass, signal] as const;
       } catch { return [assetClass, undefined] as const; }
     }));
     setSignals(Object.fromEntries(entries));
@@ -62,7 +72,7 @@ export function MonthlyPlan() {
         <p className="hero-amount">{formatMoney(budget)}</p>
         <p className="muted">Bu ay portföye eklenecek toplam tutar</p>
         <div className="chart-legend">
-          <span>Toplam güven: <strong>{formatPercent(allocation.confidence, 0)}</strong></span>
+          <span>Ortalama veri güveni: <strong>{formatUnsignedPercent(allocation.confidence, 0)}</strong></span>
           <span>Turnover sınırı: <strong>10 puan</strong></span>
           <span>Satış: <strong>varsayılan kapalı</strong></span>
         </div>
@@ -70,10 +80,10 @@ export function MonthlyPlan() {
       <Card>
         <div className="card-title"><div><h2>Dağılım özeti</h2><p>Her renk bir varlık sınıfını gösterir</p></div></div>
         <div className="progress" style={{ height: 18, display: "flex" }} aria-label="Önerilen varlık sınıfı dağılımı">
-          {allocation.items.map((item, index) => <span key={item.assetClass} title={`${item.label} ${formatPercent(item.weight)}`} style={{ width: `${item.weight * 100}%`, background: `var(--chart-${index + 1})` }} />)}
+          {allocation.items.map((item, index) => <span key={item.assetClass} title={`${item.label} ${formatUnsignedPercent(item.weight)}`} style={{ width: `${item.weight * 100}%`, background: `var(--chart-${index + 1})` }} />)}
         </div>
-        <div className="chart-legend">{allocation.items.map((item, index) => <span key={item.assetClass}><i className="legend-dot" style={{ background: `var(--chart-${index + 1})` }} />{item.label} {formatPercent(item.weight)}</span>)}</div>
-        <div className="notice section-gap"><CircleHelp size={20} /><p>Düşük güvenli veri, nötr ağırlıktan büyük sapmaları otomatik olarak bastırır.</p></div>
+        <div className="chart-legend">{allocation.items.map((item, index) => <span key={item.assetClass}><i className="legend-dot" style={{ background: `var(--chart-${index + 1})` }} />{item.label} {formatUnsignedPercent(item.weight)}</span>)}</div>
+        <div className="notice section-gap"><CircleHelp size={20} /><p>Fırsat skoru oranı yönlendirir; veri güveni düşükse nötr ağırlıktan sapma otomatik olarak küçülür. Bitcoin için BTC/M2 ve 200 haftalık SMA ayrıca hesaba katılır.</p></div>
       </Card>
     </div>
     <Card className="section-gap">
@@ -81,10 +91,10 @@ export function MonthlyPlan() {
       {allocation.items.map((item, index) => {
         const detail = signals[item.assetClass];
         return <div className="allocation-row" key={item.assetClass}>
-          <div><div className="allocation-name">{item.label}</div><div className="allocation-note">{proxies[item.assetClass].label} sinyali · Nötr {formatPercent(item.neutralWeight, 0)}</div></div>
+          <div><div className="allocation-name">{item.label}</div><div className="allocation-note">{proxies[item.assetClass].label} sinyali · Nötr {formatUnsignedPercent(item.neutralWeight, 0)}</div></div>
           <div className="progress"><span style={{ width: `${item.weight * 100}%`, background: `var(--chart-${index + 1})` }} /></div>
-          <strong>{formatPercent(item.weight, 1)}</strong>
-          <div className="number"><strong>{formatMoney(item.amount)}</strong><div className="confidence">Güven {formatPercent(item.confidence, 0)}</div></div>
+          <strong>{formatUnsignedPercent(item.weight, 1)}</strong>
+          <div className="number"><strong>{formatMoney(item.amount)}</strong><div className="confidence">Fırsat {item.signal >= 0 ? "+" : ""}{Math.round(item.signal * 100)}/100 · Veri güveni {formatUnsignedPercent(item.confidence, 0)}</div></div>
           <details style={{ gridColumn: "1 / -1" }}><summary className="muted">Neden bu oran?</summary><p className="muted">{item.explanation} {detail?.reasons.join(" ") ?? "Canlı geçmiş veri alınamadığı için nötr ağırlık korundu."}</p></details>
         </div>;
       })}

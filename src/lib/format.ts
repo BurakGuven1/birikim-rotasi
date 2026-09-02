@@ -4,6 +4,9 @@ export const formatMoney = (value: number, currency: "TRY" | "USD" | "EUR" = "TR
 export const formatPercent = (value: number, digits = 1) =>
   new Intl.NumberFormat("tr-TR", { style: "percent", minimumFractionDigits: digits, maximumFractionDigits: digits, signDisplay: "exceptZero" }).format(value);
 
+export const formatUnsignedPercent = (value: number, digits = 1) =>
+  new Intl.NumberFormat("tr-TR", { style: "percent", minimumFractionDigits: digits, maximumFractionDigits: digits, signDisplay: "never" }).format(value);
+
 export const formatNumber = (value: number, digits = 2) =>
   new Intl.NumberFormat("tr-TR", { maximumFractionDigits: digits }).format(value);
 

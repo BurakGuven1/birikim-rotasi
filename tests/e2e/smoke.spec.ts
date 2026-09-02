@@ -9,6 +9,10 @@ async function stubMarketApi(page: import("@playwright/test").Page) {
       const payload = Object.fromEntries(symbols.map((symbol, index) => [symbol, { ok: true, data: { price: symbol === "USDTRY" ? 48.26 : 100 + index * 12, currency: symbol === "USDTRY" || symbol === "BIST100" ? "TRY" : "USD", asOf: "2026-09-01T12:00:00Z", source: "E2E doğrulama verisi", status: "fresh", changePercent: index - 2 } }]));
       await route.fulfill({ contentType: "application/json", body: JSON.stringify(payload) }); return;
     }
+    if (url.pathname.endsWith("/macro-history")) {
+      const points = Array.from({ length: 180 }, (_, index) => ({ date: new Date(Date.UTC(2011, index, 1)).toISOString(), close: 10_000 + index * 70 }));
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ points, source: "FRED E2E" }) }); return;
+    }
     if (url.pathname.endsWith("/history")) {
       const points = Array.from({ length: 260 }, (_, index) => ({ date: new Date(Date.UTC(2021, 0, 1 + index * 7)).toISOString(), open: 95 + index * .2, high: 102 + index * .2, low: 92 + index * .2, close: 98 + index * .2, volume: 1000 + index }));
       await route.fulfill({ contentType: "application/json", body: JSON.stringify({ points, source: "E2E doğrulama verisi" }) }); return;
@@ -44,6 +48,7 @@ for (const item of pages) {
     await page.goto(item.path, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
     if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
+    if (item.path === "/backtest") await expect(page.getByTestId("exact-invested")).toContainText("₺3.000.000");
     await page.locator("html[data-theme]").waitFor({ state: "attached" });
     await page.screenshot({ path: `artifacts/ui/${item.shot}.png`, fullPage: false });
     expect(errors).toEqual([]);

@@ -34,11 +34,14 @@ export async function getQuote(symbol: string): Promise<MarketSnapshot> {
 
 export async function getHistory(symbol: string, range = "5y"): Promise<{ points: PricePoint[]; source: string }> {
   const errors: string[] = [];
+  const requestedMonths = range === "max" ? 120 : (Number.parseInt(range, 10) || 5) * 12;
   for (const provider of providers) {
     if (!provider.supports(symbol)) continue;
     try {
       const points = await provider.getHistory(symbol, range);
-      if (points.length > 0) return { points, source: provider.id };
+      const coveredMonths = new Set(points.map((point) => point.date.slice(0, 7))).size;
+      if (coveredMonths >= requestedMonths) return { points, source: provider.id };
+      if (points.length > 0) errors.push(`${provider.id}: ${requestedMonths} ay istendi, yalnızca ${coveredMonths} ay geldi`);
     } catch (error) {
       errors.push(`${provider.id}: ${error instanceof Error ? error.message : "hata"}`);
     }

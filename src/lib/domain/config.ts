@@ -24,7 +24,7 @@ export interface AssetClassConstraint {
 export const ALLOCATION_CONSTRAINTS: Record<AssetClass, AssetClassConstraint> = {
   foreignEquity: { min: 0.25, neutral: 0.35, max: 0.5, sensitivity: 0.12 },
   commodity: { min: 0.1, neutral: 0.25, max: 0.4, sensitivity: 0.1 },
-  bitcoin: { min: 0.05, neutral: 0.2, max: 0.35, sensitivity: 0.12 },
+  bitcoin: { min: 0.05, neutral: 0.2, max: 0.45, sensitivity: 0.22 },
   turkishEquity: { min: 0.1, neutral: 0.2, max: 0.35, sensitivity: 0.1 },
 };
 

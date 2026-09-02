@@ -34,7 +34,7 @@ function token() {
 }
 
 function fromDate(range: string) {
-  const years = Number.parseInt(range, 10) || 5;
+  const years = range === "max" ? 20 : Number.parseInt(range, 10) || 5;
   const date = new Date();
   date.setUTCFullYear(date.getUTCFullYear() - years);
   return date.toISOString().slice(0, 10);
