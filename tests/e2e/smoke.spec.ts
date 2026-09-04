@@ -33,6 +33,7 @@ const pages = [
   { path: "/", heading: "Bu ayın yatırım rotası", shot: "home-desktop" },
   { path: "/piyasa", heading: "Piyasa göstergeleri", shot: "market-desktop" },
   { path: "/portfoyum", heading: "Portföyüm", shot: "portfolio-desktop" },
+  { path: "/swing", heading: "Swing masası", shot: "swing-desktop" },
   { path: "/backtest", heading: "Düzenli alım backtesti", shot: "backtest-desktop" },
   { path: "/ayarlar", heading: "Ayarlar ve veri kaynakları", shot: "settings-desktop" },
   { path: "/varlik/BTC", heading: "Bitcoin", shot: "asset-desktop" },
@@ -55,6 +56,10 @@ for (const item of pages) {
       await expect(page.getByText("Reel USD hedefi", { exact: true })).toBeVisible();
     }
     if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
+    if (item.path === "/swing") {
+      await expect(page.getByText("İşlem başına risk", { exact: false })).toContainText("%0,50");
+      await expect(page.getByText("Taktik tavan", { exact: false })).toContainText("%20");
+    }
     if (item.path === "/ayarlar") {
       await expect(page.getByLabel("Yıllık ek katkı (USD)", { exact: true })).toHaveValue("3750");
       await expect(page.getByLabel("Yıllık ek katkı ayı", { exact: true })).toHaveValue("1");

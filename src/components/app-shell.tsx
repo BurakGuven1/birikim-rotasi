@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bitcoin, ChartNoAxesCombined, FlaskConical, Home, Moon, Settings2, Sun, WalletCards } from "lucide-react";
+import { BarChart3, Bitcoin, ChartNoAxesCombined, Crosshair, Home, Moon, Settings2, Sun, WalletCards } from "lucide-react";
 import { useTheme } from "./theme-provider";
 
 const links = [
-  { href: "/", label: "Aylık Plan", icon: Home },
-  { href: "/piyasa", label: "Piyasa", icon: ChartNoAxesCombined },
-  { href: "/portfoyum", label: "Portföyüm", icon: WalletCards },
+  { href: "/", label: "Rota", icon: Home },
+  { href: "/portfoyum", label: "Portföy", icon: WalletCards },
+  { href: "/swing", label: "Swing", icon: Crosshair },
+  { href: "/piyasa", label: "Analiz", icon: ChartNoAxesCombined },
   { href: "/backtest", label: "Backtest", icon: BarChart3 },
-  { href: "/arastirma", label: "Metodoloji", icon: FlaskConical },
   { href: "/ayarlar", label: "Ayarlar", icon: Settings2 },
 ];
 
