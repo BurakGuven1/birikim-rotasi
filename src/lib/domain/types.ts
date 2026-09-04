@@ -52,3 +52,24 @@ export interface AllocationResult {
   confidence: number;
   generatedAt: string;
 }
+
+export type TacticalTradeStatus = "planned" | "open" | "closed";
+
+export interface TacticalTrade {
+  id: string;
+  setupId: string;
+  symbol: string;
+  name: string;
+  status: TacticalTradeStatus;
+  plannedAt: string;
+  openedAt?: string;
+  closedAt?: string;
+  plannedEntry: number;
+  invalidation: number;
+  targets: [number, number];
+  plannedSizeUsd: number;
+  actualEntry?: number;
+  actualExit?: number;
+  realizedPnlUsd?: number;
+  setupSnapshot: string;
+}
