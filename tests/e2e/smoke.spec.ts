@@ -30,9 +30,10 @@ async function stubMarketApi(page: import("@playwright/test").Page) {
 }
 
 const pages = [
-  { path: "/", heading: "Bu ayın birikim rotası", shot: "home-desktop" },
+  { path: "/", heading: "Bu ayın yatırım rotası", shot: "home-desktop" },
   { path: "/piyasa", heading: "Piyasa göstergeleri", shot: "market-desktop" },
   { path: "/portfoyum", heading: "Portföyüm", shot: "portfolio-desktop" },
+  { path: "/swing", heading: "Swing masası", shot: "swing-desktop" },
   { path: "/backtest", heading: "Düzenli alım backtesti", shot: "backtest-desktop" },
   { path: "/ayarlar", heading: "Ayarlar ve veri kaynakları", shot: "settings-desktop" },
   { path: "/varlik/BTC", heading: "Bitcoin", shot: "asset-desktop" },
@@ -49,20 +50,28 @@ for (const item of pages) {
     await page.goto(item.path, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
     if (item.path === "/") {
-      await expect(page.getByText("Dengeli optimum %70", { exact: true })).toBeVisible();
-      await expect(page.getByText("Güncel dinamik %30", { exact: true })).toBeVisible();
-      await expect(page.getByText("Optimum", { exact: false }).first()).toBeVisible();
-      await expect(page.getByTestId("monthly-budget-usd")).toContainText("$1.000");
-      await expect(page.getByTestId("monthly-budget-try")).toContainText("₺");
-      await expect(page.getByText("S&P 500 / ABD hisseleri", { exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Bugünün alım gücüyle hedef", exact: true })).toBeVisible();
+      await expect(page.getByText("Çekirdek", { exact: true })).toBeVisible();
+      await expect(page.getByText("Taktik / swing", { exact: true })).toBeVisible();
+      await expect(page.getByText("Fırsat rezervi", { exact: true })).toBeVisible();
+      await expect(page.getByText("Reel USD hedefi", { exact: true })).toBeVisible();
     }
     if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
+    if (item.path === "/swing") {
+      await expect(page.getByText("İşlem başına risk", { exact: false })).toContainText("%0,50");
+      await expect(page.getByText("Taktik tavan", { exact: false })).toContainText("%20");
+    }
+    if (item.path === "/ayarlar") {
+      await expect(page.getByLabel("Yıllık ek katkı (USD)", { exact: true })).toHaveValue("3750");
+      await expect(page.getByLabel("Yıllık ek katkı ayı", { exact: true })).toHaveValue("1");
+      await expect(page.getByLabel("Taktik bütçe (%)", { exact: true })).toHaveValue("20");
+      await expect(page.getByLabel("İşlem başına risk (%)", { exact: true })).toHaveValue("0.5");
+    }
     if (item.path === "/backtest") {
-      await expect(page.getByTestId("exact-invested")).toContainText("$60.000");
+      await expect(page.getByTestId("exact-invested")).toContainText("$78.750");
       await expect(page.getByRole("columnheader", { name: "Reel USD getiri", exact: true })).toBeVisible();
       await expect(page.getByText("ABD TÜFE koruma eşiği", { exact: true })).toBeVisible();
       await expect(page.getByRole("cell", { name: "Aylık plan · %70/%30 walk-forward", exact: true })).toBeVisible();
+      await expect(page.getByRole("cell", { name: "Çekirdek + kurallı swing", exact: true })).toBeVisible();
       await expect(page.getByRole("cell", { name: "%25 eşit sepet", exact: true })).toHaveCount(0);
       await expect(page.getByRole("cell", { name: "Maksimum statik", exact: true })).toHaveCount(0);
       await expect(page.getByRole("cell", { name: "Teorik üst sınır", exact: true })).toHaveCount(0);
@@ -73,15 +82,21 @@ for (const item of pages) {
   });
 }
 
-test("375 piksel mobil görünüm yatay taşma üretmez", async ({ page }) => {
-  await stubMarketApi(page);
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Bu ayın birikim rotası", exact: true })).toBeVisible();
-  await page.locator("html[data-theme]").waitFor({ state: "attached" });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: "artifacts/ui/home-mobile.png", fullPage: false });
-});
+for (const item of [
+  { path: "/", heading: "Bu ayın yatırım rotası", shot: "home-mobile" },
+  { path: "/swing", heading: "Swing masası", shot: "swing-mobile" },
+  { path: "/ayarlar", heading: "Ayarlar ve veri kaynakları", shot: "settings-mobile" },
+]) {
+  test(`375 piksel ${item.heading} görünümü yatay taşma üretmez`, async ({ page }) => {
+    await stubMarketApi(page);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(item.path, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
+    await page.locator("html[data-theme]").waitFor({ state: "attached" });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: `artifacts/ui/${item.shot}.png`, fullPage: false });
+  });
+}
 
 test("koyu tema etkinleşir ve okunabilir kalır", async ({ page }) => {
   await stubMarketApi(page);

@@ -11,6 +11,32 @@ describe("settings migration", () => {
       monthlyBudgetUsd: 1_250,
       targetUsd: 600_000,
       riskAnswersCompleted: true,
+      annualContributionUsd: 3_750,
+      annualContributionMonth: 1,
+      tacticalShare: 0.2,
+      perTradeRisk: 0.005,
+      minRiskReward: 2,
+      minConfidence: 0.6,
+    });
+  });
+
+  it("bounds unsafe strategy settings while preserving valid values", () => {
+    expect(normalizeUserSettings({
+      monthlyBudgetUsd: 900,
+      annualContributionUsd: 4_000,
+      annualContributionMonth: 13,
+      tacticalShare: 0.8,
+      perTradeRisk: 0.04,
+      minRiskReward: 1,
+      minConfidence: 0.2,
+    })).toMatchObject({
+      monthlyBudgetUsd: 900,
+      annualContributionUsd: 4_000,
+      annualContributionMonth: 1,
+      tacticalShare: 0.25,
+      perTradeRisk: 0.01,
+      minRiskReward: 2,
+      minConfidence: 0.6,
     });
   });
 });

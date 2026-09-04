@@ -1,6 +1,6 @@
 # Veri Kaynakları
 
-Erişim tarihi: **1 Eylül 2026**. Uygulama her yanıtta kaynak adı, verinin zamanı ve güncellik sınıfı taşır.
+Erişim tarihi: **4 Eylül 2026**. Uygulama her yanıtta kaynak adı, verinin zamanı ve güncellik sınıfı taşır.
 
 | Kaynak | Kullanım | Anahtar | Güncellik / sınırlama | Yedek |
 | --- | --- | --- | --- | --- |
@@ -21,3 +21,9 @@ Erişim tarihi: **1 Eylül 2026**. Uygulama her yanıtta kaynak adı, verinin za
 - `unavailable`: güvenilir değer ve önbellek yok; hesaplamaya sıfır fiyat eklenmez.
 
 FRED API kullanıldığında arayüzde şu uyarı geçerlidir: “This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.”
+
+## Araştırma bağlayıcıları ve çalışma zamanı ayrımı
+
+ChatGPT Work araştırma oturumunda Bigdata.com şirket/market bağlamı, CoinMarketCap kripto piyasa rejimi ve Financial Datasets makro veri erişimi kullanılabilir. Bunlar bu yerel Next.js uygulamasının tarayıcı veya sunucu çalışma zamanı bağımlılığı değildir; bağlayıcı kimlik bilgileri repoya yazılmaz ve portföy verisi bu servislere gönderilmez.
+
+Uygulamanın canlı çalışma zamanı yalnız yukarıdaki tabloda yer alan EODHD, Alpha Vantage, FRED, Binance, Yahoo-compatible uç ve Stooq adaptörlerini kullanır. Yeni bir sağlayıcı eklenirse kaynak adı, zaman damgası, gecikme sınıfı, kota davranışı ve başarısızlık yedeği tanımlanmadan hesaplamaya alınmamalıdır.
