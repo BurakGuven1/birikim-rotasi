@@ -58,6 +58,12 @@ for (const item of pages) {
       await expect(page.getByRole("heading", { name: "Bugünün alım gücüyle hedef", exact: true })).toBeVisible();
     }
     if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
+    if (item.path === "/ayarlar") {
+      await expect(page.getByLabel("Yıllık ek katkı (USD)", { exact: true })).toHaveValue("3750");
+      await expect(page.getByLabel("Yıllık ek katkı ayı", { exact: true })).toHaveValue("1");
+      await expect(page.getByLabel("Taktik bütçe (%)", { exact: true })).toHaveValue("20");
+      await expect(page.getByLabel("İşlem başına risk (%)", { exact: true })).toHaveValue("0.5");
+    }
     if (item.path === "/backtest") {
       await expect(page.getByTestId("exact-invested")).toContainText("$60.000");
       await expect(page.getByRole("columnheader", { name: "Reel USD getiri", exact: true })).toBeVisible();
