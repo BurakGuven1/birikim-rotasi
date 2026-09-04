@@ -92,6 +92,58 @@ describe("core + tactical backtest", () => {
     expect(result.tacticalPnlUsd).toBeCloseTo(-20, 8);
   });
 
+  it("reports matched core and tactical quality metrics after costs", () => {
+    const core = [
+      point("2026-01-02", 100),
+      point("2026-01-05", 100),
+      point("2026-01-06", 100),
+    ];
+    const tactical = [
+      point("2026-01-02", 100),
+      point("2026-01-05", 100, 80, 120),
+      point("2026-01-06", 100, 99, 115),
+    ];
+    const setupFactory: TacticalSetupFactory = (input) => ({
+      id: `setup-${input.prices.length}`,
+      symbol: input.symbol,
+      name: input.name,
+      action: "long",
+      generatedAt: input.prices.at(-1)!.date,
+      expiresAt: "2026-01-10",
+      entryZone: [99, 101],
+      invalidation: 90,
+      targetZones: [110, 120],
+      riskReward: 2,
+      confidence: 0.8,
+      positionSizeUsd: 200,
+      portfolioRiskUsd: 20,
+      reasons: [],
+    });
+
+    const result = runCoreTacticalBacktest({
+      monthlyContribution: 1_000,
+      annualContribution: 0,
+      annualContributionMonth: 1,
+      corePrices: core,
+      tacticalPrices: tactical,
+      profile: DEFAULT_STRATEGY_PROFILE,
+      setupFactory,
+      spreadBps: 0,
+      commissionUsd: 0,
+    });
+
+    expect(result.coreOnly.finalValue).toBe(1_000);
+    expect(result.tacticalOnly).toMatchObject({
+      realizedPnlUsd: 0,
+      tradeCount: 2,
+      winRate: 0.5,
+      payoffRatio: 1,
+      profitFactor: 1,
+    });
+    expect(result.tacticalOnly.turnover).toBeCloseTo(0.8, 8);
+    expect(result.benchmarkDelta).toBe(0);
+  });
+
   it("does not count monthly or annual cash deposits as investment returns", () => {
     const dates = ["2026-01-02", "2026-02-02", "2026-03-02"];
     const flat = dates.map((date) => point(date, 100));

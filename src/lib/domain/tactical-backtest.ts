@@ -29,6 +29,15 @@ interface CoreTacticalBacktestInput {
 }
 
 export interface CoreTacticalBacktestResult extends BacktestResult {
+  coreOnly: BacktestResult;
+  tacticalOnly: {
+    realizedPnlUsd: number;
+    tradeCount: number;
+    winRate: number;
+    turnover: number;
+    payoffRatio: number;
+    profitFactor: number;
+  };
   tacticalPnlUsd: number;
   tradeCount: number;
   winRate: number;
@@ -100,7 +109,9 @@ export function runCoreTacticalBacktest(input: CoreTacticalBacktestInput): CoreT
   const name = input.tacticalName ?? "Bitcoin";
   const stagedCore = new Map<string, number>();
   const monthlyOutput = new Map<string, BacktestResult["series"][number]>();
+  const benchmarkOutput = new Map<string, BacktestResult["series"][number]>();
   const returns: number[] = [];
+  const benchmarkReturns: number[] = [];
 
   let cash = 0;
   let coreUnits = 0;
@@ -108,12 +119,16 @@ export function runCoreTacticalBacktest(input: CoreTacticalBacktestInput): CoreT
   let benchmarkUnits = 0;
   let invested = 0;
   let previousValue = 0;
+  let previousBenchmarkValue = 0;
   let previousMonth = "";
   let pending: TacticalSetup | undefined;
   let openTrade: OpenTrade | undefined;
   let tacticalPnlUsd = 0;
   let tradeCount = 0;
   let winningTrades = 0;
+  let grossProfit = 0;
+  let grossLoss = 0;
+  let grossTradedNotional = 0;
 
   selected.forEach((tacticalPoint, index) => {
     const dateKey = tacticalPoint.date.slice(0, 10);
@@ -161,6 +176,7 @@ export function runCoreTacticalBacktest(input: CoreTacticalBacktestInput): CoreT
             invalidation: pending.invalidation,
             target: pending.targetZones[0],
           };
+          grossTradedNotional += notional;
         }
         pending = undefined;
       } else if (!active) {
@@ -181,18 +197,27 @@ export function runCoreTacticalBacktest(input: CoreTacticalBacktestInput): CoreT
         tacticalPnlUsd += pnl;
         tradeCount += 1;
         if (pnl > 0) winningTrades += 1;
+        if (pnl > 0) grossProfit += pnl;
+        if (pnl < 0) grossLoss += Math.abs(pnl);
+        grossTradedNotional += Math.max(0, proceeds);
         tacticalUnits = 0;
         openTrade = undefined;
       }
     }
 
     const endValue = cash + coreUnits * corePoint.close + tacticalUnits * tacticalPoint.close;
+    const benchmarkValue = benchmarkUnits * corePoint.close;
     if (index > 0 && previousValue > 0) {
       returns.push((endValue - externalContribution) / previousValue - 1);
     }
+    if (index > 0 && previousBenchmarkValue > 0) {
+      benchmarkReturns.push((benchmarkValue - externalContribution) / previousBenchmarkValue - 1);
+    }
 
     monthlyOutput.set(currentMonth, { date: tacticalPoint.date, invested, value: endValue });
+    benchmarkOutput.set(currentMonth, { date: tacticalPoint.date, invested, value: benchmarkValue });
     previousValue = endValue;
+    previousBenchmarkValue = benchmarkValue;
 
     if (!openTrade && !pending) {
       const throughToday = tactical.filter((point) => point.date <= tacticalPoint.date);
@@ -211,6 +236,26 @@ export function runCoreTacticalBacktest(input: CoreTacticalBacktestInput): CoreT
   const finalValue = series.at(-1)?.value ?? 0;
   const lastCore = selected.length ? coreByDate.get(selected.at(-1)!.date.slice(0, 10))!.close : 0;
   const benchmarkFinalValue = benchmarkUnits * lastCore;
+  const coreOnlySeries = [...benchmarkOutput.values()];
+  const coreOnly: BacktestResult = {
+    totalInvested: invested,
+    units: benchmarkUnits,
+    finalValue: benchmarkFinalValue,
+    totalReturn: invested > 0 ? benchmarkFinalValue / invested - 1 : 0,
+    ...metrics(benchmarkReturns),
+    series: coreOnlySeries,
+  };
+  const losingTrades = tradeCount - winningTrades;
+  const averageWin = winningTrades ? grossProfit / winningTrades : 0;
+  const averageLoss = losingTrades ? grossLoss / losingTrades : 0;
+  const tacticalOnly = {
+    realizedPnlUsd: tacticalPnlUsd,
+    tradeCount,
+    winRate: tradeCount ? winningTrades / tradeCount : 0,
+    turnover: invested > 0 ? grossTradedNotional / invested : 0,
+    payoffRatio: averageLoss > 0 ? averageWin / averageLoss : averageWin > 0 ? Number.POSITIVE_INFINITY : 0,
+    profitFactor: grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Number.POSITIVE_INFINITY : 0,
+  };
   return {
     totalInvested: invested,
     units: coreUnits + tacticalUnits,
@@ -218,6 +263,8 @@ export function runCoreTacticalBacktest(input: CoreTacticalBacktestInput): CoreT
     totalReturn: invested > 0 ? finalValue / invested - 1 : 0,
     ...metrics(returns),
     series,
+    coreOnly,
+    tacticalOnly,
     tacticalPnlUsd,
     tradeCount,
     winRate: tradeCount ? winningTrades / tradeCount : 0,
