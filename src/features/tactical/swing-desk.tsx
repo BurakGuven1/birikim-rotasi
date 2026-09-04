@@ -55,7 +55,7 @@ export function SwingDesk() {
   const [trades, setTrades] = useState<TacticalTrade[]>([]);
   const [journalError, setJournalError] = useState("");
   const reload = useCallback(async () => setTrades(await tacticalTradeRepository.list()), []);
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => { void Promise.resolve().then(reload); }, [reload]);
   const perform = async (operation: () => Promise<unknown>) => {
     try { setJournalError(""); await operation(); await reload(); }
     catch (error) { setJournalError(error instanceof Error ? error.message : "İşlem günlüğü güncellenemedi."); }

@@ -103,6 +103,6 @@ export function useStrategyRoute(): StrategyRouteState {
     setState({ plan, profile, setups, usdTry, portfolioValueUsd: riskBase.value, portfolioValueEstimated: riskBase.estimated, loading: false, errors });
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void Promise.resolve().then(refresh); }, [refresh]);
   return { ...state, refresh };
 }

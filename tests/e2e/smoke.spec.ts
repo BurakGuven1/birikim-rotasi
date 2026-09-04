@@ -82,15 +82,21 @@ for (const item of pages) {
   });
 }
 
-test("375 piksel mobil görünüm yatay taşma üretmez", async ({ page }) => {
-  await stubMarketApi(page);
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Bu ayın yatırım rotası", exact: true })).toBeVisible();
-  await page.locator("html[data-theme]").waitFor({ state: "attached" });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: "artifacts/ui/home-mobile.png", fullPage: false });
-});
+for (const item of [
+  { path: "/", heading: "Bu ayın yatırım rotası", shot: "home-mobile" },
+  { path: "/swing", heading: "Swing masası", shot: "swing-mobile" },
+  { path: "/ayarlar", heading: "Ayarlar ve veri kaynakları", shot: "settings-mobile" },
+]) {
+  test(`375 piksel ${item.heading} görünümü yatay taşma üretmez`, async ({ page }) => {
+    await stubMarketApi(page);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(item.path, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
+    await page.locator("html[data-theme]").waitFor({ state: "attached" });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: `artifacts/ui/${item.shot}.png`, fullPage: false });
+  });
+}
 
 test("koyu tema etkinleşir ve okunabilir kalır", async ({ page }) => {
   await stubMarketApi(page);

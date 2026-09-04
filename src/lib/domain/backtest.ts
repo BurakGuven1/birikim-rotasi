@@ -14,7 +14,7 @@ export function buildAnnualContributionSchedule(
   monthlyContribution: number,
   annualContribution: number,
   annualContributionMonth: number,
-) {
+): (date: string, index: number) => number {
   if (!Number.isFinite(monthlyContribution) || monthlyContribution <= 0) {
     throw new Error("Aylık katkı sıfırdan büyük olmalı.");
   }
@@ -25,7 +25,7 @@ export function buildAnnualContributionSchedule(
     throw new Error("Yıllık ek katkı ayı 1 ile 12 arasında olmalı.");
   }
 
-  return (date: string, _index?: number) => {
+  return (date: string) => {
     const month = new Date(date).getUTCMonth() + 1;
     return month === annualContributionMonth ? monthlyContribution + annualContribution : monthlyContribution;
   };

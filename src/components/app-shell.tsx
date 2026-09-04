@@ -39,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
       <main className="main-content" id="main-content">{children}</main>
       <nav className="mobile-nav" aria-label="Mobil navigasyon">
-        {links.slice(0, 5).map(({ href, label, icon: Icon }) => {
+        {links.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return <Link key={href} href={href} className={active ? "mobile-link active" : "mobile-link"}><Icon size={20} /><span>{label.replace("Aylık ", "")}</span></Link>;
         })}
