@@ -10,6 +10,8 @@ const symbolMap: Record<string, string> = {
   VT: "VT.US",
   VOO: "VOO.US",
   QQQM: "QQQM.US",
+  QUAL: "QUAL.US",
+  SGOV: "SGOV.US",
   SP500: "GSPC.INDX",
   NASDAQ: "IXIC.INDX",
   BIST100: "XU100.INDX",

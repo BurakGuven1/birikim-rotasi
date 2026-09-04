@@ -30,7 +30,7 @@ async function stubMarketApi(page: import("@playwright/test").Page) {
 }
 
 const pages = [
-  { path: "/", heading: "Bu ayın birikim rotası", shot: "home-desktop" },
+  { path: "/", heading: "Bu ayın yatırım rotası", shot: "home-desktop" },
   { path: "/piyasa", heading: "Piyasa göstergeleri", shot: "market-desktop" },
   { path: "/portfoyum", heading: "Portföyüm", shot: "portfolio-desktop" },
   { path: "/backtest", heading: "Düzenli alım backtesti", shot: "backtest-desktop" },
@@ -49,13 +49,10 @@ for (const item of pages) {
     await page.goto(item.path, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
     if (item.path === "/") {
-      await expect(page.getByText("Dengeli optimum %70", { exact: true })).toBeVisible();
-      await expect(page.getByText("Güncel dinamik %30", { exact: true })).toBeVisible();
-      await expect(page.getByText("Optimum", { exact: false }).first()).toBeVisible();
-      await expect(page.getByTestId("monthly-budget-usd")).toContainText("$1.000");
-      await expect(page.getByTestId("monthly-budget-try")).toContainText("₺");
-      await expect(page.getByText("S&P 500 / ABD hisseleri", { exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Bugünün alım gücüyle hedef", exact: true })).toBeVisible();
+      await expect(page.getByText("Çekirdek", { exact: true })).toBeVisible();
+      await expect(page.getByText("Taktik / swing", { exact: true })).toBeVisible();
+      await expect(page.getByText("Fırsat rezervi", { exact: true })).toBeVisible();
+      await expect(page.getByText("Reel USD hedefi", { exact: true })).toBeVisible();
     }
     if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
     if (item.path === "/ayarlar") {
@@ -83,7 +80,7 @@ test("375 piksel mobil görünüm yatay taşma üretmez", async ({ page }) => {
   await stubMarketApi(page);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Bu ayın birikim rotası", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bu ayın yatırım rotası", exact: true })).toBeVisible();
   await page.locator("html[data-theme]").waitFor({ state: "attached" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "artifacts/ui/home-mobile.png", fullPage: false });
