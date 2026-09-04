@@ -67,10 +67,11 @@ for (const item of pages) {
       await expect(page.getByLabel("İşlem başına risk (%)", { exact: true })).toHaveValue("0.5");
     }
     if (item.path === "/backtest") {
-      await expect(page.getByTestId("exact-invested")).toContainText("$60.000");
+      await expect(page.getByTestId("exact-invested")).toContainText("$78.750");
       await expect(page.getByRole("columnheader", { name: "Reel USD getiri", exact: true })).toBeVisible();
       await expect(page.getByText("ABD TÜFE koruma eşiği", { exact: true })).toBeVisible();
       await expect(page.getByRole("cell", { name: "Aylık plan · %70/%30 walk-forward", exact: true })).toBeVisible();
+      await expect(page.getByRole("cell", { name: "Çekirdek + kurallı swing", exact: true })).toBeVisible();
       await expect(page.getByRole("cell", { name: "%25 eşit sepet", exact: true })).toHaveCount(0);
       await expect(page.getByRole("cell", { name: "Maksimum statik", exact: true })).toHaveCount(0);
       await expect(page.getByRole("cell", { name: "Teorik üst sınır", exact: true })).toHaveCount(0);

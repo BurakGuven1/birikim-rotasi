@@ -10,6 +10,27 @@ interface BacktestInput {
   contributionForDate?: (date: string, index: number) => number;
 }
 
+export function buildAnnualContributionSchedule(
+  monthlyContribution: number,
+  annualContribution: number,
+  annualContributionMonth: number,
+) {
+  if (!Number.isFinite(monthlyContribution) || monthlyContribution <= 0) {
+    throw new Error("Aylık katkı sıfırdan büyük olmalı.");
+  }
+  if (!Number.isFinite(annualContribution) || annualContribution < 0) {
+    throw new Error("Yıllık ek katkı negatif olamaz.");
+  }
+  if (!Number.isInteger(annualContributionMonth) || annualContributionMonth < 1 || annualContributionMonth > 12) {
+    throw new Error("Yıllık ek katkı ayı 1 ile 12 arasında olmalı.");
+  }
+
+  return (date: string, _index?: number) => {
+    const month = new Date(date).getUTCMonth() + 1;
+    return month === annualContributionMonth ? monthlyContribution + annualContribution : monthlyContribution;
+  };
+}
+
 export interface BacktestResult {
   totalInvested: number;
   units: number;

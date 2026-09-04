@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { applyUsdInflation, convertTrySeriesToUsd, maxDrawdown, optimizeBalancedConsensus, optimizeStaticAllocation, runAllocationBacktest, runDcaBacktest, runPerfectForesightBacktest, runWalkForwardAllocationBacktest } from "./backtest";
+import { applyUsdInflation, buildAnnualContributionSchedule, convertTrySeriesToUsd, maxDrawdown, optimizeBalancedConsensus, optimizeStaticAllocation, runAllocationBacktest, runDcaBacktest, runPerfectForesightBacktest, runWalkForwardAllocationBacktest } from "./backtest";
 
 describe("backtest", () => {
+  it("adds the annual contribution only in the selected calendar month", () => {
+    const schedule = buildAnnualContributionSchedule(1_000, 3_750, 4);
+
+    expect(schedule("2026-03-01", 0)).toBe(1_000);
+    expect(schedule("2026-04-01", 1)).toBe(4_750);
+    expect(schedule("2027-04-01", 13)).toBe(4_750);
+  });
+
   it("buys only at each historical timestamp without seeing the next price", () => {
     const result = runDcaBacktest({
       monthlyContribution: 100,
