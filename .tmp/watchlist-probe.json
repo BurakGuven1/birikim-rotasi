@@ -1,0 +1,1 @@
+{"symbols": {"tickers": ["NASDAQ:AAPL", "BIST:THYAO"]}, "columns": ["name", "description", "close", "currency", "price_earnings_ttm", "price_book_fq", "enterprise_value_ebitda_ttm", "SMA200|1W", "market_cap_basic"]}

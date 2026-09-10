@@ -1,0 +1,48 @@
+import { chromium } from 'playwright';
+import { mkdir } from 'node:fs/promises';
+const browser = await chromium.launch({ channel: 'msedge', headless: true });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const page = await context.newPage();
+const errors = []; let apiCalls = 0;
+page.on('pageerror', e => errors.push(e.message));
+page.on('request', request => { if (request.url().includes('/api/market/')) apiCalls++; });
+try {
+ await page.goto('http://localhost:3000/takip-listesi');
+ await page.getByRole('button', { name: 'Güncelle', exact: true }).waitFor();
+ await page.getByRole('tab', { name: /BIST 100/ }).click();
+ await page.getByRole('tab', { name: /ABD 100/ }).click();
+ if (apiCalls !== 0) throw new Error('Automatic market request on page entry');
+ await page.getByRole('button', { name: 'Güncelle', exact: true }).click();
+ await page.getByRole('button', { name: 'Güncelle', exact: true }).waitFor({ timeout: 60000 });
+ console.log('refresh:', await page.getByRole('status').textContent(), 'requests:', apiCalls);
+ const alerts = await page.getByRole('alert').allTextContents();
+ console.log('source alerts:', alerts);
+ await page.getByLabel('Hisse ara', { exact: true }).fill('AAPL');
+ await page.getByRole('button', { name: 'AAPL alış ekle', exact: true }).click();
+ const dialog = page.getByRole('dialog');
+ await dialog.getByLabel('Adet', { exact: true }).fill('2');
+ await dialog.getByLabel('Birim fiyat (USD)', { exact: true }).fill('100');
+ await dialog.getByRole('button', { name: 'Portföye kaydet', exact: true }).click();
+ await dialog.waitFor({ state: 'hidden' });
+ await page.getByRole('button', { name: 'AAPL satış ekle', exact: true }).click();
+ await page.getByRole('dialog').getByLabel('Adet', { exact: true }).fill('1');
+ await page.getByRole('dialog').getByLabel('Birim fiyat (USD)', { exact: true }).fill('110');
+ await page.getByRole('dialog').getByRole('button', { name: 'Portföye kaydet', exact: true }).click();
+ await page.getByRole('dialog').waitFor({ state: 'hidden' });
+ if (!await page.getByText('1 adet', { exact: true }).isVisible()) throw new Error('Position did not update');
+ await page.getByLabel('Hisse ara', { exact: true }).fill('');
+ await mkdir('artifacts/ui', { recursive: true });
+ await page.screenshot({ path: 'artifacts/ui/watchlist-desktop.png', fullPage: false });
+ const before = apiCalls;
+ await page.reload();
+ await page.getByRole('button', { name: 'Güncelle', exact: true }).waitFor();
+ await page.waitForFunction(() => { const b = [...document.querySelectorAll('button')].find(b => b.textContent === 'G?ncelle'); return b && !b.disabled; });
+ if (!await page.getByText('100 / 100', { exact: false }).count()) { const text = await page.locator('.watchlist-summary').innerText(); if (!text.includes('100')) throw new Error('Cache missing'); }
+ if (apiCalls !== before) throw new Error('Reload automatically fetched prices');
+ await page.setViewportSize({ width: 390, height: 844 });
+ if (!await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)) throw new Error('Mobile overflow');
+ await page.locator('.watchlist-panel').scrollIntoViewIfNeeded();
+ await page.screenshot({ path: 'artifacts/ui/watchlist-mobile.png', fullPage: false });
+ console.log('verified: manual refresh, cache reload, buy/sell and mobile; page errors:', errors);
+ if (errors.length) throw new Error(errors.join('; '));
+} finally { await browser.close(); }

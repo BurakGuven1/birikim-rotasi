@@ -1,3 +1,3 @@
 import { MarketGrid } from "@/features/market/market-grid";
-
-export default function MarketPage() { return <MarketGrid />; }
+import { RelativeAnalysis } from "@/features/market/relative-analysis";
+export default function MarketPage() { return <><RelativeAnalysis/><details className="method-details section-gap"><summary>Tek tek varlık fiyatları</summary><MarketGrid/></details></>; }

@@ -59,7 +59,7 @@ export function RouteDashboardView({ plan, profile, setups, usdTry, portfolioVal
       </Card>
     </div>
     <div className="grid grid-2 section-gap">
-      <Card><div className="card-title"><div><h3>Risk tabanı</h3><p>İşlem büyüklükleri bu değer üzerinden hesaplanır</p></div><Target size={19} /></div><p className="metric-value">{formatMoney(portfolioValueUsd, "USD")}</p><p className="muted">{portfolioValueEstimated ? "Portföy kaydı bulunmadığı için ilk 12 ay katkısı + yıllık ekleme ile tahmini taban." : "Portföyüm ekranındaki güncel kayıtlardan hesaplandı."} İşlem başına en fazla {formatUnsignedPercent(profile.perTradeRisk, 2)} risk.</p></Card>
+      <Card><div className="card-title"><div><h3>Risk tabanı</h3><p>İşlem büyüklükleri bu değer üzerinden hesaplanır</p></div><Target size={19} /></div><p className="metric-value">{formatMoney(portfolioValueUsd, "USD")}</p><p className="muted">{portfolioValueEstimated ? "Portföy değerlemesi veya risk profili eksik; yeni işlem riski ayrılmadı." : "Portföyüm ekranındaki güncel kayıtlardan hesaplandı."} İşlem başına en fazla {formatUnsignedPercent(profile.perTradeRisk, 2)} risk.</p></Card>
       <Card><div className="card-title"><div><h3>Yıllık ek katkı</h3><p>Tek güne bağımlı kalmayan dağıtım</p></div><Vault size={19} /></div><p className="metric-value">{formatMoney(profile.annualContributionUsd, "USD")}</p><p className="muted">Yarısı seçilen ay çekirdeğe, yarısı üç aya bölünerek rezerv ve uygun fırsatlara gider.</p></Card>
     </div>
     {errors.length ? <div className="notice danger section-gap"><p><strong>Veri notu:</strong> {errors.join(" · ")}</p></div> : null}

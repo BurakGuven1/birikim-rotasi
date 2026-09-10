@@ -9,15 +9,17 @@ const requireDb = () => {
   return investmentDb;
 };
 
-export function createPlannedTrade(setup: TacticalSetup, id = crypto.randomUUID()): TacticalTrade {
+export function createPlannedTrade(setup: TacticalSetup, id = crypto.randomUUID(), now = new Date()): TacticalTrade {
   if (setup.action !== "long") throw new Error("Yalnızca geçerli long kurulumu günlüğe eklenebilir.");
+  if (!Number.isFinite(Date.parse(setup.expiresAt)) || Date.parse(setup.expiresAt) <= now.getTime() || !Number.isFinite(Date.parse(setup.generatedAt)) || Date.parse(setup.generatedAt) > now.getTime()) throw new Error("Sinyalin zamanı geçersiz veya süresi doldu; yeniden hesapla.");
+  if (!Number.isFinite(setup.positionSizeUsd) || setup.positionSizeUsd <= 0) throw new Error("Gerçek sermaye üzerinden pozisyon büyüklüğü gerekli.");
   return {
     id,
     setupId: setup.id,
     symbol: setup.symbol,
     name: setup.name,
     status: "planned",
-    plannedAt: setup.generatedAt,
+    plannedAt: now.toISOString(),
     plannedEntry: roundMoney((setup.entryZone[0] + setup.entryZone[1]) / 2),
     invalidation: setup.invalidation,
     targets: [...setup.targetZones],
@@ -41,7 +43,7 @@ export function closeTacticalTrade(trade: TacticalTrade, actualExit: number, clo
 }
 
 export const tacticalTradeRepository = {
-  list: () => requireDb().tacticalTrades.orderBy("plannedAt").reverse().toArray(),
+  list: async () => (await requireDb().tacticalTrades.toArray()).sort((a, b) => b.plannedAt.localeCompare(a.plannedAt)),
   add: (trade: TacticalTrade) => requireDb().tacticalTrades.add(trade),
   update: (trade: TacticalTrade) => requireDb().tacticalTrades.put(trade),
   remove: (id: string) => requireDb().tacticalTrades.delete(id),

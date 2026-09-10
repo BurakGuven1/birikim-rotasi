@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BookOpenCheck, Crosshair, ShieldAlert, Trash2 } from "lucide-react";
+import { BookOpenCheck, Crosshair, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
 import { Card, PageHeader } from "@/components/ui";
 import type { StrategyProfile } from "@/lib/domain/strategy";
 import type { TacticalSetup } from "@/lib/domain/tactical";
@@ -21,6 +21,7 @@ interface SwingDeskViewProps {
   onOpen: (trade: TacticalTrade, price: number) => void;
   onClose: (trade: TacticalTrade, price: number) => void;
   onRemove: (trade: TacticalTrade) => void;
+  onRefresh?: () => void;
 }
 
 const statusLabel = { planned: "Planlandı", open: "Açık", closed: "Kapandı" } as const;
@@ -31,16 +32,17 @@ function JournalAction({ trade, onOpen, onClose, onRemove }: Pick<SwingDeskViewP
   return <span className={(trade.realizedPnlUsd ?? 0) >= 0 ? "positive" : "negative"}>{formatMoney(trade.realizedPnlUsd ?? 0, "USD")}</span>;
 }
 
-export function SwingDeskView({ profile, setups, trades, loading, errors, onPlan, onOpen, onClose, onRemove }: SwingDeskViewProps) {
+export function SwingDeskView({ profile, setups, trades, loading, errors, onPlan, onOpen, onClose, onRemove, onRefresh }: SwingDeskViewProps) {
   return <div>
-    <PageHeader eyebrow="KURALLI TAKTİK KATMAN" title="Swing masası" description="Yalnız trend, momentum, güven ve getiri/risk koşulları birlikte doğrulandığında işlem planı üretir." />
+    <PageHeader eyebrow="KURALLI TAKTİK KATMAN" title="Swing masası" description="Yalnız trend, momentum, güven ve getiri/risk koşulları birlikte doğrulandığında işlem planı üretir." actions={<button className="button secondary" disabled={loading} onClick={onRefresh}><RefreshCw size={16} />Yeniden hesapla</button>} />
     <div className="risk-strip">
       <span><ShieldAlert size={16} />İşlem başına risk <strong>{formatUnsignedPercent(profile.perTradeRisk, 2)}</strong></span>
       <span>Taktik tavan <strong>{formatUnsignedPercent(Math.min(profile.tacticalShare, 0.25), 0)}</strong></span>
       <span>Minimum G/R <strong>{profile.minRiskReward.toFixed(1)}</strong></span>
       <span>Minimum güven <strong>{formatUnsignedPercent(profile.minConfidence, 0)}</strong></span>
     </div>
-    {loading ? <Card className="section-gap"><div className="wait-state"><Crosshair size={24} /><strong>Kurulumlar hesaplanıyor</strong><p className="muted">10 yıllık fiyat geçmişi ve risk limitleri kontrol ediliyor.</p></div></Card> : <div className="setup-grid section-gap">{setups.map((setup) => <SetupCard key={setup.id} setup={setup} alreadyPlanned={trades.some((trade) => trade.setupId === setup.id && trade.status !== "closed")} onPlan={onPlan} />)}</div>}
+    <p className="muted small-copy section-gap">Deneysel sinyal laboratuvarı. Güven puanı kural uyumudur, başarı olasılığı değildir. Aylık yatırım merkezinden otomatik bütçe ayrılmaz.</p>
+    {loading ? <Card className="section-gap"><div className="wait-state"><Crosshair size={24} /><strong>Kurulumlar hesaplanıyor</strong><p className="muted">Bir yıllık günlük fiyat geçmişi ve gerçek sermaye kontrol ediliyor.</p></div></Card> : <div className="setup-grid section-gap">{setups.map((setup) => <SetupCard key={setup.id} setup={setup} alreadyPlanned={trades.some((trade) => trade.setupId === setup.id && trade.status !== "closed")} onPlan={onPlan} />)}</div>}
     {errors.length ? <div className="notice danger section-gap"><p><strong>Veri notu:</strong> {errors.join(" · ")}</p></div> : null}
     <Card className="section-gap">
       <div className="card-title"><div><h2>İşlem günlüğü</h2><p>Plan anındaki sinyal dondurulur; gerçek giriş ve çıkış ayrıca kaydedilir</p></div><BookOpenCheck size={20} /></div>
@@ -65,6 +67,7 @@ export function SwingDesk() {
     setups={route.setups}
     trades={trades}
     loading={route.loading}
+    onRefresh={() => void route.refresh()}
     errors={[...route.errors, ...(journalError ? [journalError] : [])]}
     onPlan={(setup) => void perform(() => tacticalTradeRepository.add(createPlannedTrade(setup)))}
     onOpen={(trade, price) => void perform(() => tacticalTradeRepository.update(openTacticalTrade(trade, price)))}

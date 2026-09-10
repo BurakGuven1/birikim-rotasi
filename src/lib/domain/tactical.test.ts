@@ -22,6 +22,11 @@ function trendingPoints(length: number): PricePoint[] {
 }
 
 describe("tactical setup engine", () => {
+  it("does not approve an overextended entry", () => {
+    const points = trendingPoints(260);
+    for (let i = 239; i < 260; i++) points[i] = { ...points[i], close: 400, high: 402, low: 398 };
+    expect(deriveTacticalSetup({ symbol: "VTI", name: "US", prices: points, portfolioValueUsd: 10000, profile: DEFAULT_STRATEGY_PROFILE }).action).toBe("wait");
+  });
   it("returns wait when long-regime evidence is incomplete", () => {
     const setup = deriveTacticalSetup({
       symbol: "SP500",

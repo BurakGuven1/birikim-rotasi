@@ -20,9 +20,10 @@ describe("core tactical contribution strategy", () => {
   });
 
   it("deploys half of the annual top-up immediately and stages the other half over three months", () => {
-    const first = buildContributionPlan(DEFAULT_STRATEGY_PROFILE, 1, { hasEligibleSetup: false });
-    const second = buildContributionPlan(DEFAULT_STRATEGY_PROFILE, 2, { hasEligibleSetup: false });
-    const fourth = buildContributionPlan(DEFAULT_STRATEGY_PROFILE, 4, { hasEligibleSetup: false });
+    const profile = { ...DEFAULT_STRATEGY_PROFILE, annualContributionUsd: 3750 };
+    const first = buildContributionPlan(profile, 1, { hasEligibleSetup: false });
+    const second = buildContributionPlan(profile, 2, { hasEligibleSetup: false });
+    const fourth = buildContributionPlan(profile, 4, { hasEligibleSetup: false });
 
     expect(first).toMatchObject({ total: 3_500, annualImmediateCore: 1_875, annualStaged: 625, core: 2_575, reserve: 925 });
     expect(second).toMatchObject({ total: 1_625, annualImmediateCore: 0, annualStaged: 625, core: 700, reserve: 925 });
@@ -30,7 +31,7 @@ describe("core tactical contribution strategy", () => {
   });
 
   it("wraps staged annual capital across December into January and February", () => {
-    const profile = { ...DEFAULT_STRATEGY_PROFILE, annualContributionMonth: 12 };
+    const profile = { ...DEFAULT_STRATEGY_PROFILE, annualContributionUsd: 3750, annualContributionMonth: 12 };
 
     expect(buildContributionPlan(profile, 1, { hasEligibleSetup: true }).annualStaged).toBe(625);
     expect(buildContributionPlan(profile, 2, { hasEligibleSetup: true }).annualStaged).toBe(625);

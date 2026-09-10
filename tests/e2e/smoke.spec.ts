@@ -4,6 +4,12 @@ import { mkdir } from "node:fs/promises";
 async function stubMarketApi(page: import("@playwright/test").Page) {
   await page.route("**/api/market/**", async (route) => {
     const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/investment")) {
+      const now = Date.now();
+      const history = Array.from({ length: 260 }, (_, index) => ({ date: new Date(now - (260 - index) * 86400000).toISOString(), close: 100 + index * .2 }));
+      const market = Object.fromEntries(["foreignEquity", "commodity", "turkishEquity", "bitcoin"].map(key => [key, { quote: { price: 152, currency: key === "turkishEquity" ? "TRY" : "USD", asOf: new Date(now).toISOString(), source: "E2E doğrulama verisi", status: "fresh" }, history, source: "E2E doğrulama verisi" }]));
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ market, fx: { price: 48.26, currency: "TRY", asOf: new Date(now).toISOString(), source: "E2E", status: "fresh" }, fxHistory: history.map(point => ({ ...point, close: 48.26 })), fetchedAt: new Date(now).toISOString(), errors: [] }) }); return;
+    }
     if (url.pathname.endsWith("/quotes")) {
       const symbols = (url.searchParams.get("symbols") ?? "").split(",");
       const payload = Object.fromEntries(symbols.map((symbol, index) => [symbol, { ok: true, data: { price: symbol === "USDTRY" ? 48.26 : 100 + index * 12, currency: symbol === "USDTRY" || symbol === "BIST100" ? "TRY" : "USD", asOf: "2026-09-01T12:00:00Z", source: "E2E doğrulama verisi", status: "fresh", changePercent: index - 2 } }]));
@@ -30,7 +36,7 @@ async function stubMarketApi(page: import("@playwright/test").Page) {
 }
 
 const pages = [
-  { path: "/", heading: "Bu ayın yatırım rotası", shot: "home-desktop" },
+  { path: "/", heading: "Birikimini geleceğine dönüştür.", shot: "home-desktop" },
   { path: "/piyasa", heading: "Piyasa göstergeleri", shot: "market-desktop" },
   { path: "/portfoyum", heading: "Portföyüm", shot: "portfolio-desktop" },
   { path: "/swing", heading: "Swing masası", shot: "swing-desktop" },
@@ -50,10 +56,10 @@ for (const item of pages) {
     await page.goto(item.path, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: item.heading, exact: true })).toBeVisible();
     if (item.path === "/") {
-      await expect(page.getByText("Çekirdek", { exact: true })).toBeVisible();
-      await expect(page.getByText("Taktik / swing", { exact: true })).toBeVisible();
-      await expect(page.getByText("Fırsat rezervi", { exact: true })).toBeVisible();
-      await expect(page.getByText("Reel USD hedefi", { exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Yeni katkının dağılımı", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Ev hedefine giden yol", exact: true })).toBeVisible();
+      await expect(page.getByText("Profil eksik · taslak", { exact: true })).toBeVisible();
+      await expect(page.getByLabel("Bu dönem ayıracağım tutar")).toHaveValue("1000");
     }
     if (item.path === "/piyasa") await expect(page.getByRole("heading", { name: "FRED makro göstergeleri", exact: true })).toBeVisible();
     if (item.path === "/swing") {
@@ -61,13 +67,13 @@ for (const item of pages) {
       await expect(page.getByText("Taktik tavan", { exact: false })).toContainText("%20");
     }
     if (item.path === "/ayarlar") {
-      await expect(page.getByLabel("Yıllık ek katkı (USD)", { exact: true })).toHaveValue("3750");
+      await expect(page.getByLabel("Yıllık ek katkı (USD)", { exact: true })).toHaveValue("0");
       await expect(page.getByLabel("Yıllık ek katkı ayı", { exact: true })).toHaveValue("1");
       await expect(page.getByLabel("Taktik bütçe (%)", { exact: true })).toHaveValue("20");
       await expect(page.getByLabel("İşlem başına risk (%)", { exact: true })).toHaveValue("0.5");
     }
     if (item.path === "/backtest") {
-      await expect(page.getByTestId("exact-invested")).toContainText("$78.750");
+      await expect(page.getByTestId("exact-invested")).toContainText("$60.000");
       await expect(page.getByRole("columnheader", { name: "Reel USD getiri", exact: true })).toBeVisible();
       await expect(page.getByText("ABD TÜFE koruma eşiği", { exact: true })).toBeVisible();
       await expect(page.getByRole("cell", { name: "Aylık plan · %70/%30 walk-forward", exact: true })).toBeVisible();
@@ -83,7 +89,7 @@ for (const item of pages) {
 }
 
 for (const item of [
-  { path: "/", heading: "Bu ayın yatırım rotası", shot: "home-mobile" },
+  { path: "/", heading: "Birikimini geleceğine dönüştür.", shot: "home-mobile" },
   { path: "/swing", heading: "Swing masası", shot: "swing-mobile" },
   { path: "/ayarlar", heading: "Ayarlar ve veri kaynakları", shot: "settings-mobile" },
 ]) {
@@ -105,4 +111,43 @@ test("koyu tema etkinleşir ve okunabilir kalır", async ({ page }) => {
   await page.getByRole("button", { name: "Koyu moda geç", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.screenshot({ path: "artifacts/ui/home-dark.png", fullPage: false });
+});
+
+test("risk profili ve karar anı sayfa yenilendiğinde korunur", async ({ page }) => {
+  await stubMarketApi(page);
+  await page.goto("/");
+  await expect(page.getByText("Profil eksik · taslak", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Yatırım profilim", exact: true }).click();
+  await page.getByLabel("Geçici düşüş toleransı", { exact: true }).selectOption("0.3");
+  await page.getByLabel("Yüksek faizli borç", { exact: true }).selectOption("false");
+  await page.getByRole("button", { name: "Profili kaydet", exact: true }).click();
+  await expect(page.getByText("Plan hesaplandı", { exact: true })).toBeVisible();
+  await page.getByLabel("Bu dönem ayıracağım tutar").fill("1200");
+  await page.getByRole("button", { name: "Aylık katkıyı kaydet", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Aylık katkı tutarı kaydedildi." })).toBeVisible();
+  await page.getByRole("button", { name: "Karar anını kaydet", exact: true }).click();
+  await expect(page.getByText("Karar anı kaydedildi.", { exact: false })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Bu dönem ayıracağım tutar")).toHaveValue("1200");
+  await expect(page.getByText("Plan hesaplandı", { exact: true })).toBeVisible();
+  await expect(page.locator(".decision-item")).toHaveCount(1);
+  await page.screenshot({ path: "artifacts/ui/home-complete.png", fullPage: true });
+});
+
+test("eksik veri nakitte bekler ve borç cevabı alışları durdurur", async ({ page }) => {
+  await stubMarketApi(page);
+  await page.goto("/");
+  await expect(page.getByText("Profil eksik · taslak", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Yatırım profilim", exact: true }).click();
+  await page.getByLabel("Geçici düşüş toleransı", { exact: true }).selectOption("0.3");
+  await page.getByLabel("Yüksek faizli borç", { exact: true }).selectOption("true");
+  await page.getByRole("button", { name: "Profili kaydet", exact: true }).click();
+  await expect(page.getByText("Yeni alım bekliyor", { exact: true })).toBeVisible();
+  await expect(page.locator(".overview-line").filter({ hasText: "Varlıklara ayrılan" })).toContainText("$0,00");
+  await page.reload();
+  await expect(page.getByText("Yeni alım bekliyor", { exact: true })).toBeVisible();
+  await page.route("**/api/market/investment", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ market: {}, fxHistory: [], fetchedAt: new Date().toISOString(), errors: ["Test: kaynak erişilemiyor"] }) }));
+  await page.getByRole("button", { name: "Verileri yenile", exact: true }).click();
+  await expect(page.getByText("Yeterli piyasa verisi yok; katkı nakitte bekler.", { exact: true })).toBeVisible();
+  await expect(page.locator(".overview-line").filter({ hasText: "Nakitte bekleyen" })).toContainText("$1.000,00");
 });

@@ -1,3 +1,3 @@
-import { SwingDesk } from "@/features/tactical/swing-desk";
+import { PriceActionDesk } from "@/features/tactical/price-action-desk";
 
-export default function SwingPage() { return <SwingDesk />; }
+export default function SwingPage() { return <PriceActionDesk />; }

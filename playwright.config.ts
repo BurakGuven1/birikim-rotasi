@@ -9,6 +9,7 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
+    channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
   },
   webServer: {
     command: "npm run dev -- --hostname 127.0.0.1",

@@ -26,7 +26,7 @@ function apiSymbol(symbol: string) {
 
 function currencyFor(symbol: string): Currency {
   const normalized = symbol.toUpperCase();
-  return normalized === "USDTRY" || normalized.endsWith(".IS") ? "TRY" : "USD";
+  return normalized === "USDTRY" || normalized === "BIST100" || normalized.endsWith(".IS") ? "TRY" : "USD";
 }
 
 function token() {
@@ -51,7 +51,8 @@ export const eodhdProvider: MarketDataProvider = {
     const data = await response.json() as { timestamp?: number; close?: number; previousClose?: number; change_p?: number };
     const price = Number(data.close);
     if (!Number.isFinite(price) || price <= 0) throw new Error("EODHD geçerli fiyat döndürmedi.");
-    const asOf = new Date((data.timestamp ?? Date.now() / 1000) * 1000).toISOString();
+    if (!Number.isFinite(data.timestamp) || data.timestamp! <= 0) throw new Error("EODHD fiyat zamanı eksik.");
+    const asOf = new Date(data.timestamp! * 1000).toISOString();
     const previous = Number(data.previousClose);
     const changePercent = Number.isFinite(Number(data.change_p))
       ? Number(data.change_p)

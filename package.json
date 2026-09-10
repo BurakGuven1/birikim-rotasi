@@ -3,14 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": { "node": ">=22.13.0" },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --hostname 127.0.0.1",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "bot:worker": "tsx scripts/bot-worker.ts",
+    "bot:once": "tsx scripts/bot-worker.ts --once",
+    "bot:research": "tsx scripts/bot-research.ts",
+    "bot:research:fresh": "tsx scripts/bot-research.ts --fresh"
   },
   "dependencies": {
     "@tailwindcss/postcss": "4.3.3",
@@ -32,6 +37,7 @@
     "eslint-config-next": "16.3.4",
     "jsdom": "26.1.0",
     "tailwindcss": "4.3.3",
+    "tsx": "^4.23.13",
     "typescript": "5.9.2",
     "vitest": "4.1.11"
   }

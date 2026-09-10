@@ -1,0 +1,1606 @@
+{
+  "asOf": "2026-09-08",
+  "source": "TradingView screener: US market cap / BIST 100",
+  "rows": [
+    {
+      "symbol": "NVDA",
+      "ticker": "NVDA",
+      "name": "NVIDIA Corporation",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:NVDA"
+    },
+    {
+      "symbol": "AAPL",
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:AAPL"
+    },
+    {
+      "symbol": "GOOG",
+      "ticker": "GOOG",
+      "name": "Alphabet Inc. Class C",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:GOOG"
+    },
+    {
+      "symbol": "MSFT",
+      "ticker": "MSFT",
+      "name": "Microsoft Corporation",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:MSFT"
+    },
+    {
+      "symbol": "AMZN",
+      "ticker": "AMZN",
+      "name": "Amazon.com, Inc.",
+      "sector": "Retail Trade",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:AMZN"
+    },
+    {
+      "symbol": "SPCX",
+      "ticker": "SPCX",
+      "name": "Space Exploration Technologies Corp",
+      "sector": "Communications",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:SPCX"
+    },
+    {
+      "symbol": "AVGO",
+      "ticker": "AVGO",
+      "name": "Broadcom Inc.",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:AVGO"
+    },
+    {
+      "symbol": "META",
+      "ticker": "META",
+      "name": "Meta Platforms Inc Class A",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:META"
+    },
+    {
+      "symbol": "TSLA",
+      "ticker": "TSLA",
+      "name": "Tesla, Inc.",
+      "sector": "Consumer Durables",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:TSLA"
+    },
+    {
+      "symbol": "MU",
+      "ticker": "MU",
+      "name": "Micron Technology, Inc.",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:MU"
+    },
+    {
+      "symbol": "LLY",
+      "ticker": "LLY",
+      "name": "Eli Lilly and Company",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:LLY"
+    },
+    {
+      "symbol": "BRK-A",
+      "ticker": "BRK.A",
+      "name": "Berkshire Hathaway Inc. Class A",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:BRK.A"
+    },
+    {
+      "symbol": "JPM",
+      "ticker": "JPM",
+      "name": "JPMorgan Chase & Co.",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:JPM"
+    },
+    {
+      "symbol": "WMT",
+      "ticker": "WMT",
+      "name": "Walmart Inc.",
+      "sector": "Retail Trade",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:WMT"
+    },
+    {
+      "symbol": "AMD",
+      "ticker": "AMD",
+      "name": "Advanced Micro Devices, Inc.",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:AMD"
+    },
+    {
+      "symbol": "V",
+      "ticker": "V",
+      "name": "Visa Inc. Class A",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:V"
+    },
+    {
+      "symbol": "JNJ",
+      "ticker": "JNJ",
+      "name": "Johnson & Johnson",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:JNJ"
+    },
+    {
+      "symbol": "XOM",
+      "ticker": "XOM",
+      "name": "Exxonmobil Holdings Corporation",
+      "sector": "Energy Minerals",
+      "market": "US",
+      "scannerSymbol": "NYSE:XOM"
+    },
+    {
+      "symbol": "MA",
+      "ticker": "MA",
+      "name": "Mastercard Incorporated Class A",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:MA"
+    },
+    {
+      "symbol": "INTC",
+      "ticker": "INTC",
+      "name": "Intel Corporation",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:INTC"
+    },
+    {
+      "symbol": "ORCL",
+      "ticker": "ORCL",
+      "name": "Oracle Corporation",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:ORCL"
+    },
+    {
+      "symbol": "ABBV",
+      "ticker": "ABBV",
+      "name": "AbbVie, Inc.",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:ABBV"
+    },
+    {
+      "symbol": "BAC",
+      "ticker": "BAC",
+      "name": "Bank of America Corp",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:BAC"
+    },
+    {
+      "symbol": "CSCO",
+      "ticker": "CSCO",
+      "name": "Cisco Systems, Inc.",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:CSCO"
+    },
+    {
+      "symbol": "PLTR",
+      "ticker": "PLTR",
+      "name": "Palantir Technologies Inc. Class A",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:PLTR"
+    },
+    {
+      "symbol": "CVX",
+      "ticker": "CVX",
+      "name": "Chevron Corporation",
+      "sector": "Energy Minerals",
+      "market": "US",
+      "scannerSymbol": "NYSE:CVX"
+    },
+    {
+      "symbol": "COST",
+      "ticker": "COST",
+      "name": "Costco Wholesale Corporation",
+      "sector": "Retail Trade",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:COST"
+    },
+    {
+      "symbol": "LRCX",
+      "ticker": "LRCX",
+      "name": "Lam Research Corporation",
+      "sector": "Producer Manufacturing",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:LRCX"
+    },
+    {
+      "symbol": "KO",
+      "ticker": "KO",
+      "name": "Coca-Cola Company",
+      "sector": "Consumer Non-Durables",
+      "market": "US",
+      "scannerSymbol": "NYSE:KO"
+    },
+    {
+      "symbol": "CAT",
+      "ticker": "CAT",
+      "name": "Caterpillar Inc.",
+      "sector": "Producer Manufacturing",
+      "market": "US",
+      "scannerSymbol": "NYSE:CAT"
+    },
+    {
+      "symbol": "MRK",
+      "ticker": "MRK",
+      "name": "Merck & Co., Inc.",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:MRK"
+    },
+    {
+      "symbol": "AMAT",
+      "ticker": "AMAT",
+      "name": "Applied Materials, Inc.",
+      "sector": "Producer Manufacturing",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:AMAT"
+    },
+    {
+      "symbol": "UNH",
+      "ticker": "UNH",
+      "name": "UnitedHealth Group Incorporated",
+      "sector": "Health Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:UNH"
+    },
+    {
+      "symbol": "GE",
+      "ticker": "GE",
+      "name": "GE Aerospace",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:GE"
+    },
+    {
+      "symbol": "MS",
+      "ticker": "MS",
+      "name": "Morgan Stanley",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:MS"
+    },
+    {
+      "symbol": "PG",
+      "ticker": "PG",
+      "name": "Procter & Gamble Company",
+      "sector": "Consumer Non-Durables",
+      "market": "US",
+      "scannerSymbol": "NYSE:PG"
+    },
+    {
+      "symbol": "DELL",
+      "ticker": "DELL",
+      "name": "Dell Technologies, Inc. Class C",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:DELL"
+    },
+    {
+      "symbol": "NFLX",
+      "ticker": "NFLX",
+      "name": "Netflix, Inc.",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:NFLX"
+    },
+    {
+      "symbol": "HD",
+      "ticker": "HD",
+      "name": "Home Depot, Inc.",
+      "sector": "Retail Trade",
+      "market": "US",
+      "scannerSymbol": "NYSE:HD"
+    },
+    {
+      "symbol": "GS",
+      "ticker": "GS",
+      "name": "Goldman Sachs Group, Inc.",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:GS"
+    },
+    {
+      "symbol": "PM",
+      "ticker": "PM",
+      "name": "Philip Morris International Inc.",
+      "sector": "Consumer Non-Durables",
+      "market": "US",
+      "scannerSymbol": "NYSE:PM"
+    },
+    {
+      "symbol": "WFC",
+      "ticker": "WFC",
+      "name": "Wells Fargo & Company",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:WFC"
+    },
+    {
+      "symbol": "PANW",
+      "ticker": "PANW",
+      "name": "Palo Alto Networks, Inc.",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:PANW"
+    },
+    {
+      "symbol": "RTX",
+      "ticker": "RTX",
+      "name": "RTX Corporation",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:RTX"
+    },
+    {
+      "symbol": "SNDK",
+      "ticker": "SNDK",
+      "name": "Sandisk Corporation",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:SNDK"
+    },
+    {
+      "symbol": "GEV",
+      "ticker": "GEV",
+      "name": "GE Vernova Inc.",
+      "sector": "Producer Manufacturing",
+      "market": "US",
+      "scannerSymbol": "NYSE:GEV"
+    },
+    {
+      "symbol": "ANET",
+      "ticker": "ANET",
+      "name": "Arista Networks Inc",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:ANET"
+    },
+    {
+      "symbol": "KLAC",
+      "ticker": "KLAC",
+      "name": "KLA Corporation",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:KLAC"
+    },
+    {
+      "symbol": "AMGN",
+      "ticker": "AMGN",
+      "name": "Amgen Inc.",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:AMGN"
+    },
+    {
+      "symbol": "TXN",
+      "ticker": "TXN",
+      "name": "Texas Instruments Incorporated",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:TXN"
+    },
+    {
+      "symbol": "C",
+      "ticker": "C",
+      "name": "Citigroup Inc.",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:C"
+    },
+    {
+      "symbol": "TMO",
+      "ticker": "TMO",
+      "name": "Thermo Fisher Scientific Inc.",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:TMO"
+    },
+    {
+      "symbol": "IBM",
+      "ticker": "IBM",
+      "name": "International Business Machines Corporation",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:IBM"
+    },
+    {
+      "symbol": "AXP",
+      "ticker": "AXP",
+      "name": "American Express Company",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:AXP"
+    },
+    {
+      "symbol": "CRWD",
+      "ticker": "CRWD",
+      "name": "CrowdStrike Holdings, Inc. Class A",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:CRWD"
+    },
+    {
+      "symbol": "CRM",
+      "ticker": "CRM",
+      "name": "Salesforce, Inc.",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:CRM"
+    },
+    {
+      "symbol": "VZ",
+      "ticker": "VZ",
+      "name": "Verizon Communications Inc.",
+      "sector": "Communications",
+      "market": "US",
+      "scannerSymbol": "NYSE:VZ"
+    },
+    {
+      "symbol": "APH",
+      "ticker": "APH",
+      "name": "Amphenol Corporation Class A",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:APH"
+    },
+    {
+      "symbol": "MRVL",
+      "ticker": "MRVL",
+      "name": "Marvell Technology, Inc.",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:MRVL"
+    },
+    {
+      "symbol": "TMUS",
+      "ticker": "TMUS",
+      "name": "T-Mobile US, Inc.",
+      "sector": "Communications",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:TMUS"
+    },
+    {
+      "symbol": "SCHW",
+      "ticker": "SCHW",
+      "name": "Charles Schwab Corp",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:SCHW"
+    },
+    {
+      "symbol": "PEP",
+      "ticker": "PEP",
+      "name": "PepsiCo, Inc.",
+      "sector": "Consumer Non-Durables",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:PEP"
+    },
+    {
+      "symbol": "ABT",
+      "ticker": "ABT",
+      "name": "Abbott Laboratories",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:ABT"
+    },
+    {
+      "symbol": "GILD",
+      "ticker": "GILD",
+      "name": "Gilead Sciences, Inc.",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:GILD"
+    },
+    {
+      "symbol": "DE",
+      "ticker": "DE",
+      "name": "Deere & Company",
+      "sector": "Producer Manufacturing",
+      "market": "US",
+      "scannerSymbol": "NYSE:DE"
+    },
+    {
+      "symbol": "BLK",
+      "ticker": "BLK",
+      "name": "BlackRock, Inc.",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:BLK"
+    },
+    {
+      "symbol": "DIS",
+      "ticker": "DIS",
+      "name": "Walt Disney Company",
+      "sector": "Consumer Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:DIS"
+    },
+    {
+      "symbol": "MCD",
+      "ticker": "MCD",
+      "name": "McDonald's Corporation",
+      "sector": "Consumer Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:MCD"
+    },
+    {
+      "symbol": "QCOM",
+      "ticker": "QCOM",
+      "name": "QUALCOMM Incorporated",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:QCOM"
+    },
+    {
+      "symbol": "T",
+      "ticker": "T",
+      "name": "AT&T Inc",
+      "sector": "Communications",
+      "market": "US",
+      "scannerSymbol": "NYSE:T"
+    },
+    {
+      "symbol": "ADI",
+      "ticker": "ADI",
+      "name": "Analog Devices, Inc.",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:ADI"
+    },
+    {
+      "symbol": "NEE",
+      "ticker": "NEE",
+      "name": "NextEra Energy, Inc.",
+      "sector": "Utilities",
+      "market": "US",
+      "scannerSymbol": "NYSE:NEE"
+    },
+    {
+      "symbol": "UNP",
+      "ticker": "UNP",
+      "name": "Union Pacific Corporation",
+      "sector": "Transportation",
+      "market": "US",
+      "scannerSymbol": "NYSE:UNP"
+    },
+    {
+      "symbol": "WELL",
+      "ticker": "WELL",
+      "name": "Welltower Inc.",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:WELL"
+    },
+    {
+      "symbol": "BX",
+      "ticker": "BX",
+      "name": "Blackstone Inc.",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:BX"
+    },
+    {
+      "symbol": "WDC",
+      "ticker": "WDC",
+      "name": "Western Digital Corporation",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:WDC"
+    },
+    {
+      "symbol": "SCCO",
+      "ticker": "SCCO",
+      "name": "Southern Copper Corporation",
+      "sector": "Non-Energy Minerals",
+      "market": "US",
+      "scannerSymbol": "NYSE:SCCO"
+    },
+    {
+      "symbol": "BA",
+      "ticker": "BA",
+      "name": "Boeing Company",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:BA"
+    },
+    {
+      "symbol": "PFE",
+      "ticker": "PFE",
+      "name": "Pfizer Inc.",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:PFE"
+    },
+    {
+      "symbol": "COP",
+      "ticker": "COP",
+      "name": "ConocoPhillips",
+      "sector": "Energy Minerals",
+      "market": "US",
+      "scannerSymbol": "NYSE:COP"
+    },
+    {
+      "symbol": "IBKR",
+      "ticker": "IBKR",
+      "name": "Interactive Brokers Group, Inc. Class A",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:IBKR"
+    },
+    {
+      "symbol": "UBER",
+      "ticker": "UBER",
+      "name": "Uber Technologies, Inc.",
+      "sector": "Transportation",
+      "market": "US",
+      "scannerSymbol": "NYSE:UBER"
+    },
+    {
+      "symbol": "NOW",
+      "ticker": "NOW",
+      "name": "ServiceNow, Inc.",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:NOW"
+    },
+    {
+      "symbol": "DHR",
+      "ticker": "DHR",
+      "name": "Danaher Corporation",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:DHR"
+    },
+    {
+      "symbol": "TJX",
+      "ticker": "TJX",
+      "name": "TJX Companies Inc",
+      "sector": "Retail Trade",
+      "market": "US",
+      "scannerSymbol": "NYSE:TJX"
+    },
+    {
+      "symbol": "BKNG",
+      "ticker": "BKNG",
+      "name": "Booking Holdings Inc.",
+      "sector": "Consumer Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:BKNG"
+    },
+    {
+      "symbol": "VRTX",
+      "ticker": "VRTX",
+      "name": "Vertex Pharmaceuticals Incorporated",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:VRTX"
+    },
+    {
+      "symbol": "BMY",
+      "ticker": "BMY",
+      "name": "Bristol-Myers Squibb Company",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:BMY"
+    },
+    {
+      "symbol": "NEM",
+      "ticker": "NEM",
+      "name": "Newmont Corporation",
+      "sector": "Non-Energy Minerals",
+      "market": "US",
+      "scannerSymbol": "NYSE:NEM"
+    },
+    {
+      "symbol": "COF",
+      "ticker": "COF",
+      "name": "Capital One Financial Corp",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:COF"
+    },
+    {
+      "symbol": "GLW",
+      "ticker": "GLW",
+      "name": "Corning Inc",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:GLW"
+    },
+    {
+      "symbol": "PLD",
+      "ticker": "PLD",
+      "name": "Prologis, Inc.",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:PLD"
+    },
+    {
+      "symbol": "SPGI",
+      "ticker": "SPGI",
+      "name": "S&P Global, Inc.",
+      "sector": "Commercial Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:SPGI"
+    },
+    {
+      "symbol": "ISRG",
+      "ticker": "ISRG",
+      "name": "Intuitive Surgical, Inc.",
+      "sector": "Health Technology",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:ISRG"
+    },
+    {
+      "symbol": "PGR",
+      "ticker": "PGR",
+      "name": "Progressive Corporation",
+      "sector": "Finance",
+      "market": "US",
+      "scannerSymbol": "NYSE:PGR"
+    },
+    {
+      "symbol": "CVS",
+      "ticker": "CVS",
+      "name": "CVS Health Corporation",
+      "sector": "Retail Trade",
+      "market": "US",
+      "scannerSymbol": "NYSE:CVS"
+    },
+    {
+      "symbol": "PH",
+      "ticker": "PH",
+      "name": "Parker-Hannifin Corporation",
+      "sector": "Producer Manufacturing",
+      "market": "US",
+      "scannerSymbol": "NYSE:PH"
+    },
+    {
+      "symbol": "LMT",
+      "ticker": "LMT",
+      "name": "Lockheed Martin Corporation",
+      "sector": "Electronic Technology",
+      "market": "US",
+      "scannerSymbol": "NYSE:LMT"
+    },
+    {
+      "symbol": "SBUX",
+      "ticker": "SBUX",
+      "name": "Starbucks Corporation",
+      "sector": "Consumer Services",
+      "market": "US",
+      "scannerSymbol": "NASDAQ:SBUX"
+    },
+    {
+      "symbol": "SNOW",
+      "ticker": "SNOW",
+      "name": "Snowflake, Inc.",
+      "sector": "Technology Services",
+      "market": "US",
+      "scannerSymbol": "NYSE:SNOW"
+    },
+    {
+      "symbol": "ASELS.IS",
+      "ticker": "ASELS",
+      "name": "Aselsan Elektronik Sanayi ve Ticaret A.S. Class B",
+      "sector": "Electronic Technology",
+      "market": "TR",
+      "scannerSymbol": "BIST:ASELS"
+    },
+    {
+      "symbol": "DSTKF.IS",
+      "ticker": "DSTKF",
+      "name": "Destek Finans Faktoring A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:DSTKF"
+    },
+    {
+      "symbol": "TUPRS.IS",
+      "ticker": "TUPRS",
+      "name": "Tupras Turkiye Petrol Rafinerileri A.S.",
+      "sector": "Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:TUPRS"
+    },
+    {
+      "symbol": "GARAN.IS",
+      "ticker": "GARAN",
+      "name": "Turkiye Garanti Bankasi Anonim Sirketi",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:GARAN"
+    },
+    {
+      "symbol": "KCHOL.IS",
+      "ticker": "KCHOL",
+      "name": "Koc Holding A.S.",
+      "sector": "Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:KCHOL"
+    },
+    {
+      "symbol": "ENKAI.IS",
+      "ticker": "ENKAI",
+      "name": "Enka Insaat ve Sanayi A.S.",
+      "sector": "Industrial Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:ENKAI"
+    },
+    {
+      "symbol": "BIMAS.IS",
+      "ticker": "BIMAS",
+      "name": "BIM Birlesik Magazalar A.S.",
+      "sector": "Retail Trade",
+      "market": "TR",
+      "scannerSymbol": "BIST:BIMAS"
+    },
+    {
+      "symbol": "THYAO.IS",
+      "ticker": "THYAO",
+      "name": "Turk Hava Yollari A.O.",
+      "sector": "Transportation",
+      "market": "TR",
+      "scannerSymbol": "BIST:THYAO"
+    },
+    {
+      "symbol": "HALKB.IS",
+      "ticker": "HALKB",
+      "name": "Turkiye Halk Bankasi Anonim Sirketi",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:HALKB"
+    },
+    {
+      "symbol": "AKBNK.IS",
+      "ticker": "AKBNK",
+      "name": "Akbank T.A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:AKBNK"
+    },
+    {
+      "symbol": "ISCTR.IS",
+      "ticker": "ISCTR",
+      "name": "Turkiye Is Bankasi Anonim Sirketi Class C",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:ISCTR"
+    },
+    {
+      "symbol": "VAKBN.IS",
+      "ticker": "VAKBN",
+      "name": "Turkiye Vakiflar Bankasi Turk Anonim Ortakligi",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:VAKBN"
+    },
+    {
+      "symbol": "YKBNK.IS",
+      "ticker": "YKBNK",
+      "name": "Yapi ve Kredi Bankasi A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:YKBNK"
+    },
+    {
+      "symbol": "KTLEV.IS",
+      "ticker": "KTLEV",
+      "name": "KATILIMEVIM TASARRUF FINANSMAN A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:KTLEV"
+    },
+    {
+      "symbol": "ASTOR.IS",
+      "ticker": "ASTOR",
+      "name": "Astor Enerji A.S.",
+      "sector": "Producer Manufacturing",
+      "market": "TR",
+      "scannerSymbol": "BIST:ASTOR"
+    },
+    {
+      "symbol": "FROTO.IS",
+      "ticker": "FROTO",
+      "name": "Ford Otomotiv Sanayi A.S.",
+      "sector": "Consumer Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:FROTO"
+    },
+    {
+      "symbol": "EREGL.IS",
+      "ticker": "EREGL",
+      "name": "Eregli Demir Ve Celik Fabrikalari T.A.S.",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:EREGL"
+    },
+    {
+      "symbol": "CCOLA.IS",
+      "ticker": "CCOLA",
+      "name": "Coca-Cola Icecek A.S.",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:CCOLA"
+    },
+    {
+      "symbol": "TCELL.IS",
+      "ticker": "TCELL",
+      "name": "Turkcell Iletisim Hizmetleri A.S.",
+      "sector": "Communications",
+      "market": "TR",
+      "scannerSymbol": "BIST:TCELL"
+    },
+    {
+      "symbol": "SAHOL.IS",
+      "ticker": "SAHOL",
+      "name": "Haci Omer Sabanci Holding A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:SAHOL"
+    },
+    {
+      "symbol": "TTKOM.IS",
+      "ticker": "TTKOM",
+      "name": "Turk Telekomunikasyon A.S.",
+      "sector": "Communications",
+      "market": "TR",
+      "scannerSymbol": "BIST:TTKOM"
+    },
+    {
+      "symbol": "TRALT.IS",
+      "ticker": "TRALT",
+      "name": "Turk Altin Isletmeleri A.S.",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:TRALT"
+    },
+    {
+      "symbol": "GUBRF.IS",
+      "ticker": "GUBRF",
+      "name": "Gubre Fabrikalari T.A.S.",
+      "sector": "Process Industries",
+      "market": "TR",
+      "scannerSymbol": "BIST:GUBRF"
+    },
+    {
+      "symbol": "ODINE.IS",
+      "ticker": "ODINE",
+      "name": "Odine Solutions Teknoloji Ticaret ve Sanayi AS",
+      "sector": "Technology Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:ODINE"
+    },
+    {
+      "symbol": "TOASO.IS",
+      "ticker": "TOASO",
+      "name": "Tofas Turk Otomobil Fabrikasi A.S.",
+      "sector": "Consumer Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:TOASO"
+    },
+    {
+      "symbol": "ENJSA.IS",
+      "ticker": "ENJSA",
+      "name": "Enerjisa Enerji A.S.",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:ENJSA"
+    },
+    {
+      "symbol": "TURSG.IS",
+      "ticker": "TURSG",
+      "name": "Turkiye Sigorta A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:TURSG"
+    },
+    {
+      "symbol": "SASA.IS",
+      "ticker": "SASA",
+      "name": "Sasa Polyester Sanayi A.S.",
+      "sector": "Process Industries",
+      "market": "TR",
+      "scannerSymbol": "BIST:SASA"
+    },
+    {
+      "symbol": "SISE.IS",
+      "ticker": "SISE",
+      "name": "Turkiye Sise ve Cam Fabrikalari A.S.",
+      "sector": "Consumer Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:SISE"
+    },
+    {
+      "symbol": "AEFES.IS",
+      "ticker": "AEFES",
+      "name": "Anadolu Efes Biracilik ve Malt Sanayii A.S.",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:AEFES"
+    },
+    {
+      "symbol": "PASEU.IS",
+      "ticker": "PASEU",
+      "name": "Pasifik Eurasia Lojistik dis Ticaret AS",
+      "sector": "Transportation",
+      "market": "TR",
+      "scannerSymbol": "BIST:PASEU"
+    },
+    {
+      "symbol": "IEYHO.IS",
+      "ticker": "IEYHO",
+      "name": "Isiklar Enerji ve Yapi Holding Anonim Sirketi",
+      "sector": "Process Industries",
+      "market": "TR",
+      "scannerSymbol": "BIST:IEYHO"
+    },
+    {
+      "symbol": "OYAKC.IS",
+      "ticker": "OYAKC",
+      "name": "OYAK Cimento Fabrikalari A.S.",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:OYAKC"
+    },
+    {
+      "symbol": "KLRHO.IS",
+      "ticker": "KLRHO",
+      "name": "KILER HOLDING A.S.",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:KLRHO"
+    },
+    {
+      "symbol": "BRSAN.IS",
+      "ticker": "BRSAN",
+      "name": "BORUSAN BIRLESIK BORU FABRIKALARI SANAYI VE TICARET ANONIM SIRKETI",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:BRSAN"
+    },
+    {
+      "symbol": "MAGEN.IS",
+      "ticker": "MAGEN",
+      "name": "MARGUN ENERJI URETIM SANAYI VE TICARET A.S.",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:MAGEN"
+    },
+    {
+      "symbol": "ENERY.IS",
+      "ticker": "ENERY",
+      "name": "Enerya Enerji A.S.",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:ENERY"
+    },
+    {
+      "symbol": "TAVHL.IS",
+      "ticker": "TAVHL",
+      "name": "TAV Havalimanlari Holding A.S.",
+      "sector": "Transportation",
+      "market": "TR",
+      "scannerSymbol": "BIST:TAVHL"
+    },
+    {
+      "symbol": "AKSEN.IS",
+      "ticker": "AKSEN",
+      "name": "Aksa Enerji Uretim A.S.",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:AKSEN"
+    },
+    {
+      "symbol": "MGROS.IS",
+      "ticker": "MGROS",
+      "name": "Migros Ticaret A.S.",
+      "sector": "Retail Trade",
+      "market": "TR",
+      "scannerSymbol": "BIST:MGROS"
+    },
+    {
+      "symbol": "RALYH.IS",
+      "ticker": "RALYH",
+      "name": "Ral Yatirim Holding A.S.",
+      "sector": "Industrial Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:RALYH"
+    },
+    {
+      "symbol": "MPARK.IS",
+      "ticker": "MPARK",
+      "name": "MLP Saglik Hizmetleri AS Class B",
+      "sector": "Health Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:MPARK"
+    },
+    {
+      "symbol": "TKFEN.IS",
+      "ticker": "TKFEN",
+      "name": "Tekfen Holding Anonim Sirketi",
+      "sector": "Industrial Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:TKFEN"
+    },
+    {
+      "symbol": "PGSUS.IS",
+      "ticker": "PGSUS",
+      "name": "Pegasus Hava Tasimaciligi Anonim Sirketi",
+      "sector": "Transportation",
+      "market": "TR",
+      "scannerSymbol": "BIST:PGSUS"
+    },
+    {
+      "symbol": "EKGYO.IS",
+      "ticker": "EKGYO",
+      "name": "Emlak Konut Gayrimenkul Yatirim Ortakligi A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:EKGYO"
+    },
+    {
+      "symbol": "ARCLK.IS",
+      "ticker": "ARCLK",
+      "name": "Arcelik A.S.",
+      "sector": "Consumer Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:ARCLK"
+    },
+    {
+      "symbol": "CVKMD.IS",
+      "ticker": "CVKMD",
+      "name": "CVK MADEN ISLETMELERI SANAYI VE TICARET A.S",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:CVKMD"
+    },
+    {
+      "symbol": "KRDMD.IS",
+      "ticker": "KRDMD",
+      "name": "Kardemir Karabiik Demir celik Sanayi ve Ticaret A.S. Class D",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:KRDMD"
+    },
+    {
+      "symbol": "TRMET.IS",
+      "ticker": "TRMET",
+      "name": "TR Anadolu Metal Madencilik Isletmeleri Anonim Sirketi",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:TRMET"
+    },
+    {
+      "symbol": "ANSGR.IS",
+      "ticker": "ANSGR",
+      "name": "Anadolu Anonim Turk Sigorta Sirketi A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:ANSGR"
+    },
+    {
+      "symbol": "ISMEN.IS",
+      "ticker": "ISMEN",
+      "name": "Is Yatirim Menkul Degerler AS",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:ISMEN"
+    },
+    {
+      "symbol": "GLRMK.IS",
+      "ticker": "GLRMK",
+      "name": "Gulermak Agir Sanayi Insaat Ve Taahhut A.S.",
+      "sector": "Industrial Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:GLRMK"
+    },
+    {
+      "symbol": "PETKM.IS",
+      "ticker": "PETKM",
+      "name": "Petkim Petrokimya Holding Anonim Sirketi",
+      "sector": "Process Industries",
+      "market": "TR",
+      "scannerSymbol": "BIST:PETKM"
+    },
+    {
+      "symbol": "GENIL.IS",
+      "ticker": "GENIL",
+      "name": "Gen Ilac ve Saglik Urunleri Sanayi ve Ticaret A.S.",
+      "sector": "Health Technology",
+      "market": "TR",
+      "scannerSymbol": "BIST:GENIL"
+    },
+    {
+      "symbol": "ECILC.IS",
+      "ticker": "ECILC",
+      "name": "EIS Eczacibasi Ilac, Sinai ve Finansal Yatirimlar Sanayi ve Ticaret A.S.",
+      "sector": "Health Technology",
+      "market": "TR",
+      "scannerSymbol": "BIST:ECILC"
+    },
+    {
+      "symbol": "ALARK.IS",
+      "ticker": "ALARK",
+      "name": "Alarko Holding A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:ALARK"
+    },
+    {
+      "symbol": "EUPWR.IS",
+      "ticker": "EUPWR",
+      "name": "Europower Enerji ve Otomasyon Teknolojileri Sanayi Ticaret AS",
+      "sector": "Producer Manufacturing",
+      "market": "TR",
+      "scannerSymbol": "BIST:EUPWR"
+    },
+    {
+      "symbol": "BRYAT.IS",
+      "ticker": "BRYAT",
+      "name": "Borusan Yatirim ve Pazarlama AS",
+      "sector": "Miscellaneous",
+      "market": "TR",
+      "scannerSymbol": "BIST:BRYAT"
+    },
+    {
+      "symbol": "AKSA.IS",
+      "ticker": "AKSA",
+      "name": "Aksa Akrilik Kimya Sanayii A.S.",
+      "sector": "Process Industries",
+      "market": "TR",
+      "scannerSymbol": "BIST:AKSA"
+    },
+    {
+      "symbol": "CIMSA.IS",
+      "ticker": "CIMSA",
+      "name": "Cimsa Cimento Sanayi ve Ticaret A.S.",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:CIMSA"
+    },
+    {
+      "symbol": "EFOR.IS",
+      "ticker": "EFOR",
+      "name": "Efor Yatirim Sanayi Ticaret A.S.",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:EFOR"
+    },
+    {
+      "symbol": "BSOKE.IS",
+      "ticker": "BSOKE",
+      "name": "Batisoke Soke Cimento Sanayii T.A.S.",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:BSOKE"
+    },
+    {
+      "symbol": "OTKAR.IS",
+      "ticker": "OTKAR",
+      "name": "Otokar Otomotiv ve Savunma Sanayi A.S.",
+      "sector": "Consumer Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:OTKAR"
+    },
+    {
+      "symbol": "DOHOL.IS",
+      "ticker": "DOHOL",
+      "name": "Dogan Sirketler Grubu Holding A.S.",
+      "sector": "Retail Trade",
+      "market": "TR",
+      "scannerSymbol": "BIST:DOHOL"
+    },
+    {
+      "symbol": "SOKM.IS",
+      "ticker": "SOKM",
+      "name": "Sok Marketler Ticaret AS",
+      "sector": "Retail Trade",
+      "market": "TR",
+      "scannerSymbol": "BIST:SOKM"
+    },
+    {
+      "symbol": "CWENE.IS",
+      "ticker": "CWENE",
+      "name": "CW ENERJI MUHENDISLIK TICARET VE SANAYI A.S.",
+      "sector": "Electronic Technology",
+      "market": "TR",
+      "scannerSymbol": "BIST:CWENE"
+    },
+    {
+      "symbol": "ULKER.IS",
+      "ticker": "ULKER",
+      "name": "Ulker Biskuvi Sanayi A.S.",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:ULKER"
+    },
+    {
+      "symbol": "DOAS.IS",
+      "ticker": "DOAS",
+      "name": "Dogus Otomotiv Servis ve Ticaret Anonim Sirketi",
+      "sector": "Retail Trade",
+      "market": "TR",
+      "scannerSymbol": "BIST:DOAS"
+    },
+    {
+      "symbol": "TSKB.IS",
+      "ticker": "TSKB",
+      "name": "Turkiye Sinai Kalkinma Bankasi A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:TSKB"
+    },
+    {
+      "symbol": "GRSEL.IS",
+      "ticker": "GRSEL",
+      "name": "Gur-Sel Turizm Tasimacilik Ve Servis Ticaret A.S.",
+      "sector": "Consumer Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:GRSEL"
+    },
+    {
+      "symbol": "MAVI.IS",
+      "ticker": "MAVI",
+      "name": "Mavi Giyim Sanayi ve Ticaret A.S.",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:MAVI"
+    },
+    {
+      "symbol": "GESAN.IS",
+      "ticker": "GESAN",
+      "name": "GIRISIM ELEKTRIK SANAYI TAAHHUT VE TICARET A.S.",
+      "sector": "Electronic Technology",
+      "market": "TR",
+      "scannerSymbol": "BIST:GESAN"
+    },
+    {
+      "symbol": "TRENJ.IS",
+      "ticker": "TRENJ",
+      "name": "TR Dogal Enerji Kaynaklari Arastirma ve Uretim Anonim Sirketi",
+      "sector": "Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:TRENJ"
+    },
+    {
+      "symbol": "PAHOL.IS",
+      "ticker": "PAHOL",
+      "name": "PASIFIK HOLDING A.S",
+      "sector": "Miscellaneous",
+      "market": "TR",
+      "scannerSymbol": "BIST:PAHOL"
+    },
+    {
+      "symbol": "KUYAS.IS",
+      "ticker": "KUYAS",
+      "name": "Kuyas Yatirim A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:KUYAS"
+    },
+    {
+      "symbol": "GRTHO.IS",
+      "ticker": "GRTHO",
+      "name": "Grainturk Holding A.S.",
+      "sector": "Distribution Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:GRTHO"
+    },
+    {
+      "symbol": "SARKY.IS",
+      "ticker": "SARKY",
+      "name": "Sarkuysan Elektrolitik Bakir Sanayi ve Ticaret A.S.",
+      "sector": "Producer Manufacturing",
+      "market": "TR",
+      "scannerSymbol": "BIST:SARKY"
+    },
+    {
+      "symbol": "HEKTS.IS",
+      "ticker": "HEKTS",
+      "name": "Hektas Ticaret T.A.S.",
+      "sector": "Process Industries",
+      "market": "TR",
+      "scannerSymbol": "BIST:HEKTS"
+    },
+    {
+      "symbol": "BTCIM.IS",
+      "ticker": "BTCIM",
+      "name": "Baticim Bati Anadolu Cimento Sanayii A.S.",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:BTCIM"
+    },
+    {
+      "symbol": "PSGYO.IS",
+      "ticker": "PSGYO",
+      "name": "Pasifik Gayrimenkul Yatirim Ortakligi AS",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:PSGYO"
+    },
+    {
+      "symbol": "DAPGM.IS",
+      "ticker": "DAPGM",
+      "name": "DAP GAYRIMENKUL GELISTIRME AS",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:DAPGM"
+    },
+    {
+      "symbol": "FENER.IS",
+      "ticker": "FENER",
+      "name": "Fenerbahce Futbol A.S.",
+      "sector": "Consumer Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:FENER"
+    },
+    {
+      "symbol": "ALTNY.IS",
+      "ticker": "ALTNY",
+      "name": "Altinay Savunma Teknolojileri A.S.",
+      "sector": "Electronic Technology",
+      "market": "TR",
+      "scannerSymbol": "BIST:ALTNY"
+    },
+    {
+      "symbol": "IZENR.IS",
+      "ticker": "IZENR",
+      "name": "Izdemir Enerji Elektrik Uretim A.S.",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:IZENR"
+    },
+    {
+      "symbol": "SKBNK.IS",
+      "ticker": "SKBNK",
+      "name": "Sekerbank T.A.S.",
+      "sector": "Finance",
+      "market": "TR",
+      "scannerSymbol": "BIST:SKBNK"
+    },
+    {
+      "symbol": "MIATK.IS",
+      "ticker": "MIATK",
+      "name": "MIA Teknoloji AS",
+      "sector": "Technology Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:MIATK"
+    },
+    {
+      "symbol": "OBAMS.IS",
+      "ticker": "OBAMS",
+      "name": "Oba Makarnacilik Sanayi Ve Ticaret A. S.",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:OBAMS"
+    },
+    {
+      "symbol": "GSRAY.IS",
+      "ticker": "GSRAY",
+      "name": "Galatasaray Sportif Sinai Veticari Yatirimlar A.S.",
+      "sector": "Consumer Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:GSRAY"
+    },
+    {
+      "symbol": "CANTE.IS",
+      "ticker": "CANTE",
+      "name": "CAN2 TERMIK A.S.",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:CANTE"
+    },
+    {
+      "symbol": "PATEK.IS",
+      "ticker": "PATEK",
+      "name": "Pasifik Teknoloji AS",
+      "sector": "Technology Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:PATEK"
+    },
+    {
+      "symbol": "ZOREN.IS",
+      "ticker": "ZOREN",
+      "name": "Zorlu Enerji Elektrik Uretim A.S.",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:ZOREN"
+    },
+    {
+      "symbol": "ODAS.IS",
+      "ticker": "ODAS",
+      "name": "ODAS Elektrik Uretim Sanayi Ticaret A.S.",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:ODAS"
+    },
+    {
+      "symbol": "BALSU.IS",
+      "ticker": "BALSU",
+      "name": "Balsu Gida Sanayi ve Ticaret Anonim Sirketi",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:BALSU"
+    },
+    {
+      "symbol": "TUKAS.IS",
+      "ticker": "TUKAS",
+      "name": "Tukas Gida Sanayi ve Ticaret Anonim Sirketi",
+      "sector": "Consumer Non-Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:TUKAS"
+    },
+    {
+      "symbol": "VESTL.IS",
+      "ticker": "VESTL",
+      "name": "Vestel Elektronik Sanayi ve Ticaret A.S.",
+      "sector": "Consumer Durables",
+      "market": "TR",
+      "scannerSymbol": "BIST:VESTL"
+    },
+    {
+      "symbol": "BERA.IS",
+      "ticker": "BERA",
+      "name": "Bera Holding AS",
+      "sector": "Producer Manufacturing",
+      "market": "TR",
+      "scannerSymbol": "BIST:BERA"
+    },
+    {
+      "symbol": "QUAGR.IS",
+      "ticker": "QUAGR",
+      "name": "Qua Granite Hayal Yapi ve Urunleri Sanayi Ticaret AS",
+      "sector": "Non-Energy Minerals",
+      "market": "TR",
+      "scannerSymbol": "BIST:QUAGR"
+    },
+    {
+      "symbol": "EUREN.IS",
+      "ticker": "EUREN",
+      "name": "Europen Endustri Insaat Sanayi ve Ticaret A.S.",
+      "sector": "Producer Manufacturing",
+      "market": "TR",
+      "scannerSymbol": "BIST:EUREN"
+    },
+    {
+      "symbol": "ESEN.IS",
+      "ticker": "ESEN",
+      "name": "Esenboga Elektrik Uretim AS",
+      "sector": "Utilities",
+      "market": "TR",
+      "scannerSymbol": "BIST:ESEN"
+    },
+    {
+      "symbol": "REEDR.IS",
+      "ticker": "REEDR",
+      "name": "Reeder Teknoloji Sanayi ve Ticaret A.S.",
+      "sector": "Technology Services",
+      "market": "TR",
+      "scannerSymbol": "BIST:REEDR"
+    }
+  ]
+}

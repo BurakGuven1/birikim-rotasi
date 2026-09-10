@@ -11,7 +11,7 @@ describe("settings migration", () => {
       monthlyBudgetUsd: 1_250,
       targetUsd: 600_000,
       riskAnswersCompleted: true,
-      annualContributionUsd: 3_750,
+      annualContributionUsd: 0,
       annualContributionMonth: 1,
       tacticalShare: 0.2,
       perTradeRisk: 0.005,

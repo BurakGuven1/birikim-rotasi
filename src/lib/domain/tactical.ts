@@ -135,6 +135,7 @@ export function deriveTacticalSetup(input: DeriveTacticalSetupInput): TacticalSe
   const eligible = aboveLongTrend
     && alignedTrend
     && positiveMomentum
+    && notExtended
     && confidence >= input.profile.minConfidence
     && riskReward >= input.profile.minRiskReward;
   const reasons = [

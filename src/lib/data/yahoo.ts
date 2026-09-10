@@ -24,13 +24,14 @@ export const yahooProvider: MarketDataProvider = {
   async getQuote(symbol) {
     const result = await getChart(symbol, "5d", "1d");
     const meta = result.meta;
-    const asOf = new Date((meta.regularMarketTime ?? Date.now() / 1000) * 1000).toISOString();
+    if (!Number.isFinite(meta.regularMarketTime) || meta.regularMarketTime! <= 0) throw new Error("Yahoo fiyat zamanı eksik.");
+    const asOf = new Date(meta.regularMarketTime! * 1000).toISOString();
     const previous = meta.chartPreviousClose ?? meta.regularMarketPrice;
     const currency = (["TRY", "USD", "EUR"].includes(meta.currency ?? "") ? meta.currency : "USD") as Currency;
     return { price: meta.regularMarketPrice, currency, asOf, source: "Yahoo Finance (anahtarsız)", status: freshnessStatus(asOf), changePercent: previous ? (meta.regularMarketPrice / previous - 1) * 100 : 0 };
   },
   async getHistory(symbol, range = "5y") {
-    const result = await getChart(symbol, range, range === "10y" || range === "max" ? "1wk" : "1d");
+    const result = await getChart(symbol, range, "1d");
     const quote = result.indicators.quote[0];
     return (result.timestamp ?? []).flatMap((timestamp, index): PricePoint[] => {
       const close = quote.close[index];

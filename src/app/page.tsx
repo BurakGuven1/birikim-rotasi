@@ -1,3 +1,3 @@
-import { RouteDashboard } from "@/features/strategy/route-dashboard";
+import { InvestmentDashboard } from "@/features/investment/investment-dashboard";
 
-export default function HomePage() { return <RouteDashboard />; }
+export default function HomePage() { return <InvestmentDashboard />; }

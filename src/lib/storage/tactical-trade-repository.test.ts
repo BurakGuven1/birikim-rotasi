@@ -24,8 +24,12 @@ const setup: TacticalSetup = {
 };
 
 describe("tactical trade journal transitions", () => {
+  it("rejects expired or future-dated setups before journaling", () => {
+    expect(() => createPlannedTrade(setup, "expired", new Date("2026-09-12T00:00:00Z"))).toThrow();
+    expect(() => createPlannedTrade(setup, "future", new Date("2026-09-01T00:00:00Z"))).toThrow();
+  });
   it("freezes the generated setup inside a planned journal row", () => {
-    const trade = createPlannedTrade(setup, "trade-1");
+    const trade = createPlannedTrade(setup, "trade-1", new Date("2026-09-05T00:00:00Z"));
 
     setup.reasons.push("Sonradan değişti.");
     expect(trade.status).toBe("planned");
@@ -34,21 +38,21 @@ describe("tactical trade journal transitions", () => {
   });
 
   it("opens a planned trade at the actual fill without rewriting its plan", () => {
-    const planned = createPlannedTrade(setup, "trade-2");
+    const planned = createPlannedTrade(setup, "trade-2", new Date("2026-09-05T00:00:00Z"));
     const opened = openTacticalTrade(planned, 100.5, "2026-09-05T12:00:00.000Z");
 
     expect(opened).toMatchObject({ status: "open", actualEntry: 100.5, openedAt: "2026-09-05T12:00:00.000Z", plannedEntry: 100 });
   });
 
   it("closes an open trade and calculates realized dollar profit", () => {
-    const opened = openTacticalTrade(createPlannedTrade(setup, "trade-3"), 100, "2026-09-05T12:00:00.000Z");
+    const opened = openTacticalTrade(createPlannedTrade(setup, "trade-3", new Date("2026-09-05T00:00:00Z")), 100, "2026-09-05T12:00:00.000Z");
     const closed = closeTacticalTrade(opened, 110, "2026-09-20T12:00:00.000Z");
 
     expect(closed).toMatchObject({ status: "closed", actualExit: 110, realizedPnlUsd: 200 });
   });
 
   it("rejects invalid state transitions", () => {
-    const planned = createPlannedTrade(setup, "trade-4");
+    const planned = createPlannedTrade(setup, "trade-4", new Date("2026-09-05T00:00:00Z"));
 
     expect(() => closeTacticalTrade(planned, 110, "2026-09-20T12:00:00.000Z")).toThrow("Yalnızca açık işlem kapatılabilir");
   });

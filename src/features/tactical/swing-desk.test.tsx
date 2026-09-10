@@ -38,7 +38,7 @@ describe("swing desk", () => {
     const journalHtml = renderToStaticMarkup(<SwingDeskView
       profile={DEFAULT_STRATEGY_PROFILE}
       setups={[setup]}
-      trades={[createPlannedTrade(setup, "trade-1")]}
+      trades={[createPlannedTrade(setup, "trade-1", new Date("2026-09-05T00:00:00Z"))]}
       loading={false}
       errors={[]}
       onPlan={() => undefined}
