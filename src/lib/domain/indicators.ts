@@ -38,3 +38,41 @@ export function annualizedVolatility(values: number[], periodsPerYear = 52): num
   const variance = returns.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (returns.length - 1);
   return Math.sqrt(variance) * Math.sqrt(periodsPerYear);
 }
+export function exponentialMovingAverage(values: number[], period: number): Array<number | null> {
+  if (!Number.isInteger(period) || period < 1) throw new Error("Invalid EMA period");
+  let previous = 0;
+  return values.map((value, index) => {
+    if (index < period - 1) return null;
+    previous = index === period - 1 ? values.slice(0, period).reduce((a,b)=>a+b,0)/period : value*2/(period+1)+previous*(1-2/(period+1));
+    return previous;
+  });
+}
+
+export function relativeStrengthIndex(values: number[], period = 14): Array<number | null> {
+  let gain=0, loss=0;
+  return values.map((v,i)=>{
+    if (!i) return null;
+    const d=v-values[i-1];
+    if(i<=period){gain+=Math.max(d,0)/period;loss+=Math.max(-d,0)/period;}
+    else {gain=(gain*(period-1)+Math.max(d,0))/period;loss=(loss*(period-1)+Math.max(-d,0))/period;}
+    return i<period ? null : loss===0 ? gain===0 ? 50 : 100 : 100-100/(1+gain/loss);
+  });
+}
+
+export function averageTrueRange(bars: {high:number;low:number;close:number}[], period=14): Array<number|null> {
+  let atr=0;
+  return bars.map((bar,i)=>{
+    const tr=i ? Math.max(bar.high-bar.low,Math.abs(bar.high-bars[i-1].close),Math.abs(bar.low-bars[i-1].close)) : bar.high-bar.low;
+    atr=i<period ? atr+tr/period : (atr*(period-1)+tr)/period;
+    return i<period-1 ? null : atr;
+  });
+}
+
+export function movingAverageConvergenceDivergence(values:number[], fast=12, slow=26, signalPeriod=9) {
+  const f=exponentialMovingAverage(values,fast), s=exponentialMovingAverage(values,slow);
+  const macd=values.map((_,i)=>f[i]===null||s[i]===null?null:f[i]!-s[i]!);
+  const valid=macd.filter((v):v is number=>v!==null), signalValues=exponentialMovingAverage(valid,signalPeriod);
+  let cursor=0;
+  const signal=macd.map(v=>v===null?null:signalValues[cursor++]);
+  return {macd,signal,histogram:macd.map((v,i)=>v===null||signal[i]===null?null:v-signal[i]!)};
+}

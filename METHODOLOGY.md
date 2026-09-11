@@ -1,5 +1,39 @@
 # Metodoloji
 
+## Hedef ve üç katmanlı rota
+
+Reel USD `%10–11` bir optimizasyon hedefidir; garanti, sabit beklenti veya uygulamanın ürettiği bir tahmin değildir. Sistem önce sermayenin kalıcılığını, sonra risk ayarlı ek getiriyi gözetir:
+
+| Katman | Varsayılan pay | Görev |
+| --- | ---: | --- |
+| Çekirdek | `%70` | Uzun vadeli küresel/ABD hisse, Bitcoin ve altın/reel varlık birikimi |
+| Taktik / swing | `%20` | Yalnız doğrulanmış trend ve momentum kurulumlarında sınırlı risk |
+| Fırsat rezervi | `%10` | Kurulum yokken nakit bekletme ve sonraki fırsatı finanse etme |
+
+Aylık `$1.000` katkı bu oranlarla yönlendirilir. Varsayılan yıllık `$3.750` ek katkının yarısı seçilen ay çekirdeğe eklenir; diğer yarısı üç aya bölünerek zamanlama riski azaltılır. Taktik kurulum yoksa o ayki taktik pay da rezervde kalır. Ana yaklaşım satış yapmadan yeni katkıyla dengelemektir.
+
+## Kurallı swing motoru
+
+Kurulum evreni S&P 500, Nasdaq 100, Bitcoin, altın ve BIST 100’dür. En az 200 işlem günü olmadan `long` üretilmez. Adayın aynı anda şu filtreleri geçmesi gerekir:
+
+- fiyat 200 günlük ortalamanın üzerinde,
+- 50 günlük ortalama 200 günlük ortalamanın üzerinde,
+- 6–1 ve 12–1 momentum pozitif,
+- güven skoru varsayılan `%60` eşiğini geçiyor,
+- ilk hedefe getiri/risk oranı en az `2,0`,
+- fiyat 50 günlük trendden dört ATR’den fazla uzak değil.
+
+Giriş aralığı ve geçersizleşme seviyesi 14 günlük ATR ile kurulur. İlk hedef yaklaşık `4 ATR`, ikinci hedef `6 ATR` uzaktadır. Pozisyon büyüklüğü:
+
+```text
+risk bütçesi = portföy değeri × işlem başına risk
+risk mesafesi = (giriş − geçersizleşme) / giriş
+risk bazlı pozisyon = risk bütçesi / risk mesafesi
+nihai pozisyon = min(risk bazlı pozisyon, portföy × taktik tavan)
+```
+
+Varsayılan işlem başına risk `%0,50`, taktik pay `%20`, kesin taktik üst sınır `%25`tir. Taktik katmanın kendi düşüşü `-%12` olduğunda yeni taktik bütçe yarıya iner; `-%18` olduğunda durur. En az 12 işlem ve 12 aylık gözlemden sonra çekirdeğe göre düşük performans taktik payı en fazla `%10`a indirir; iki ardışık başarısız inceleme yeni taktik bütçeyi sıfırlar.
+
 ## Portföy muhasebesi
 
 İşlemler tarih sırasına alınır. Alış komisyonu maliyete, satış komisyonu net satış gelirine eklenir. Satışlarda FIFO lot yöntemi kullanılır.
@@ -48,11 +82,13 @@ Bitcoin sinyali fiyat bileşenine ek olarak BTC/M2 tarihsel yüzdesini (%30), 20
 
 ## Backtest ve USD ölçümü
 
-Her takvim ayında bir gözlem ve aynı USD katkı tutarı kullanılır; varsayılan katkı `$1.000/ay`dır. S&P 500, altın ve Bitcoin doğal USD fiyatıyla; BIST 100 ise her gözlemde tarihsel USD/TRY kuruna bölünerek USD bazında ölçülür. Seçimler tam 12/36/60/120 ortak takvim ayına karşılık gelir.
+Her takvim ayında varsayılan `$1.000`, seçilen takvim ayında ayrıca varsayılan `$3.750` USD katkı kullanılır. S&P 500, altın ve Bitcoin doğal USD fiyatıyla; BIST 100 ise her gözlemde tarihsel USD/TRY kuruna bölünerek USD bazında ölçülür. Seçimler tam 12/36/60/120 ortak takvim ayına karşılık gelir.
 
-Ana karşılaştırma **Aylık plan · %70/%30 walk-forward** satırıdır. Her alım ayında dengeli optimum tabanı yalnızca önceki aya kadar bilinen ortak fiyat geçmişinde 1/3/5/10 yıllık uygun pencerelerle yeniden hesaplanır; dinamik sinyal de aynı tarih kesimindeki fiyat ve geciktirilmiş M2 verisini kullanır. Seçilen 12/36/60/120 aylık dönemden eski gözlemler yalnızca model eğitimi ve SMA200 ısınması içindir, bu aylarda katkı yatırılmış sayılmaz. Sonuçta %70 dengeli taban ile %30 dinamik ayar birleştirilir. Kafa karıştıran geriye dönük maksimum statik, teorik üst sınır, eşit ve nötr sepetler kullanıcı arayüzünden kaldırılmıştır; tek-varlık satırları sade kıyas olarak korunur.
+Ana karşılaştırma **Çekirdek + kurallı swing** satırıdır. Çekirdek alımları düzenli yapılır; yıllık katkının yarısı hemen, kalanı üç aya bölünerek çekirdeğe dağıtılır. Swing sinyali yalnız o günün kapanışına kadar olan gözlemlerden üretilir ve aynı barda girişe izin verilmez. Bekleyen giriş en erken sonraki barda, yedi günlük geçerlilik içinde çalışabilir. Giriş ve çıkışta varsayılan 8 baz puan toplam spread etkisi ve işlem başına `$0,50` komisyon hesaba katılır. Bir bar hem stopu hem hedefi görürse muhafazakâr olarak stop önce çalışmış sayılır.
 
-Toplam yatırılan para ve son değer USD olarak gösterilir. “USD getiri” son değer ile sabit dolar katkılarının toplamını karşılaştırır. “Reel USD getiri”, her dolar katkısının FRED `CPIAUCSL` endeksiyle dönem sonuna taşınmış satın alma gücü eşiğine göre hesaplanır. Yıllık TWR, maksimum düşüş ve yıllıklandırılmış volatilite yeni katkıları getiri kabul etmeyen zaman ağırlıklı aylık getirilerden hesaplanır. Vergi, spread, tüm ürün masraf oranları ve farklı piyasa tatilleri tam modellenmediğinden sonuçlar karar desteğidir.
+**Aylık plan · %70/%30 walk-forward** satırı ikinci, bağımsız kıyastır. Her alım ayında dengeli optimum tabanı yalnızca önceki aya kadar bilinen ortak fiyat geçmişinde 1/3/5/10 yıllık uygun pencerelerle yeniden hesaplanır; dinamik sinyal de aynı tarih kesimindeki fiyat ve geciktirilmiş M2 verisini kullanır. Seçilen dönemden eski gözlemler yalnızca model ısınması içindir ve bu aylarda para yatırılmış sayılmaz.
+
+Toplam yatırılan para ve son değer USD olarak gösterilir. “USD getiri” son değer ile dolar katkılarının toplamını karşılaştırır. “Reel USD getiri”, her dolar katkısının FRED `CPIAUCSL` endeksiyle dönem sonuna taşınmış satın alma gücü eşiğine göre hesaplanır. Yıllık TWR, maksimum düşüş ve yıllıklandırılmış volatilite yeni katkıları getiri kabul etmeyen zaman ağırlıklı getirilerden hesaplanır. Vergi, ürün masraf oranı, temettü stopajı, kayma, kısmi dolum ve farklı piyasa tatilleri tam modellenmediğinden sonuçlar karar desteğidir.
 
 ## Enflasyona bağlı USD hedefi
 

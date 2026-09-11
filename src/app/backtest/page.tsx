@@ -1,3 +1,2 @@
-import { BacktestDashboard } from "@/features/backtest/backtest-dashboard";
-
-export default function BacktestPage() { return <BacktestDashboard />; }
+import { OpportunityBacktestPanel } from "@/features/investment/opportunity-backtest-panel";
+export default function BacktestPage() { return <OpportunityBacktestPanel />; }

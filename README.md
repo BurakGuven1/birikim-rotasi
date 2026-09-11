@@ -1,6 +1,8 @@
 # Birikim Rotası
 
-Yerelde çalışan, portföy işlemlerini yalnızca tarayıcıdaki IndexedDB deposunda saklayan yatırım takip ve aylık dağılım karar destek uygulaması.
+Yerelde çalışan, portföy işlemlerini yalnızca tarayıcıdaki IndexedDB deposunda saklayan; aylık birikimi çekirdek, kurallı swing ve fırsat rezervi olarak yöneten yatırım karar destek uygulaması.
+
+Varsayılan rota ayda `$1.000` ve yılda bir `$3.750` ek katkıdır. Reel USD `%10–11` bir **hedef bandıdır**; vaat veya beklenen getiri değildir. Gerçekleşen sonuç portföy ve geçmişe dönük, maliyetli backtest ekranlarında ayrı ölçülür.
 
 ## Hızlı başlangıç
 
@@ -46,7 +48,7 @@ Uygulamayı denemek için **DEMO portföyü yükle** seçeneği kullanılabilir.
 | USD/TRY | Yahoo-compatible uç | EODHD döviz yedeği |
 | FRED makro serileri | Resmî grafik CSV indirmesi | Resmî API üzerinden M2, CPI ve reel faiz |
 | Portföy takibi, kâr/zarar ve grafikler | Tam çalışır | Değişmez |
-| Fiyat/SMA backtesti | Tam çalışır | Değişmez |
+| Çekirdek + swing backtesti | Tam çalışır | Daha geniş fiyat geçmişi |
 
 Ücretsiz ABD ve BIST fiyatları lisanslı tick-by-tick gerçek zaman verisi değildir. Her kart kaynak, veri zamanı ve `Güncel/Gecikmeli/Veri eski` durumunu gösterir. Veri alınamazsa uydurma fiyat kullanılmaz.
 
@@ -62,13 +64,26 @@ Anahtarları sohbet, Git veya uygulama ekranına göndermeyin. `.env.local` Git 
 
 ## Sayfalar
 
-- **Aylık Plan:** Varsayılan sabit `$1.000/ay`; S&P 500, altın, Bitcoin ve USD'ye çevrilmiş BIST 100 üzerinde 1/3/5/10 yıllık dengeli optimum uzlaşısının %70 ana tabanı ile güncel dinamik modelin %30 küçük ayarı. `$500.000` hedefi bugünün alım gücüyle tutulur ve ABD TÜFE ile büyütülür.
-- **Piyasa:** ücretsiz güncel/gecikmeli fiyatlar ve kaynak durumu.
+- **Rota:** Varsayılan `%70 çekirdek / %20 taktik / %10 rezerv`; o ayın uygulanabilir alış tutarı, doğrulanmış swing kurulumu ve risk tabanı tek ekranda.
+- **Swing:** 50/200 günlük trend, 6–1 ve 12–1 momentum, ATR, minimum güven ve minimum getiri/risk filtresi. Giriş, geçersizleşme, iki hedef ve risk bazlı pozisyon büyüklüğü üretilir. Planlanan/açılan/kapanan işlemler yerel günlükte tutulur.
+- **Analiz:** ücretsiz güncel/gecikmeli fiyatlar ve kaynak durumu.
 - **Portföyüm:** FIFO maliyet, komisyon, gerçekleşmiş/gerçekleşmemiş kâr ve grafikler.
-- **Backtest:** Tam 12/36/60/120 ay boyunca aynı USD katkısını kullanır; gerçek `%70 dengeli optimum + %30 dinamik` aylık planını yalnız önceki aya kadar bilinen verilerle walk-forward sınar. USD toplam/reel getiri, ABD TÜFE koruma eşiği, dinamik model ve tek-varlık kıyasları gösterilir.
+- **Backtest:** Tam 12/36/60/120 ay boyunca aylık ve yıllık USD katkısını kullanır. Çekirdek + swing satırında sinyal gününde işlem açılmaz, en erken sonraki bar kullanılır; spread, komisyon ve stop-önce varsayımı uygulanır. USD toplam/reel getiri, ABD TÜFE koruma eşiği, walk-forward model ve tek-varlık kıyasları gösterilir.
 - **Varlık Detayı:** mum/çizgi, SMA40, SMA200, ATH düşüşü, sinyal ve dönemsel performans.
-- **Metodoloji:** karar sırası, satış koruması ve sınırlamalar.
-- **Ayarlar:** aylık tutar, risk kontrolü ve veri kaynağı durumu.
+- **Ayarlar:** aylık/yıllık katkı, yıllık katkı ayı, taktik tavan, işlem başına risk, minimum getiri/risk ve güven sınırı.
+
+## Varsayılan risk çerçevesi
+
+| Kural | Varsayılan |
+| --- | ---: |
+| Çekirdek / taktik / rezerv | `%70 / %20 / %10` |
+| İşlem başına portföy riski | `%0,50` |
+| Minimum getiri / risk | `2,0` |
+| Minimum sinyal güveni | `%60` |
+| Taktik katman üst sınırı | `%25` |
+| Taktik düşüş freni | `-%12` yarıya indir, `-%18` durdur |
+
+Kaldıraç, short ve otomatik emir yoktur. Geçersizleşme seviyesi zarar büyürken uzağa taşınmaz. Uygun kurulum yoksa taktik bütçe rezerve geçer; sırf nakit bulunduğu için işlem açılmaz.
 
 ## Komutlar
 
@@ -76,6 +91,7 @@ Anahtarları sohbet, Git veya uygulama ekranına göndermeyin. `.env.local` Git 
 npm test
 npm run lint
 npm run build
+npm run test:e2e
 npm run dev
 ```
 

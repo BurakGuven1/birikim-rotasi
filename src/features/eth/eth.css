@@ -1,0 +1,27 @@
+.eth-workspace .eyebrow { color: var(--muted); font-size: 10px; letter-spacing: .12em; }
+.eth-workspace .eth-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; align-items: start; }
+.eth-workspace .eth-card { padding: 22px; box-shadow: none; min-width: 0; }
+.eth-workspace .eth-card h3 { margin: 0 0 12px; font-size: 18px; letter-spacing: -.02em; }
+.eth-workspace .eth-card h4 { margin: 22px 0 8px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.eth-workspace .eth-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; margin: 4px 0 12px; }
+.eth-workspace .eth-metrics p { margin: 4px 0 2px; font-size: 20px; font-weight: 650; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.eth-workspace .eth-metrics small { color: var(--muted); font-size: 11px; }
+.eth-workspace .eth-idle, .eth-workspace .eth-pending { margin: 12px 0 0; padding: 12px 14px; border-radius: 10px; font-size: 13px; }
+.eth-workspace .eth-idle { background: var(--surface-2); color: var(--muted); }
+.eth-workspace .eth-pending { background: var(--primary-soft); border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border)); }
+.eth-workspace .eth-blocked { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.eth-workspace .eth-blocked li { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
+.eth-workspace .eth-blocked b { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+.eth-workspace .eth-blockers ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; font-size: 13px; }
+.eth-workspace .eth-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow-y: auto; font-size: 12px; }
+.eth-workspace .eth-log li { display: grid; grid-template-columns: 108px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.eth-workspace .eth-log span { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11px; }
+.eth-workspace .eth-log-warning { color: var(--warning, #b45309); }
+.eth-workspace .eth-log-error { color: var(--negative); }
+.eth-workspace .eth-settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 16px 0; }
+.eth-workspace .eth-warning { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 14px; padding: 12px 14px; border-radius: 10px; background: var(--negative-soft, color-mix(in srgb, var(--negative) 12%, transparent)); color: var(--negative); font-size: 12px; }
+.eth-workspace .eth-warning svg { flex: none; margin-top: 1px; }
+.eth-workspace .button.danger { color: var(--negative); border-color: color-mix(in srgb, var(--negative) 40%, var(--border)); }
+.eth-workspace .eth-spin { animation: eth-spin 1s linear infinite; vertical-align: -3px; }
+@keyframes eth-spin { to { transform: rotate(360deg); } }
+@media (max-width: 720px) { .eth-workspace .eth-columns { grid-template-columns: 1fr; } .eth-workspace .eth-log li { grid-template-columns: 1fr; gap: 2px; } }

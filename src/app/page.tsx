@@ -1,3 +1,3 @@
-import { MonthlyPlan } from "@/features/allocation/monthly-plan";
+import { InvestmentDashboard } from "@/features/investment/investment-dashboard";
 
-export default function HomePage() { return <MonthlyPlan />; }
+export default function HomePage() { return <InvestmentDashboard />; }

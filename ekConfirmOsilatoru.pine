@@ -1,0 +1,968 @@
+//@version=6
+indicator("LMO — Liquidity Manipulation Oscillator", shorttitle="LMO", overlay=false, precision=2, max_labels_count=500)
+
+// LMO v3.1 — correctness audit, 2026-09-08.
+// OHLCV-based sweep/reclaim heuristic; does not prove manipulation or hidden liquidity.
+// Raw quality is NOT a calibrated probability. Window survival is NOT trade win rate.
+// Events/state update on confirmed closes. Pivot confirmation requires P right bars.
+// One pending/validation event per direction; new same-direction candidates are skipped while busy.
+// Both directions resolving together: larger final magnitude selects histogram/dashboard; ties bearish.
+// Volume filter intentionally remains required: missing/zero volume blocks new candidates.
+// Model weights, failure criterion, validation proxies and decay were not optimized/backtested.
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// GİRDİLER
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+grpPivot = "Pivot & ATR"
+P        = input.int(5, "Pivot Left/Right Bars", minval=3, maxval=15, group=grpPivot)
+atrLen   = input.int(14, "ATR Length", minval=7, maxval=30, group=grpPivot)
+
+grpNoise         = "Noise Filter (4 Koşullu Sweep Kapısı)"
+kSweep           = input.float(0.25, "Min Sweep Mesafesi (x ATR)", minval=0.10, maxval=1.00, step=0.05, group=grpNoise)
+sweepCap         = input.float(2.0, "Sweep Mesafe Cap (x ATR)", minval=1.0, maxval=4.0, step=0.1, group=grpNoise)
+volRegimeLen     = input.int(50, "Volatilite Rejimi Penceresi (bar)", minval=20, maxval=150, group=grpNoise)
+minVolRatio      = input.float(0.5, "Min Volatilite Rejimi Oranı (ATR/ort.ATR)", minval=0.1, maxval=1.0, step=0.05, group=grpNoise)
+minSweepWick     = input.float(0.15, "Min Sweep Fitil Skoru", minval=0.0, maxval=0.6, step=0.05, group=grpNoise)
+minSweepVolume   = input.float(0.15, "Min Sweep Hacim Skoru", minval=0.0, maxval=0.6, step=0.05, group=grpNoise)
+
+grpAbs        = "Absorption Penceresi"
+wAbsorb       = input.int(3, "Absorption Penceresi (bar)", minval=1, maxval=6, group=grpAbs)
+absorptionCap = input.float(2.0, "Absorption Geri Alma Cap (x ATR)", minval=1.0, maxval=4.0, step=0.1, group=grpAbs)
+
+grpVol   = "Volume (Robust Z)"
+nVol     = input.int(50, "Medyan/MAD Penceresi (bar)", minval=20, maxval=100, group=grpVol)
+volCap   = input.float(3.0, "Volume Z Cap (robust-sigma)", minval=2.0, maxval=5.0, step=0.1, group=grpVol)
+volRelSc = input.float(2.0, "Volume Güvenilirlik Ölçeği", minval=0.5, maxval=5.0, step=0.1, group=grpVol)
+
+grpWick     = "Wick Score (Sweep/Absorption'ın İç Bileşeni)"
+wickBodyCap = input.float(5.0, "Wick/Body Oran Cap", minval=2.0, maxval=10.0, step=0.5, group=grpWick)
+
+grpSweepComp    = "Sweep Quality — 5 Bileşen Ağırlığı (Madde 5, tekil ağırlık tavanı %40)"
+wSweepDist      = input.float(0.30, "Ağırlık: Mesafe (ATR)", minval=0.0, maxval=1.0, step=0.05, group=grpSweepComp)
+wSweepWick      = input.float(0.20, "Ağırlık: Fitil", minval=0.0, maxval=1.0, step=0.05, group=grpSweepComp)
+wSweepSpeed     = input.float(0.15, "Ağırlık: Hız (TR genişlemesi)", minval=0.0, maxval=1.0, step=0.05, group=grpSweepComp)
+wSweepVol       = input.float(0.15, "Ağırlık: Hacim", minval=0.0, maxval=1.0, step=0.05, group=grpSweepComp)
+wSweepPool      = input.float(0.20, "Ağırlık: Likidite Havuzu Kalitesi", minval=0.0, maxval=1.0, step=0.05, group=grpSweepComp)
+speedTRLookback = input.int(20, "Hız: Ortalama TR Penceresi (bar)", minval=5, maxval=60, group=grpSweepComp)
+speedCap        = input.float(2.0, "Hız: TR Genişleme Cap (kat)", minval=0.5, maxval=5.0, step=0.1, group=grpSweepComp)
+
+grpPool              = "Liquidity Pool Quality — 6 Bileşen (Test/Cluster/Age/Untouched/SweepPotential/Size)"
+wPoolAge             = input.float(0.20, "Ağırlık: Pool Age (çan eğrisi)", minval=0.0, maxval=1.0, step=0.05, group=grpPool)
+wPoolTest            = input.float(0.15, "Ağırlık: Test Count", minval=0.0, maxval=1.0, step=0.05, group=grpPool)
+wPoolCluster         = input.float(0.20, "Ağırlık: Cluster Density (Equal High/Low)", minval=0.0, maxval=1.0, step=0.05, group=grpPool)
+wPoolUntouched       = input.float(0.15, "Ağırlık: Untouched Quality", minval=0.0, maxval=1.0, step=0.05, group=grpPool)
+wPoolSweepPotential  = input.float(0.15, "Ağırlık: Sweep Potential (sıkışma)", minval=0.0, maxval=1.0, step=0.05, group=grpPool)
+wPoolSize            = input.float(0.15, "Ağırlık: Pool Size (çan eğrisi)", minval=0.0, maxval=1.0, step=0.05, group=grpPool)
+testSatK             = input.float(2.0, "Test Count: Doygunluk Sabiti (küçük=hızlı doygunluk)", minval=0.5, maxval=8.0, step=0.5, group=grpPool)
+testProximityATR     = input.float(0.5, "Test: Yakınlık Eşiği (x ATR)", minval=0.1, maxval=2.0, step=0.05, group=grpPool)
+clusterToleranceATR  = input.float(0.15, "Kümelenme: Eşitlik Toleransı (x ATR)", minval=0.05, maxval=0.5, step=0.05, group=grpPool)
+clusterCap           = input.int(3, "Kümelenme: Normalize İçin Maksimum Yakın Pivot", minval=1, maxval=8, group=grpPool)
+poolHistoryLen       = input.int(10, "Kümelenme: Geçmiş Pivot Penceresi (adet)", minval=3, maxval=30, group=grpPool)
+agePeakBars          = input.int(40, "Age: Çan Eğrisi Tepe Noktası (bar)", minval=10, maxval=200, group=grpPool)
+ageYoungSigma        = input.int(15, "Age: Genç Taraf Sigma (hızlı düşüş)", minval=5, maxval=60, group=grpPool)
+ageOldSigma          = input.int(60, "Age: Yaşlı Taraf Sigma (yavaş düşüş)", minval=10, maxval=200, group=grpPool)
+disturbSatK          = input.float(2.0, "Untouched: Doygunluk Sabiti (küçük=hızlı ceza)", minval=0.5, maxval=8.0, step=0.5, group=grpPool)
+sizePeakRatio        = input.float(1.0, "Size: Çan Eğrisi Tepe Noktası (x ATR)", minval=0.3, maxval=3.0, step=0.1, group=grpPool)
+sizeSigma            = input.float(0.6, "Size: Sigma (genişlik)", minval=0.2, maxval=2.0, step=0.1, group=grpPool)
+
+grpAbsComp     = "Absorption Quality — 5 Bileşen Ağırlığı (Madde 6, tekil ağırlık tavanı %40)"
+wAbsReclaim    = input.float(0.20, "Ağırlık: Close Recovery (geri alma oranı)", minval=0.0, maxval=1.0, step=0.05, group=grpAbsComp)
+wAbsWick       = input.float(0.20, "Ağırlık: Wick Rejection (onay barı)", minval=0.0, maxval=1.0, step=0.05, group=grpAbsComp)
+wAbsBody       = input.float(0.20, "Ağırlık: Body Recovery (onay barı gövde oranı)", minval=0.0, maxval=1.0, step=0.05, group=grpAbsComp)
+wAbsMomentum   = input.float(0.20, "Ağırlık: Sonraki Mum Onayı (bar-bar momentum)", minval=0.0, maxval=1.0, step=0.05, group=grpAbsComp)
+wAbsVolCont    = input.float(0.20, "Ağırlık: Hacim Devamlılığı", minval=0.0, maxval=1.0, step=0.05, group=grpAbsComp)
+absMomentumCap = input.float(1.0, "Momentum Cap (x ATR)", minval=0.2, maxval=3.0, step=0.1, group=grpAbsComp)
+
+grpContinuation       = "Continuation / Failure Penceresi"
+continuationWindow    = input.int(6, "Pencere Uzunluğu (bar)", minval=2, maxval=15, group=grpContinuation)
+continuationCap       = input.float(2.0, "Displacement Cap (x ATR)", minval=1.0, maxval=4.0, step=0.1, group=grpContinuation)
+
+grpFailure            = "Failure Test (kararlı KAPANIŞ tabanlı — wick-poke değil)"
+failurePenaltyFactor  = input.float(0.2, "Failure Ceza Çarpanı", minval=0.0, maxval=0.6, step=0.05, group=grpFailure)
+
+grpValidation    = "Event Validation — 5 Kriter Ağırlığı (Madde 1, en önemli geliştirme)"
+wValRange        = input.float(0.20, "Ağırlık: Eski Range'e Dönüş", minval=0.0, maxval=1.0, step=0.05, group=grpValidation)
+wValContinue     = input.float(0.20, "Ağırlık: Sweep Yönünde Devam Edememe", minval=0.0, maxval=1.0, step=0.05, group=grpValidation)
+wValDisplacement = input.float(0.25, "Ağırlık: Karşı Yöne Displacement", minval=0.0, maxval=1.0, step=0.05, group=grpValidation)
+wValExtreme      = input.float(0.20, "Ağırlık: Yeni High/Low Üretememe", minval=0.0, maxval=1.0, step=0.05, group=grpValidation)
+wValMomentum     = input.float(0.15, "Ağırlık: Momentum Zayıflaması", minval=0.0, maxval=1.0, step=0.05, group=grpValidation)
+reSweepPenalty   = input.float(0.6, "Pencerede Ters Yönde Yeniden-Sweep Ceza Çarpanı", minval=0.1, maxval=1.0, step=0.05, group=grpValidation)
+
+grpFinal        = "Final Manipulation Score = Confidence Ağırlıkları (Madde 3, 7 — TEK formül)"
+wFinalSweep     = input.float(0.25, "Ağırlık: Sweep Quality", minval=0.0, maxval=1.0, step=0.05, group=grpFinal)
+wFinalAbsorp    = input.float(0.25, "Ağırlık: Absorption Quality", minval=0.0, maxval=1.0, step=0.05, group=grpFinal)
+wFinalPool      = input.float(0.20, "Ağırlık: Liquidity Pool Quality", minval=0.0, maxval=1.0, step=0.05, group=grpFinal)
+wFinalValid     = input.float(0.20, "Ağırlık: Event Validation", minval=0.0, maxval=1.0, step=0.05, group=grpFinal)
+wFinalVolume    = input.float(0.10, "Ağırlık: Volume Quality", minval=0.0, maxval=1.0, step=0.05, group=grpFinal)
+
+grpDecay  = "Momentum Decay"
+decayRate = input.float(0.80, "Decay Oranı (bar başına)", minval=0.5, maxval=0.97, step=0.01, group=grpDecay)
+
+grpBands = "Histogram Renk Bantları"
+band20   = input.float(20.0, "Zayıf Eşiği", minval=5.0, maxval=35.0, group=grpBands)
+band40   = input.float(40.0, "Orta Eşiği", minval=25.0, maxval=55.0, group=grpBands)
+band60   = input.float(60.0, "Güçlü Eşiği", minval=45.0, maxval=75.0, group=grpBands)
+band80   = input.float(80.0, "Ekstrem Eşiği", minval=65.0, maxval=95.0, group=grpBands)
+
+grpDisp    = "Display"
+showEvents = input.bool(true, "Olay Etiketlerini Göster", group=grpDisp)
+showPanel  = input.bool(true, "Bilgi Panelini Göster", group=grpDisp)
+panelSize  = input.string("small", "Panel Yazı Boyutu", options=["tiny", "small", "normal"], group=grpDisp)
+visualGamma = input.float(1.0, "Histogram Görsel Genişletme (1=doğrusal, düşük=küçük değerleri büyüt)", minval=0.25, maxval=1.0, step=0.05, group=grpDisp)
+
+grpStats        = "İstatistik Paneli"
+showStatsPanel  = input.bool(true, "İstatistik Panelini Göster", group=grpStats)
+statsHistoryLen = input.int(100, "Geçmiş Olay Penceresi (son N olay)", minval=20, maxval=300, group=grpStats)
+
+grpOverlay            = "Overlay Katmanı (Fiyat Grafiği) — Madde 9: sade, aynı olay histogramla senkron"
+showOverlay           = input.bool(true, "Overlay Katmanını Göster", group=grpOverlay)
+showSweepMarker       = input.bool(true, "Show Sweep Marker", group=grpOverlay)
+showAbsorptionMarker  = input.bool(true, "Show Absorption Marker", group=grpOverlay)
+showFootprint         = input.bool(true, "Show Liquidity Footprint", group=grpOverlay)
+showFailedEvents      = input.bool(true, "Show Failed Events", group=grpOverlay)
+showSuccessfulEvents  = input.bool(true, "Show Successful Events", group=grpOverlay)
+overlayBaseSize       = input.string("small", "Overlay Size", options=["tiny", "small", "normal"], group=grpOverlay)
+overlayTransparency   = input.int(15, "Overlay Transparency", minval=0, maxval=90, group=grpOverlay)
+minScoreToDisplay     = input.float(35.0, "Minimum LMO Score to Display", minval=0.0, maxval=90.0, group=grpOverlay)
+clusterWindow         = input.int(8, "Cluster Bastırma Penceresi (bar)", minval=2, maxval=30, group=grpOverlay)
+stackProximityBars    = input.int(6, "Yığınlama Yakınlık Penceresi (bar)", minval=2, maxval=30, group=grpOverlay)
+stackSpacingATR       = input.float(1.0, "Yığınlama Aralığı (x ATR)", minval=0.3, maxval=3.0, step=0.1, group=grpOverlay)
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// RENK PALETİ (sabit, tema-bağımsız)
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+DARK_GREEN    = color.rgb(26, 152, 80)
+LIGHT_GREEN   = color.rgb(145, 207, 96)
+EXTREME_GREEN = color.rgb(11, 105, 60)
+NEUTRAL_GRAY  = color.rgb(140, 140, 140)
+LIGHT_RED     = color.rgb(239, 138, 98)
+DARK_RED      = color.rgb(178, 24, 43)
+EXTREME_RED   = color.rgb(110, 10, 25)
+FAILURE_COL   = color.rgb(255, 152, 0)
+
+PANEL_BG   = color.rgb(19, 23, 34)
+HEADER_BG  = color.rgb(37, 42, 56)
+BODY_BG    = color.rgb(24, 28, 39)
+BORDER_COL = color.rgb(64, 70, 86)
+LABEL_TXT  = color.rgb(158, 165, 180)
+VALUE_TXT  = color.rgb(235, 238, 242)
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// YARDIMCI FONKSİYONLAR — her biri tek iş yapar, tekrarlayan kod önlenir (Madde 10)
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+// 0-1 aralığına sıkıştırma (Pine'da math.clamp yoktur, min/max ile kuruluyor)
+f_clamp01(float x) =>
+    math.min(math.max(x, 0.0), 1.0)
+
+// Tekil ağırlık tavanı (Madde 5): bir alt-bileşen ağırlığı asla %40'ı geçmesin.
+f_capWeight(float w) =>
+    w // Normalized cap is enforced inside the weighted average.
+
+// GENEL ağırlıklı ortalama yardımcı fonksiyonu — sum-normalize edilir (ağırlıklar toplamı 1
+// olmasa bile güvenlidir). Sweep/Absorption/Pool/Validation/Final skorlarının HEPSİ bu TEK
+// fonksiyonu kullanır — aynı kombinasyon mantığının ayrı ayrı elle yazılmasını önler (Madde 10).
+f_weightedAvg(array<float> vals, array<float> weights, float maxShare = 1.0) =>
+    array<float> effective = array.copy(weights)
+    if maxShare < 1.0
+        int active = 0
+        for i = 0 to array.size(weights) - 1
+            if array.get(weights, i) > 0
+                active += 1
+        if active * maxShare < 1.0
+            runtime.error("Sweep/Absorption: %40 tavan için en az 3 pozitif ağırlık gerekir.")
+        array<bool> fixed = array.new<bool>(array.size(weights), false)
+        float remaining = 1.0
+        for pass = 0 to array.size(weights) - 1
+            float freeSum = 0.0
+            for i = 0 to array.size(weights) - 1
+                if not array.get(fixed, i)
+                    freeSum += array.get(weights, i)
+            bool capped = false
+            float budget = remaining
+            for i = 0 to array.size(weights) - 1
+                if not array.get(fixed, i)
+                    float share = freeSum > 0 ? budget * array.get(weights, i) / freeSum : 0.0
+                    array.set(effective, i, share)
+                    if share > maxShare
+                        array.set(effective, i, maxShare)
+                        array.set(fixed, i, true)
+                        remaining -= maxShare
+                        capped := true
+            if not capped
+                break
+    float sumWV = 0.0
+    float sumW  = 0.0
+    for i = 0 to array.size(vals) - 1
+        sumWV += array.get(vals, i) * array.get(effective, i)
+        sumW  += array.get(effective, i)
+    sumW > 0 ? sumWV / sumW : 0.0
+
+// Küçük yardımcı: bir diziye ekle, pencereyi (maxLen) aşarsa en eskiyi at. Rolling istatistik
+// dizilerinin hepsi bu TEK fonksiyonu kullanır.
+f_pushCapped(array<float> arr, float val, int maxLen) =>
+    array.push(arr, val)
+    if array.size(arr) > maxLen
+        array.shift(arr)
+    array.size(arr)
+
+// Yalnızca GÖRSEL amaçlı ölçekleme — dashboard/tooltip/decay'de kullanılan gerçek skoru
+// DEĞİŞTİRMEZ; sadece histogramın görünür yüksekliğini ayarlar.
+f_visualScale(float trueVal, float gamma) =>
+    float absVal = math.abs(trueVal)
+    float scaled = 100.0 * math.pow(absVal / 100.0, gamma)
+    math.sign(trueVal) * scaled
+
+// Fitil skoru: wick/range + wick/body + kapanışın fitile göre konumu -> 3 faktörün ortalaması.
+// Hem SWEEP barında hem ABSORPTION onay barında yeniden kullanılır (tek fitil mantığı, iki bağlam)
+// — Sweep Quality'nin VE Absorption Quality'nin kendi İÇSEL bileşenidir; ayrı bir üçüncü "Wick"
+// üst-düzey faktörü YOKTUR (aksi çifte-sayım olurdu).
+f_wickScore(bool isUp, float bodyCap) =>
+    float rangeVal = high - low
+    float bodyVal  = math.abs(close - open)
+    float wick     = isUp ? high - math.max(close, open) : math.min(close, open) - low
+    float wickToRange = rangeVal > 0 ? wick / rangeVal : 0.0
+    float wickToBody   = f_clamp01((bodyVal > 0 ? wick / bodyVal : wick > 0 ? bodyCap : 0.0) / bodyCap)
+    float closePos      = rangeVal > 0 ? (isUp ? (high - close) / rangeVal : (close - low) / rangeVal) : 0.0
+    (wickToRange + wickToBody + closePos) / 3.0
+
+// Log-hacim üzerinden medyan/MAD tabanlı robust Z-skor + veri güvenilirliği.
+f_volumeMetrics(array<float> arr, float currentLogVol, float cap, float relScale) =>
+    float med = array.size(arr) > 0 ? array.median(arr) : na
+    array<float> devArr = array.new<float>(0)
+    if not na(med)
+        for i = 0 to array.size(arr) - 1
+            array.push(devArr, math.abs(array.get(arr, i) - med))
+    float mad = array.size(devArr) > 0 ? array.median(devArr) : na
+    float z   = (not na(med) and not na(mad)) ? (currentLogVol - med) / (mad * 1.4826 + 1e-10) : 0.0
+    float volComp    = f_clamp01(math.max(z, 0.0) / cap)
+    float reliability = na(mad) ? 0.0 : f_clamp01(mad * relScale)
+    [volComp, reliability]
+
+// NOISE FILTER — 4 koşulun HEPSİ sağlanmalı: mesafe, volatilite rejimi, fitil, hacim.
+f_noiseFilterPass(float sweepMag, float kSweepVal, float volRatio, float minVolRatioVal, float wickS, float minWick, float volS, float minVol) =>
+    sweepMag >= kSweepVal and volRatio >= minVolRatioVal and wickS >= minWick and volS >= minVol
+
+// LİKİDİTE HAVUZU KALİTESİ — 6 bileşen: (1) Test Count — doygunluk eğrisi (1 test düşük, 2-3 orta,
+// 4+ yüksek puan, ama sınırsız artmaz); (2) Cluster Density — Equal High/Low kümelenmesi (mevcut
+// lineer oran korunur, şekil değişikliği istenmedi); (3) Pool Age — ASİMETRİK ÇAN EĞRİSİ: çok genç
+// havuzlar hızlı biçimde düşük puan alır (dar sigma), çok eski havuzlar İSE yavaşça puan kaybeder
+// (geniş sigma) — yaş artık doğrusal değildir; (4) Untouched Quality — havuz oluştuktan sonra kaç
+// kez "bozulmaya çalışıldığı" (sweep eşiğini geçemeyen dokunuşlar) arttıkça doygunlukla düşer, hiç
+// dokunulmamış havuz = 1.0; (5) Sweep Potential — havuza yaklaşırken oluşan volatilite sıkışması
+// (mevcut adaptRatio'nun yeniden kullanımı, yeni bir ta.* hesaplaması EKLENMEDİ); (6) Pool Size —
+// ÇAN EĞRİSİ: pivot barının kendi ATR'ye göre range'i çok küçükse (önemsiz doji) veya çok büyükse
+// (anomali/haber barı) düşük puan, ORTA büyüklükte iyi tanımlanmış bir formasyon en yüksek puanı alır.
+f_poolScore(int ageBars, float agePeak, float ageYoungSig, float ageOldSig, int testCount, float testK, float cluster, int disturbCount, float disturbK, float sweepPotential, float sizeRatio, float sizePeak, float sizeSig, float wAge, float wTest, float wCluster, float wUntouched, float wSweepPot, float wSize) =>
+    float ageSigma    = float(ageBars) < agePeak ? ageYoungSig : ageOldSig
+    float ageS        = math.exp(-math.pow(float(ageBars) - agePeak, 2) / (2 * math.pow(ageSigma, 2)))
+    float testS       = float(testCount) / (float(testCount) + testK)
+    float untouchedS  = 1.0 - (float(disturbCount) / (float(disturbCount) + disturbK))
+    float sizeS       = math.exp(-math.pow(sizeRatio - sizePeak, 2) / (2 * math.pow(sizeSig, 2)))
+    array<float> vals = array.from(ageS, testS, cluster, untouchedS, sweepPotential, sizeS)
+    array<float> wts  = array.from(wAge, wTest, wCluster, wUntouched, wSweepPot, wSize)
+    f_weightedAvg(vals, wts)
+
+// SWEEP QUALITY (Madde 1, 5) — 5 bileşen (istatistiksel bağımsızlık varsayılmaz): mesafe (ATR normalize), fitil, hız (TR
+// genişlemesi), hacim anomalisi, likidite havuzu kalitesi. Ağırlıklı ortalama, tekil ağırlık
+// tavanı çağrı yerinde f_capWeight ile uygulanır.
+f_sweepScore(bool isUp, float level, float atr, float distCap, float trNow, float trAvg, float spdCap, float wickS, float poolS, float volAnomaly, float wDist, float wWick, float wSpeed, float wVol, float wPool) =>
+    float distanceRaw = isUp ? (high - level) / atr : (level - low) / atr
+    float distanceS = f_clamp01(distanceRaw / distCap)
+    float speedRaw  = trAvg > 0 ? (trNow / trAvg - 1.0) : 0.0
+    float speedS    = f_clamp01(speedRaw / spdCap)
+    array<float> vals = array.from(distanceS, wickS, speedS, volAnomaly, poolS)
+    array<float> wts  = array.from(wDist, wWick, wSpeed, wVol, wPool)
+    f_weightedAvg(vals, wts, 0.40)
+
+// ABSORPTION QUALITY (Madde 2, 6) — 5 bileşen (istatistiksel bağımsızlık varsayılmaz): wick rejection (onay barı), body
+// recovery (onay barının gövde/range oranı), close recovery (geri alma oranı), bar-bar momentum
+// ("sonraki mumun onayı" — bkz. not aşağıda), hacim devamlılığı (sweep barı ile onay barının
+// hacim skorlarının MİNİMUMU: ikisi de güçlü olmalı, sadece biri değil).
+//
+// NOT — "sonraki mumun onayı" yorumu: Gerçek bir ileri-bar beklemesi (state machine'i bir aşama
+// daha büyütecek bir tasarım) yerine, GEÇMİŞE bakan bir vekil kullanılır: onay barının kapanışı,
+// bir önceki bara (close[1]) göre AYNI yönde ilerlemeye devam ediyor mu? Bu, "reclaim tek bir
+// fluke bar mıydı yoksa bar-bar doğrulanıyor muydu" sorusunu tamamen causal şekilde yanıtlar.
+f_absorptionScore(bool isUp, float depthATR, float depthCap, float wickS, float sweepBarVol, float currentVol, float atr, float momentumCap, float wWick, float wBody, float wReclaim, float wMomentum, float wVolCont) =>
+    float reclaimS = f_clamp01(depthATR / depthCap)
+    float rangeC = high - low
+    float bodyC  = math.max(isUp ? open - close : close - open, 0.0)
+    float bodyS  = rangeC > 0 ? bodyC / rangeC : 0.0
+    float momentumRaw = isUp ? (close[1] - close) / atr : (close - close[1]) / atr
+    float momentumS = f_clamp01(momentumRaw / momentumCap)
+    float volContS = math.min(sweepBarVol, currentVol)
+    array<float> vals = array.from(wickS, bodyS, reclaimS, momentumS, volContS)
+    array<float> wts  = array.from(wWick, wBody, wReclaim, wMomentum, wVolCont)
+    f_weightedAvg(vals, wts, 0.40)
+
+// EVENT VALIDATION SCORE (Madde 1, en önemli geliştirme) — olay sonrası pencerede 5 kriter:
+//   (a) eski range'e dönüş     -> pencerenin en derin noktası, süpürülen seviyenin ne kadar
+//                                  gerisine gitti (refLevel'e göre)
+//   (b) sweep yönünde devam edememe -> pencerenin en ileri noktası, absorption kapanışının ne
+//                                  kadar ÖTESİNE geçebildi (refClose'a göre) — az geçtiyse
+//                                  "devam edemedi" skoru yüksek
+//   (c) karşı yöne displacement -> çözünürlük barındaki net kapanış hareketi (refClose'a göre)
+//   (d) yeni high/low üretememe -> pencerenin en ileri noktası, SWEEP barının kendi zirvesini
+//                                  (sweepExtreme) geçebildi mi
+//   (e) momentum zayıflaması    -> çözünürlük barının true range'i, güncel ortalamaya göre
+// isUp=true: bearish aday (yukarı sweep sonrası). isUp=false: bullish aday (aşağı sweep sonrası).
+f_eventValidation(bool isUp, float refLevel, float refClose, float sweepExtreme, float windowMinLow, float windowMaxHigh, float dispS, float atr, float cap, float momentumRatio, float wRange, float wContinue, float wDisp, float wExtreme, float wMomentum) =>
+    float rangeReturnS    = isUp ? f_clamp01((refLevel - windowMinLow) / atr / cap) : f_clamp01((windowMaxHigh - refLevel) / atr / cap)
+    float sweepPushS      = isUp ? f_clamp01((windowMaxHigh - refClose) / atr / cap) : f_clamp01((refClose - windowMinLow) / atr / cap)
+    float failedContinueS = f_clamp01(1.0 - sweepPushS)
+    float failedExtremeS  = isUp ? f_clamp01((sweepExtreme - windowMaxHigh) / atr / cap) : f_clamp01((windowMinLow - sweepExtreme) / atr / cap)
+    float momentumWeakenS = f_clamp01(1.0 - momentumRatio)
+    array<float> vals = array.from(rangeReturnS, failedContinueS, dispS, failedExtremeS, momentumWeakenS)
+    array<float> wts  = array.from(wRange, wContinue, wDisp, wExtreme, wMomentum)
+    f_weightedAvg(vals, wts)
+
+// HİSTOGRAM 5-KADEMELİ RENK: 0-20 Normal / 20-40 Zayıf / 40-60 Orta / 60-80 Güçlü / 80-100
+// Ekstrem. Her bant kendi içinde pürüzsüz gradyan, bantlar arası belirgin renk sıçraması.
+f_tierColor(float val, float b20, float b40, float b60, float b80) =>
+    float absVal = math.abs(val)
+    color posC = absVal < b20 ? color.new(NEUTRAL_GRAY, 40) : absVal < b40 ? color.from_gradient(absVal, b20, b40, color.new(LIGHT_GREEN, 70), color.new(LIGHT_GREEN, 15)) : absVal < b60 ? color.from_gradient(absVal, b40, b60, color.new(LIGHT_GREEN, 15), DARK_GREEN) : absVal < b80 ? color.from_gradient(absVal, b60, b80, DARK_GREEN, EXTREME_GREEN) : color.from_gradient(absVal, b80, 100, EXTREME_GREEN, color.rgb(4, 60, 34))
+    color negC = absVal < b20 ? color.new(NEUTRAL_GRAY, 40) : absVal < b40 ? color.from_gradient(absVal, b20, b40, color.new(LIGHT_RED, 70), color.new(LIGHT_RED, 15)) : absVal < b60 ? color.from_gradient(absVal, b40, b60, color.new(LIGHT_RED, 15), DARK_RED) : absVal < b80 ? color.from_gradient(absVal, b60, b80, DARK_RED, EXTREME_RED) : color.from_gradient(absVal, b80, 100, EXTREME_RED, color.rgb(70, 5, 12))
+    val > 0 ? posC : val < 0 ? negC : color.new(NEUTRAL_GRAY, 60)
+
+// Bant adı (metin) — dashboard'da ve tooltipte gösterilir.
+f_tierLabel(float absVal, float b20, float b40, float b60, float b80) =>
+    string result = "Normal"
+    if absVal >= b80
+        result := "Ekstrem Manipülasyon"
+    else if absVal >= b60
+        result := "Güçlü"
+    else if absVal >= b40
+        result := "Orta"
+    else if absVal >= b20
+        result := "Zayıf Manipülasyon"
+    result
+
+// Overlay marker boyutu: skor büyüklüğüne göre 3 kademe. Markerlar zaten minScoreToDisplay ile
+// önceden elenmiş "kaliteli" olaylar olduğu için tabanlar bir kademe yukarı çekildi.
+f_markerSize(float score01, string baseSize) =>
+    string result = baseSize
+    if baseSize == "tiny"
+        result := score01 >= 0.7 ? size.normal : score01 >= 0.4 ? size.small : size.tiny
+    else if baseSize == "small"
+        result := score01 >= 0.7 ? size.large : score01 >= 0.4 ? size.normal : size.small
+    else
+        result := score01 >= 0.7 ? size.huge : score01 >= 0.4 ? size.large : size.normal
+    result
+
+// Overlay marker rengi — TABAN (0.35) eklendi: bu markerlar zaten kaliteli-filtrelenmiş olaylar
+// olduğu için en zayıfları bile gradyanın soluk/görünmez ucuna düşmesin.
+f_markerColor(bool isUp, float score01, float transp) =>
+    float floored = 0.35 + 0.65 * score01
+    color grad = isUp ? color.from_gradient(floored, 0, 1, LIGHT_RED, DARK_RED) : color.from_gradient(floored, 0, 1, LIGHT_GREEN, DARK_GREEN)
+    color.new(grad, transp)
+
+// Marker arkasına ince bir "halo" (yarı-saydam vurgu zemin, opak kutu DEĞİL) — kontrast için.
+f_markerBg(bool isUp, float score01, float transp) =>
+    float floored = 0.35 + 0.65 * score01
+    color grad = isUp ? color.from_gradient(floored, 0, 1, LIGHT_RED, DARK_RED) : color.from_gradient(floored, 0, 1, LIGHT_GREEN, DARK_GREEN)
+    color.new(grad, math.min(transp + 45, 85))
+
+// Yığınlama seviyesi: aynı "satır" (sweep/absorption/sonuç) için, yakın zamanda başka bir marker
+// zaten yerleştirildiyse seviyeyi bir artırır, yoksa sıfırlar. Pine'da skaler bir değeri fonksiyon
+// içinden güncelleyip çağırana yansıtmanın standart yolu 1-elemanlı dizi kullanmaktır.
+f_nextStackLevel(array<int> lastBarRef, array<int> levelRef, int proximityBars) =>
+    int lastBar  = array.get(lastBarRef, 0)
+    int newLevel = (not na(lastBar) and (bar_index - lastBar) <= proximityBars) ? array.get(levelRef, 0) + 1 : 0
+    array.set(lastBarRef, 0, bar_index)
+    array.set(levelRef, 0, newLevel)
+    newLevel
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// DURUM DEĞİŞKENLERİ (yalnızca bar-aşırı kalması ZORUNLU olan state)
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+var float PH = na
+var float PL = na
+var bool  sweptUp   = false
+var bool  sweptDown = false
+
+// Likidite Havuzu metadata (Madde 2) — PH/PL ile birlikte yaşayan, tek pivotluk state
+var int   PH_barIndex     = na
+var int   PL_barIndex     = na
+var int   testCountUp     = 0
+var int   testCountDown   = 0
+var int   disturbCountUp   = 0
+var int   disturbCountDown = 0
+var float poolClusterUp   = 0.0
+var float poolClusterDown = 0.0
+var float poolSizeUp      = 0.0
+var float poolSizeDown    = 0.0
+var array<float> recentPHLevels = array.new<float>(0)
+var array<float> recentPLLevels = array.new<float>(0)
+
+var array<float> logVolArr = array.new<float>(0)
+
+var bool  pendUpActive    = false
+var int   pendUpBar       = na
+var float pendUpPH        = na
+var float pendUpATR       = na
+var float pendUpSweepStr  = na
+var float pendUpWick      = na
+var float pendUpVol       = na
+var float pendUpPoolS     = na
+var float pendUpSweepHigh = na
+
+var bool  pendDownActive   = false
+var int   pendDownBar      = na
+var float pendDownPL       = na
+var float pendDownATR      = na
+var float pendDownSweepStr = na
+var float pendDownWick     = na
+var float pendDownVol      = na
+var float pendDownPoolS    = na
+var float pendDownSweepLow = na
+
+// Continuation / Failure / Validation durumu (Absorption onayından sonraki gözlem penceresi)
+var float contUpSweepS = na
+var float contUpAbsS = na
+var bool  contUpActive      = false
+var int   contUpStartBar    = na
+var float contUpRefLevel    = na
+var float contUpRefClose    = na
+var float contUpATR         = na
+var bool  contUpFailed      = false
+var float contUpPoolS       = na
+var float contUpVol         = na
+var float contUpSweepExtreme = na
+var float contUpMinLow      = na
+var float contUpMaxHigh     = na
+var int   contUpSweepCountAtStart = na
+
+var float contDownSweepS = na
+var float contDownAbsS = na
+var bool  contDownActive      = false
+var int   contDownStartBar    = na
+var float contDownRefLevel    = na
+var float contDownRefClose    = na
+var float contDownATR         = na
+var bool  contDownFailed      = false
+var float contDownPoolS       = na
+var float contDownVol         = na
+var float contDownSweepExtreme = na
+var float contDownMinLow      = na
+var float contDownMaxHigh     = na
+var int   contDownSweepCountAtStart = na
+
+var int totalSweepEvents = 0
+var int upSweepEvents = 0
+var int downSweepEvents = 0
+
+// Son olay — dashboard/tooltip için
+var float lastSweepS        = na
+var float lastAbsS          = na
+var float lastVolS          = na
+var float lastContinuationS = na
+var float lastPoolS         = na
+var float lastConfidence    = na
+var float lastEventValid    = na
+var bool  lastFailed        = false
+var int   lastEventBar      = na
+
+// Rolling istatistikler (Madde 8) — son statsHistoryLen olay
+var array<float> histManipScore = array.new<float>(0)
+var array<float> histConfidence = array.new<float>(0)
+var array<float> histSweepQ     = array.new<float>(0)
+var array<float> histAbsorpQ    = array.new<float>(0)
+var array<float> histValidation = array.new<float>(0)
+var array<float> histPoolQ      = array.new<float>(0)
+var array<float> histSuccess    = array.new<float>(0)
+var array<float> histDelay      = array.new<float>(0)
+
+// Overlay katmanı: cluster (kümelenme) bastırma + olay bazlı marker gösterim bayrağı
+var label lastAbsorptionLabelRef = na
+var label lastFootprintLabelRef  = na
+var float lastMarkerStrength     = na
+var int   lastMarkerBar          = na
+var bool  contUpMarkersShown     = false
+var bool  contDownMarkersShown   = false
+
+// Marker Yığınlama — her "satır" (sweep/absorption/sonuç) x her yön için ayrı bir sayaç çifti.
+var array<int> sweepStackBarUp   = array.new<int>(1, na)
+var array<int> sweepStackLvlUp   = array.new<int>(1, 0)
+var array<int> sweepStackBarDown = array.new<int>(1, na)
+var array<int> sweepStackLvlDown = array.new<int>(1, 0)
+var array<int> absStackBarUp     = array.new<int>(1, na)
+var array<int> absStackLvlUp     = array.new<int>(1, 0)
+var array<int> absStackBarDown   = array.new<int>(1, na)
+var array<int> absStackLvlDown   = array.new<int>(1, 0)
+var array<int> resStackBarUp     = array.new<int>(1, na)
+var array<int> resStackLvlUp     = array.new<int>(1, 0)
+var array<int> resStackBarDown   = array.new<int>(1, na)
+var array<int> resStackLvlDown   = array.new<int>(1, 0)
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// BAR-BAZLI TEMEL HESAPLAMALAR — stateful ta.* çağrıları BURADA, koşulsuz, TEK sefer (Madde 10)
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+atrVal        = ta.atr(atrLen)
+trNowGlobal   = ta.tr(true)
+atrBaseline   = ta.sma(atrVal, volRegimeLen)
+adaptRatio    = atrBaseline > 0 ? atrVal / atrBaseline : 1.0
+trAvgForSpeed = ta.sma(trNowGlobal, speedTRLookback)
+// Sweep Potential (Madde 5): havuza yaklaşırken volatilite sıkışması — YENİ bir ta.* hesaplaması
+// EKLENMEDEN, zaten koşulsuz hesaplanan adaptRatio'nun (ATR/ort.ATR) yeniden kullanımıdır.
+sweepPotentialGlobal = f_clamp01(1.0 - adaptRatio)
+
+phRaw = ta.pivothigh(P, P)
+plRaw = ta.pivotlow(P, P)
+
+if barstate.isconfirmed and not na(phRaw)
+    PH := phRaw
+    PH_barIndex := bar_index - P
+    sweptUp := false
+    testCountUp := 0
+    disturbCountUp := 0
+    poolSizeUp  := atrVal[P] > 0 ? (high[P] - low[P]) / atrVal[P] : 0.0
+    int clusterCountUp = 0
+    if atrVal > 0 and array.size(recentPHLevels) > 0
+        for i = 0 to array.size(recentPHLevels) - 1
+            if math.abs(array.get(recentPHLevels, i) - phRaw) / atrVal <= clusterToleranceATR
+                clusterCountUp += 1
+    poolClusterUp := f_clamp01(float(clusterCountUp) / float(clusterCap))
+    array.push(recentPHLevels, phRaw)
+    if array.size(recentPHLevels) > poolHistoryLen
+        array.shift(recentPHLevels)
+
+if barstate.isconfirmed and not na(plRaw)
+    PL := plRaw
+    PL_barIndex := bar_index - P
+    sweptDown := false
+    testCountDown := 0
+    disturbCountDown := 0
+    poolSizeDown  := atrVal[P] > 0 ? (high[P] - low[P]) / atrVal[P] : 0.0
+    int clusterCountDown = 0
+    if atrVal > 0 and array.size(recentPLLevels) > 0
+        for i = 0 to array.size(recentPLLevels) - 1
+            if math.abs(array.get(recentPLLevels, i) - plRaw) / atrVal <= clusterToleranceATR
+                clusterCountDown += 1
+    poolClusterDown := f_clamp01(float(clusterCountDown) / float(clusterCap))
+    array.push(recentPLLevels, plRaw)
+    if array.size(recentPLLevels) > poolHistoryLen
+        array.shift(recentPLLevels)
+
+// Test sayacı: pivot henüz süpürülmemişse ve fiyat ona YAKLAŞIP AŞMADIYSA bu bir "test"tir
+if barstate.isconfirmed and not na(PH) and not sweptUp and atrVal > 0 and high < PH and high >= PH - testProximityATR * atrVal
+    testCountUp += 1
+if barstate.isconfirmed and not na(PL) and not sweptDown and atrVal > 0 and low > PL and low <= PL + testProximityATR * atrVal
+    testCountDown += 1
+
+float logVolNow = not na(volume) and volume > 0 ? math.log(volume + 1) : na
+if barstate.isconfirmed and not na(logVolNow)
+    array.push(logVolArr, logVolNow)
+    if array.size(logVolArr) > nVol
+        array.shift(logVolArr)
+
+[volumeComponent, volumeReliability] = f_volumeMetrics(logVolArr, logVolNow, volCap, volRelSc)
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// SWEEP TESPİTİ + PENDİNG KAYDI (BİRLEŞİK) — Noise Filter'ın 4 koşulundan biri bile sağlanmazsa
+// pivot KİLİTLENMEZ (sweptUp/Down false kalır) — zayıf bir dokunuş gerçek sweep'i engellemez.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+if barstate.isconfirmed and not pendUpActive and not contUpActive and not na(PH) and not sweptUp and high > PH and atrVal > 0 and not na(volume) and volume > 0
+    float sweepMagUpCandidate = (high - PH) / atrVal
+    float wickCandidateUp     = f_wickScore(true, wickBodyCap)
+    bool  passesNoiseUp       = f_noiseFilterPass(sweepMagUpCandidate, kSweep, adaptRatio, minVolRatio, wickCandidateUp, minSweepWick, volumeComponent, minSweepVolume)
+    if passesNoiseUp
+        sweptUp := true
+        int   ageBarsUp = bar_index - PH_barIndex
+        float poolSUp   = f_poolScore(ageBarsUp, agePeakBars, ageYoungSigma, ageOldSigma, testCountUp, testSatK, poolClusterUp, disturbCountUp, disturbSatK, sweepPotentialGlobal, poolSizeUp, sizePeakRatio, sizeSigma, wPoolAge, wPoolTest, wPoolCluster, wPoolUntouched, wPoolSweepPotential, wPoolSize)
+        pendUpActive    := true
+        pendUpBar       := bar_index
+        pendUpPH        := PH
+        pendUpATR       := atrVal
+        pendUpSweepStr  := f_sweepScore(true, PH, atrVal, sweepCap, trNowGlobal, trAvgForSpeed, speedCap, wickCandidateUp, poolSUp, volumeComponent, f_capWeight(wSweepDist), f_capWeight(wSweepWick), f_capWeight(wSweepSpeed), f_capWeight(wSweepVol), f_capWeight(wSweepPool))
+        pendUpWick      := wickCandidateUp
+        pendUpVol       := volumeComponent
+        pendUpPoolS     := poolSUp
+        pendUpSweepHigh := high
+        upSweepEvents += 1
+        totalSweepEvents += 1
+        if showOverlay and showSweepMarker
+            int sweepLvlUp = f_nextStackLevel(sweepStackBarUp, sweepStackLvlUp, stackProximityBars)
+            label.new(bar_index, high + atrVal * (0.3 + sweepLvlUp * stackSpacingATR), text="▼", yloc=yloc.price, style=label.style_label_down, color=color.new(color.black, 100), textcolor=f_markerColor(true, pendUpSweepStr, overlayTransparency), size=f_markerSize(pendUpSweepStr, overlayBaseSize), tooltip="Sweep: " + str.tostring(math.round(pendUpSweepStr * 100)) + "% | Pool: " + str.tostring(math.round(poolSUp * 100)) + "%", force_overlay=true)
+    else
+        // Untouched Quality (Madde 4): eşiği geçemeyen bir dokunuş, havuzu "bozmaya çalışan"
+        // bir rahatsızlık sayılır — sonraki gerçek sweep'te Pool Quality bunu cezalandırır.
+        disturbCountUp += 1
+
+if barstate.isconfirmed and not pendDownActive and not contDownActive and not na(PL) and not sweptDown and low < PL and atrVal > 0 and not na(volume) and volume > 0
+    float sweepMagDownCandidate = (PL - low) / atrVal
+    float wickCandidateDown     = f_wickScore(false, wickBodyCap)
+    bool  passesNoiseDown       = f_noiseFilterPass(sweepMagDownCandidate, kSweep, adaptRatio, minVolRatio, wickCandidateDown, minSweepWick, volumeComponent, minSweepVolume)
+    if passesNoiseDown
+        sweptDown := true
+        int   ageBarsDown = bar_index - PL_barIndex
+        float poolSDown   = f_poolScore(ageBarsDown, agePeakBars, ageYoungSigma, ageOldSigma, testCountDown, testSatK, poolClusterDown, disturbCountDown, disturbSatK, sweepPotentialGlobal, poolSizeDown, sizePeakRatio, sizeSigma, wPoolAge, wPoolTest, wPoolCluster, wPoolUntouched, wPoolSweepPotential, wPoolSize)
+        pendDownActive   := true
+        pendDownBar      := bar_index
+        pendDownPL       := PL
+        pendDownATR      := atrVal
+        pendDownSweepStr := f_sweepScore(false, PL, atrVal, sweepCap, trNowGlobal, trAvgForSpeed, speedCap, wickCandidateDown, poolSDown, volumeComponent, f_capWeight(wSweepDist), f_capWeight(wSweepWick), f_capWeight(wSweepSpeed), f_capWeight(wSweepVol), f_capWeight(wSweepPool))
+        pendDownWick     := wickCandidateDown
+        pendDownVol      := volumeComponent
+        pendDownPoolS    := poolSDown
+        pendDownSweepLow := low
+        downSweepEvents += 1
+        totalSweepEvents += 1
+        if showOverlay and showSweepMarker
+            int sweepLvlDown = f_nextStackLevel(sweepStackBarDown, sweepStackLvlDown, stackProximityBars)
+            label.new(bar_index, low - atrVal * (0.3 + sweepLvlDown * stackSpacingATR), text="▲", yloc=yloc.price, style=label.style_label_up, color=color.new(color.black, 100), textcolor=f_markerColor(false, pendDownSweepStr, overlayTransparency), size=f_markerSize(pendDownSweepStr, overlayBaseSize), tooltip="Sweep: " + str.tostring(math.round(pendDownSweepStr * 100)) + "% | Pool: " + str.tostring(math.round(poolSDown * 100)) + "%", force_overlay=true)
+    else
+        disturbCountDown += 1
+
+
+bool  bearFired     = false
+bool  bullFired     = false
+float bearRawQuality = na
+float bearValidation = na
+float bearDisplacement = na
+float bearComposite = na
+float bullComposite = na
+
+// -- Stage A (yukarı sweep / bearish aday): Absorption onayı -> Sweep/Absorption/Pool/Volume
+//    bileşenleri belirlenir, Continuation/Validation penceresine devredilir.
+if barstate.isconfirmed and pendUpActive
+    if close < pendUpPH
+        float depthATR = (pendUpPH - close) / pendUpATR
+        float wickAtConfirmUp = f_wickScore(true, wickBodyCap)
+        float absS = f_absorptionScore(true, depthATR, absorptionCap, wickAtConfirmUp, pendUpVol, volumeComponent, pendUpATR, absMomentumCap, f_capWeight(wAbsWick), f_capWeight(wAbsBody), f_capWeight(wAbsReclaim), f_capWeight(wAbsMomentum), f_capWeight(wAbsVolCont))
+        contUpPoolS        := pendUpPoolS
+        contUpVol          := pendUpVol * volumeReliability
+        contUpSweepExtreme := pendUpSweepHigh
+        contUpActive        := true
+        contUpStartBar       := bar_index
+        contUpRefLevel       := pendUpPH
+        contUpRefClose       := close
+        contUpATR            := pendUpATR
+        contUpFailed          := false
+        contUpMinLow          := na
+        contUpMaxHigh         := na
+        contUpSweepCountAtStart := downSweepEvents
+        contUpSweepS := pendUpSweepStr
+        contUpAbsS := absS
+        contUpMarkersShown := false
+        if showOverlay
+            array<float> prelimVals = array.from(pendUpSweepStr, absS, pendUpPoolS, contUpVol)
+            array<float> prelimWts  = array.from(f_capWeight(wFinalSweep), f_capWeight(wFinalAbsorp), f_capWeight(wFinalPool), f_capWeight(wFinalVolume))
+            float strengthPct = f_weightedAvg(prelimVals, prelimWts) * 100
+            bool  withinCluster = not na(lastMarkerBar) and (bar_index - lastMarkerBar) <= clusterWindow
+            bool  isStronger    = na(lastMarkerStrength) or strengthPct > lastMarkerStrength
+            if strengthPct >= minScoreToDisplay and (not withinCluster or isStronger)
+                int absLvlUp = f_nextStackLevel(absStackBarUp, absStackLvlUp, stackProximityBars)
+                if showAbsorptionMarker
+                    lastAbsorptionLabelRef := label.new(bar_index, high + atrVal * (0.8 + absLvlUp * stackSpacingATR), text="●", yloc=yloc.price, style=label.style_label_down, color=f_markerBg(true, strengthPct / 100, overlayTransparency), textcolor=f_markerColor(true, strengthPct / 100, overlayTransparency), size=f_markerSize(strengthPct / 100, overlayBaseSize), tooltip="Sweep: " + str.tostring(math.round(pendUpSweepStr * 100)) + "% | Absorption: " + str.tostring(math.round(absS * 100)) + "% | Pool: " + str.tostring(math.round(pendUpPoolS * 100)) + "%", force_overlay=true)
+                if showFootprint
+                    lastFootprintLabelRef := label.new(bar_index, high + atrVal * (1.8 + absLvlUp * stackSpacingATR), text="Absorb " + str.tostring(math.round(strengthPct)) + "%", yloc=yloc.price, style=label.style_label_down, color=f_markerColor(true, strengthPct / 100, overlayTransparency), textcolor=color.white, size=size.tiny, tooltip="Preliminary Score: " + str.tostring(math.round(strengthPct)), force_overlay=true)
+                lastMarkerStrength := strengthPct
+                lastMarkerBar      := bar_index
+                contUpMarkersShown := true
+        pendUpActive := false
+    else if bar_index - pendUpBar >= wAbsorb
+        pendUpActive := false
+
+// -- Stage A (aşağı sweep / bullish aday): yukarıdaki mantığın aynası
+if barstate.isconfirmed and pendDownActive
+    if close > pendDownPL
+        float depthATRD = (close - pendDownPL) / pendDownATR
+        float wickAtConfirmDown = f_wickScore(false, wickBodyCap)
+        float absSD = f_absorptionScore(false, depthATRD, absorptionCap, wickAtConfirmDown, pendDownVol, volumeComponent, pendDownATR, absMomentumCap, f_capWeight(wAbsWick), f_capWeight(wAbsBody), f_capWeight(wAbsReclaim), f_capWeight(wAbsMomentum), f_capWeight(wAbsVolCont))
+        contDownPoolS        := pendDownPoolS
+        contDownVol          := pendDownVol * volumeReliability
+        contDownSweepExtreme := pendDownSweepLow
+        contDownActive        := true
+        contDownStartBar       := bar_index
+        contDownRefLevel       := pendDownPL
+        contDownRefClose       := close
+        contDownATR            := pendDownATR
+        contDownFailed          := false
+        contDownMinLow          := na
+        contDownMaxHigh         := na
+        contDownSweepCountAtStart := upSweepEvents
+        contDownSweepS := pendDownSweepStr
+        contDownAbsS := absSD
+        contDownMarkersShown := false
+        if showOverlay
+            array<float> prelimValsD = array.from(pendDownSweepStr, absSD, pendDownPoolS, contDownVol)
+            array<float> prelimWtsD  = array.from(f_capWeight(wFinalSweep), f_capWeight(wFinalAbsorp), f_capWeight(wFinalPool), f_capWeight(wFinalVolume))
+            float strengthPctD = f_weightedAvg(prelimValsD, prelimWtsD) * 100
+            bool  withinClusterD = not na(lastMarkerBar) and (bar_index - lastMarkerBar) <= clusterWindow
+            bool  isStrongerD    = na(lastMarkerStrength) or strengthPctD > lastMarkerStrength
+            if strengthPctD >= minScoreToDisplay and (not withinClusterD or isStrongerD)
+                int absLvlDown = f_nextStackLevel(absStackBarDown, absStackLvlDown, stackProximityBars)
+                if showAbsorptionMarker
+                    lastAbsorptionLabelRef := label.new(bar_index, low - atrVal * (0.8 + absLvlDown * stackSpacingATR), text="●", yloc=yloc.price, style=label.style_label_up, color=f_markerBg(false, strengthPctD / 100, overlayTransparency), textcolor=f_markerColor(false, strengthPctD / 100, overlayTransparency), size=f_markerSize(strengthPctD / 100, overlayBaseSize), tooltip="Sweep: " + str.tostring(math.round(pendDownSweepStr * 100)) + "% | Absorption: " + str.tostring(math.round(absSD * 100)) + "% | Pool: " + str.tostring(math.round(pendDownPoolS * 100)) + "%", force_overlay=true)
+                if showFootprint
+                    lastFootprintLabelRef := label.new(bar_index, low - atrVal * (1.8 + absLvlDown * stackSpacingATR), text="Absorb " + str.tostring(math.round(strengthPctD)) + "%", yloc=yloc.price, style=label.style_label_up, color=f_markerColor(false, strengthPctD / 100, overlayTransparency), textcolor=color.white, size=size.tiny, tooltip="Preliminary Score: " + str.tostring(math.round(strengthPctD)), force_overlay=true)
+                lastMarkerStrength := strengthPctD
+                lastMarkerBar      := bar_index
+                contDownMarkersShown := true
+        pendDownActive := false
+    else if bar_index - pendDownBar >= wAbsorb
+        pendDownActive := false
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// STAGE B — Continuation/Failure/Validation penceresi tek bir çözümleme bloğunda birleşir (Madde
+// 10: fail/success dallarının ortak hesaplamaları artık tekrarlanmıyor). Final Manipulation Score
+// (Madde 7) = Sweep(25%)+Absorption(25%)+Pool(20%)+Validation(20%)+Volume(10%) ağırlıklı ortalaması;
+// Failure durumunda bu ortalamanın üstüne AYRICA sert bir ceza uygulanır. Confidence (Madde 3) AYNI
+// ağırlıklı ortalamanın Failure cezası UYGULANMADAN ÖNCEKİ HAM halidir.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+if barstate.isconfirmed and contUpActive
+    if bar_index > contUpStartBar
+        contUpMinLow  := na(contUpMinLow) ? low : math.min(contUpMinLow, low)
+        contUpMaxHigh := na(contUpMaxHigh) ? high : math.max(contUpMaxHigh, high)
+    // Kararlı KAPANIŞ tabanlı Failure — fitil-poke değil, gerçek breakout'u ayırt eder.
+    if bar_index > contUpStartBar and close > contUpRefLevel
+        contUpFailed := true
+    bool windowDoneUp = bar_index - contUpStartBar >= continuationWindow
+    if contUpFailed or windowDoneUp
+        float contS = f_clamp01((contUpRefClose - close) / contUpATR / continuationCap)
+        float momentumRatioUp = trAvgForSpeed > 0 ? trNowGlobal / trAvgForSpeed : 1.0
+        bool  reSweptDuringWindowUp = (downSweepEvents - contUpSweepCountAtStart) > 0
+        float validationBaseUp = f_eventValidation(true, contUpRefLevel, contUpRefClose, contUpSweepExtreme, contUpMinLow, contUpMaxHigh, contS, contUpATR, continuationCap, momentumRatioUp, wValRange, wValContinue, wValDisplacement, wValExtreme, wValMomentum)
+        float validationUp = validationBaseUp * (reSweptDuringWindowUp ? reSweepPenalty : 1.0)
+        array<float> finalValsUp = array.from(contUpSweepS, contUpAbsS, contUpPoolS, validationUp, contUpVol)
+        array<float> finalWtsUp  = array.from(wFinalSweep, wFinalAbsorp, wFinalPool, wFinalValid, wFinalVolume)
+        float qualityComboUp = f_weightedAvg(finalValsUp, finalWtsUp)
+        lastSweepS := contUpSweepS
+        lastAbsS := contUpAbsS
+        lastPoolS := contUpPoolS
+        lastVolS := contUpVol
+        bearRawQuality := qualityComboUp * 100
+        bearValidation := validationUp
+        bearDisplacement := contS
+        lastConfidence := qualityComboUp * 100
+        lastFailed     := contUpFailed
+        bearComposite  := contUpFailed ? qualityComboUp * failurePenaltyFactor : qualityComboUp
+        bearFired := true
+        lastContinuationS := contS
+        lastEventValid     := validationUp
+        lastEventBar        := bar_index
+        f_pushCapped(histManipScore, math.abs(bearComposite) * 100, statsHistoryLen)
+        f_pushCapped(histConfidence, lastConfidence, statsHistoryLen)
+        f_pushCapped(histSweepQ, lastSweepS * 100, statsHistoryLen)
+        f_pushCapped(histAbsorpQ, lastAbsS * 100, statsHistoryLen)
+        f_pushCapped(histValidation, validationUp * 100, statsHistoryLen)
+        f_pushCapped(histPoolQ, contUpPoolS * 100, statsHistoryLen)
+        f_pushCapped(histSuccess, contUpFailed ? 0.0 : 1.0, statsHistoryLen)
+        f_pushCapped(histDelay, float(bar_index - pendUpBar), statsHistoryLen)
+        if showOverlay and contUpMarkersShown
+            if contUpFailed and showFailedEvents
+                int resLvlUpF = f_nextStackLevel(resStackBarUp, resStackLvlUp, stackProximityBars)
+                label.new(bar_index, high + atrVal * (0.9 + resLvlUpF * stackSpacingATR), text="✖", yloc=yloc.price, style=label.style_label_down, color=color.new(FAILURE_COL, math.min(overlayTransparency + 45, 85)), textcolor=color.new(FAILURE_COL, overlayTransparency), size=f_markerSize(qualityComboUp, overlayBaseSize), tooltip="Seviye kapanışla ihlal edildi | Final Score: " + str.tostring(math.round(bearComposite * 100)), force_overlay=true)
+            else if not contUpFailed and showSuccessfulEvents
+                int resLvlUpS = f_nextStackLevel(resStackBarUp, resStackLvlUp, stackProximityBars)
+                label.new(bar_index, high + atrVal * (0.9 + resLvlUpS * stackSpacingATR), text="✔", yloc=yloc.price, style=label.style_label_down, color=f_markerBg(true, bearComposite, overlayTransparency), textcolor=f_markerColor(true, bearComposite, overlayTransparency), size=f_markerSize(bearComposite, overlayBaseSize), tooltip="Pencere korundu | Sweep: " + str.tostring(math.round(lastSweepS * 100)) + "% | Absorption: " + str.tostring(math.round(lastAbsS * 100)) + "% | Pool: " + str.tostring(math.round(contUpPoolS * 100)) + "% | Validation: " + str.tostring(math.round(validationUp * 100)) + "% | Ham Kalite: " + str.tostring(math.round(lastConfidence)) + "% | Final Score: " + str.tostring(math.round(bearComposite * 100)), force_overlay=true)
+        contUpActive := false
+
+if barstate.isconfirmed and contDownActive
+    if bar_index > contDownStartBar
+        contDownMinLow  := na(contDownMinLow) ? low : math.min(contDownMinLow, low)
+        contDownMaxHigh := na(contDownMaxHigh) ? high : math.max(contDownMaxHigh, high)
+    if bar_index > contDownStartBar and close < contDownRefLevel
+        contDownFailed := true
+    bool windowDoneDown = bar_index - contDownStartBar >= continuationWindow
+    if contDownFailed or windowDoneDown
+        float contSD = f_clamp01((close - contDownRefClose) / contDownATR / continuationCap)
+        float momentumRatioDown = trAvgForSpeed > 0 ? trNowGlobal / trAvgForSpeed : 1.0
+        bool  reSweptDuringWindowDown = (upSweepEvents - contDownSweepCountAtStart) > 0
+        float validationBaseDown = f_eventValidation(false, contDownRefLevel, contDownRefClose, contDownSweepExtreme, contDownMinLow, contDownMaxHigh, contSD, contDownATR, continuationCap, momentumRatioDown, wValRange, wValContinue, wValDisplacement, wValExtreme, wValMomentum)
+        float validationDown = validationBaseDown * (reSweptDuringWindowDown ? reSweepPenalty : 1.0)
+        array<float> finalValsDown = array.from(contDownSweepS, contDownAbsS, contDownPoolS, validationDown, contDownVol)
+        array<float> finalWtsDown  = array.from(wFinalSweep, wFinalAbsorp, wFinalPool, wFinalValid, wFinalVolume)
+        float qualityComboDown = f_weightedAvg(finalValsDown, finalWtsDown)
+        lastSweepS := contDownSweepS
+        lastAbsS := contDownAbsS
+        lastPoolS := contDownPoolS
+        lastVolS := contDownVol
+        lastConfidence := qualityComboDown * 100
+        lastFailed     := contDownFailed
+        bullComposite  := contDownFailed ? qualityComboDown * failurePenaltyFactor : qualityComboDown
+        bullFired := true
+        lastContinuationS := contSD
+        lastEventValid      := validationDown
+        lastEventBar         := bar_index
+        f_pushCapped(histManipScore, math.abs(bullComposite) * 100, statsHistoryLen)
+        f_pushCapped(histConfidence, lastConfidence, statsHistoryLen)
+        f_pushCapped(histSweepQ, lastSweepS * 100, statsHistoryLen)
+        f_pushCapped(histAbsorpQ, lastAbsS * 100, statsHistoryLen)
+        f_pushCapped(histValidation, validationDown * 100, statsHistoryLen)
+        f_pushCapped(histPoolQ, contDownPoolS * 100, statsHistoryLen)
+        f_pushCapped(histSuccess, contDownFailed ? 0.0 : 1.0, statsHistoryLen)
+        f_pushCapped(histDelay, float(bar_index - pendDownBar), statsHistoryLen)
+        if showOverlay and contDownMarkersShown
+            if contDownFailed and showFailedEvents
+                int resLvlDownF = f_nextStackLevel(resStackBarDown, resStackLvlDown, stackProximityBars)
+                label.new(bar_index, low - atrVal * (0.9 + resLvlDownF * stackSpacingATR), text="✖", yloc=yloc.price, style=label.style_label_up, color=color.new(FAILURE_COL, math.min(overlayTransparency + 45, 85)), textcolor=color.new(FAILURE_COL, overlayTransparency), size=f_markerSize(qualityComboDown, overlayBaseSize), tooltip="Seviye kapanışla ihlal edildi | Final Score: " + str.tostring(math.round(bullComposite * 100)), force_overlay=true)
+            else if not contDownFailed and showSuccessfulEvents
+                int resLvlDownS = f_nextStackLevel(resStackBarDown, resStackLvlDown, stackProximityBars)
+                label.new(bar_index, low - atrVal * (0.9 + resLvlDownS * stackSpacingATR), text="✔", yloc=yloc.price, style=label.style_label_up, color=f_markerBg(false, bullComposite, overlayTransparency), textcolor=f_markerColor(false, bullComposite, overlayTransparency), size=f_markerSize(bullComposite, overlayBaseSize), tooltip="Pencere korundu | Sweep: " + str.tostring(math.round(lastSweepS * 100)) + "% | Absorption: " + str.tostring(math.round(lastAbsS * 100)) + "% | Pool: " + str.tostring(math.round(contDownPoolS * 100)) + "% | Validation: " + str.tostring(math.round(validationDown * 100)) + "% | Ham Kalite: " + str.tostring(math.round(lastConfidence)) + "% | Final Score: " + str.tostring(math.round(bullComposite * 100)), force_overlay=true)
+        contDownActive := false
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// MOMENTUM DECAY — olay tetiklenince tam değer atanır, sonrasında her barda geometrik olarak söner
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+var float lmo = 0.0
+
+if barstate.isconfirmed and bearFired and (not bullFired or bearComposite >= bullComposite)
+    lastSweepS := contUpSweepS
+    lastAbsS := contUpAbsS
+    lastPoolS := contUpPoolS
+    lastVolS := contUpVol
+    lastConfidence := bearRawQuality
+    lastEventValid := bearValidation
+    lastContinuationS := bearDisplacement
+    lastFailed := contUpFailed
+    lmo := -1.0 * bearComposite * 100.0
+else if barstate.isconfirmed and bullFired
+    lmo := 1.0 * bullComposite * 100.0
+else if barstate.isconfirmed
+    lmo := lmo * decayRate
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// GÖRSELLEŞTİRME (plot/hline/fill/alertcondition yalnızca global scope'ta, koşulsuz çağrılır)
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+float lmoVisual = f_visualScale(lmo, visualGamma)
+plotColor = f_tierColor(lmo, band20, band40, band60, band80)
+plot(lmoVisual, title="LMO", style=plot.style_columns, color=plotColor, linewidth=3)
+
+// Data Window uyumluluğu — grafikte hiçbir çizgi çizmez, yalnızca hover/Data Window'da görünür
+plot(lmo, title="LMO Raw Score", display=display.data_window)
+plot(lastSweepS * 100, title="Sweep Quality %", display=display.data_window)
+plot(lastAbsS * 100, title="Absorption Quality %", display=display.data_window)
+plot(lastPoolS * 100, title="Liquidity Pool Quality %", display=display.data_window)
+plot(lastEventValid * 100, title="Event Validation %", display=display.data_window)
+plot(lastVolS * 100, title="Volume Quality %", display=display.data_window)
+plot(lastContinuationS * 100, title="Displacement %", display=display.data_window)
+plot(lastConfidence, title="Raw Quality (not probability)", display=display.data_window)
+plot(lastFailed ? 100.0 : 0.0, title="Failed (100=evet)", display=display.data_window)
+
+hline(100.0 * math.pow(band80 / 100.0, visualGamma), "Ekstrem (+)", color=color.new(EXTREME_GREEN, 45), linestyle=hline.style_dotted)
+hline(100.0 * math.pow(band60 / 100.0, visualGamma), "Güçlü (+)", color=color.new(DARK_GREEN, 55), linestyle=hline.style_dotted)
+hline(100.0 * math.pow(band40 / 100.0, visualGamma), "Orta (+)", color=color.new(LIGHT_GREEN, 70), linestyle=hline.style_dotted)
+hline(0, "Denge", color=color.new(color.gray, 20), linewidth=1)
+hline(-100.0 * math.pow(band40 / 100.0, visualGamma), "Orta (-)", color=color.new(LIGHT_RED, 70), linestyle=hline.style_dotted)
+hline(-100.0 * math.pow(band60 / 100.0, visualGamma), "Güçlü (-)", color=color.new(DARK_RED, 55), linestyle=hline.style_dotted)
+hline(-100.0 * math.pow(band80 / 100.0, visualGamma), "Ekstrem (-)", color=color.new(EXTREME_RED, 45), linestyle=hline.style_dotted)
+
+if showEvents and bearFired
+    label.new(bar_index, f_visualScale(-1 * bearComposite * 100, visualGamma), text=str.tostring(math.round(-1 * bearComposite * 100)), style=label.style_label_down, color=color.new(color.black, 100), textcolor=DARK_RED, size=size.small)
+
+if showEvents and bullFired
+    label.new(bar_index, f_visualScale(1 * bullComposite * 100, visualGamma), text=str.tostring(math.round(1 * bullComposite * 100)), style=label.style_label_up, color=color.new(color.black, 100), textcolor=DARK_GREEN, size=size.small)
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// BİLGİ PANELİ — histogram ve overlay ile AYNI bearComposite/bullComposite/lastPoolS/
+// lastEventValid/lastConfidence değişkenlerini okur (Madde 9: tek kaynak, hiçbir zaman farklı
+// olay göstermez).
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+var table infoPanel = table.new(position.top_right, 11, 2, bgcolor=PANEL_BG, border_width=2, border_color=BORDER_COL, frame_width=2, frame_color=BORDER_COL)
+
+if showPanel and barstate.islast
+    color  dirCol  = lmo > 2 ? DARK_GREEN : lmo < -2 ? DARK_RED : NEUTRAL_GRAY
+    string dirText = lmo > 2 ? "YÜKSELİŞ" : lmo < -2 ? "DÜŞÜŞ" : "NÖTR"
+    string agoText = na(lastEventBar) ? "—" : str.tostring(bar_index - lastEventBar) + "b"
+    string bandText = f_tierLabel(math.abs(lmo), band20, band40, band60, band80)
+
+    table.cell(infoPanel, 0, 0, "LMO", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 0, 1, str.tostring(math.round(lmo)), text_color=dirCol, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 1, 0, "Yön", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 1, 1, dirText, text_color=dirCol, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 2, 0, "Seviye", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 2, 1, bandText, text_color=dirCol, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 3, 0, "Olay", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 3, 1, agoText, text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 4, 0, "Sweep", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 4, 1, na(lastSweepS) ? "—" : str.tostring(math.round(lastSweepS * 100)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 5, 0, "Absorp", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 5, 1, na(lastAbsS) ? "—" : str.tostring(math.round(lastAbsS * 100)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 6, 0, "Havuz", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 6, 1, na(lastPoolS) ? "—" : str.tostring(math.round(lastPoolS * 100)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 7, 0, "Validation", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 7, 1, na(lastEventValid) ? "—" : str.tostring(math.round(lastEventValid * 100)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 8, 0, "Hacim", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 8, 1, na(lastVolS) ? "—" : str.tostring(math.round(lastVolS * 100)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 9, 0, "Ham Kalite", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 9, 1, na(lastConfidence) ? "—" : str.tostring(math.round(lastConfidence)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(infoPanel, 10, 0, "Failure", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(infoPanel, 10, 1, na(lastEventBar) ? "—" : (lastFailed ? "BAŞARISIZ" : "GEÇERLİ"), text_color=(lastFailed ? DARK_RED : DARK_GREEN), bgcolor=BODY_BG, text_size=panelSize)
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// İSTATİSTİK PANELİ (Madde 8) — son statsHistoryLen olayın toplu ölçümleri
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+var table statsPanel = table.new(position.bottom_right, 2, 11, bgcolor=PANEL_BG, border_width=2, border_color=BORDER_COL, frame_width=2, frame_color=BORDER_COL, force_overlay=true)
+
+if showStatsPanel and barstate.islast
+    int   nEvents    = array.size(histManipScore)
+    float avgManip   = nEvents > 0 ? array.avg(histManipScore) : na
+    float avgConf    = nEvents > 0 ? array.avg(histConfidence) : na
+    float avgSweepQ  = nEvents > 0 ? array.avg(histSweepQ) : na
+    float avgAbsorp  = nEvents > 0 ? array.avg(histAbsorpQ) : na
+    float avgValid   = nEvents > 0 ? array.avg(histValidation) : na
+    float avgPoolQ   = nEvents > 0 ? array.avg(histPoolQ) : na
+    float successRt  = nEvents > 0 ? array.avg(histSuccess) * 100 : na
+    float avgDelay   = nEvents > 0 ? array.avg(histDelay) : na
+
+    table.cell(statsPanel, 0, 0, "Toplam Olay (son " + str.tostring(statsHistoryLen) + ")", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 0, str.tostring(nEvents), text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 1, "Ort. Manipulation Score", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 1, na(avgManip) ? "—" : str.tostring(math.round(avgManip)), text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 2, "Ort. Ham Kalite", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 2, na(avgConf) ? "—" : str.tostring(math.round(avgConf)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 3, "Ort. Sweep Quality", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 3, na(avgSweepQ) ? "—" : str.tostring(math.round(avgSweepQ)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 4, "Ort. Absorption", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 4, na(avgAbsorp) ? "—" : str.tostring(math.round(avgAbsorp)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 5, "Ort. Validation", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 5, na(avgValid) ? "—" : str.tostring(math.round(avgValid)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 6, "Ort. Pool Quality", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 6, na(avgPoolQ) ? "—" : str.tostring(math.round(avgPoolQ)) + "%", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 7, "Pencereyi Koruma Oranı", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 7, na(successRt) ? "—" : str.tostring(math.round(successRt)) + "%", text_color=DARK_GREEN, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 8, "Pencere İhlal Oranı", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 8, na(successRt) ? "—" : str.tostring(math.round(100 - successRt)) + "%", text_color=DARK_RED, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 9, "Ort. Gecikme", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 9, na(avgDelay) ? "—" : str.tostring(math.round(avgDelay)) + " bar", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+    table.cell(statsPanel, 0, 10, "Pencere", text_color=LABEL_TXT, bgcolor=HEADER_BG, text_size=panelSize)
+    table.cell(statsPanel, 1, 10, "Son " + str.tostring(statsHistoryLen) + " olay", text_color=VALUE_TXT, bgcolor=BODY_BG, text_size=panelSize)
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// ALERTLER — bilgilendirme amaçlıdır, trade sinyali değildir
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+alertcondition(bearFired, title="LMO Bearish Manipulation Event", message="LMO: Bearish likidite manipülasyon olayı tespit edildi ({{ticker}}, {{interval}})")
+alertcondition(bullFired, title="LMO Bullish Manipulation Event", message="LMO: Bullish likidite manipülasyon olayı tespit edildi ({{ticker}}, {{interval}})")

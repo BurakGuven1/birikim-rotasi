@@ -1,5 +1,6 @@
 import type { Transaction } from "../domain/types";
 import { investmentDb } from "./db";
+import { validateWatchlistTrade } from "../domain/stock-watchlist";
 
 const requireDb = () => {
   if (!investmentDb) throw new Error("Yerel portföy deposu yalnızca tarayıcıda kullanılabilir.");
@@ -16,6 +17,20 @@ export const EXAMPLE_TRANSACTIONS: Transaction[] = [
 export const portfolioRepository = {
   list: () => requireDb().transactions.orderBy("date").toArray(),
   add: (transaction: Transaction) => requireDb().transactions.add(transaction),
+  addValidated: (transaction: Transaction) => {
+    const db = requireDb();
+    return db.transaction("rw", db.transactions, async () => {
+      const existing = await db.transactions.toArray();
+      // Existing FIFO readers order equal dates by id. Preserve the entry order
+      // under that contract instead of letting a random UUID precede its buy.
+      const last = existing.filter(row => row.date === transaction.date).sort((a, b) => a.id.localeCompare(b.id)).at(-1);
+      let id = last ? `${last.id}~` : transaction.id;
+      while (existing.some(row => row.id === id)) id += "~";
+      const orderedTransaction = { ...transaction, id };
+      validateWatchlistTrade(existing, orderedTransaction, new Date().toISOString().slice(0, 10));
+      await db.transactions.add(orderedTransaction);
+    });
+  },
   update: (transaction: Transaction) => requireDb().transactions.put(transaction),
   remove: (id: string) => requireDb().transactions.delete(id),
   replaceAll: async (transactions: Transaction[]) => requireDb().transaction("rw", requireDb().transactions, async () => {

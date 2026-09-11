@@ -1,7 +1,9 @@
 node_modules/
 .next/
 .npm-cache/
+.worktrees/
 coverage/
+.bot-data/
 test-results/
 playwright-report/
 artifacts/

@@ -1,0 +1,639 @@
+Bölüm 1 : NotebookLM'den aldığım efloud strateji özeti:
+
+Efloud'un Mixed Price Action Arts (MPA) felsefesi, akademik price action teorilerinin pratik piyasa tecrübesiyle harmanlanmış, tamamen istatistiğe ve disipline dayalı bir pozisyon kurma ve yönetim kılavuzudur
+. Bir işleme Efloud gibi girebilmeniz ve pozisyonu onun gibi yönetebilmeniz için tüm teknik detaylar, kurallar ve onay mekanizmaları aşağıda optimize edilmiş bir şekilde dökümante edilmiştir:
+1. Temel Kavramların Efloud Perspektifiyle Tanımları
+Ana Trend ve HTF vs. LTF Dengesi:
+"Trend her şeyden büyüktür ve trend en yakın arkadaşınızdır"
+. Yüksek zaman dilimi (HTF - Günlük, Haftalık, Aylık), düşük zaman diliminden (LTF - 4 saatlik ve altı) her zaman daha üstündür
+.
+Tümdengelim Felsefesi: Analiz her zaman en büyük zaman diliminden (Aylık/Haftalık) başlar, önemli kurumsal seviyeler belirlenir ve LTF’ye (1 saatlik, 15 dakikalık vb.) inilerek onay aranır
+.
+Tümevarım (Domino Taşı Etkisi): LTF'deki (örn. 5dk/15dk) küçük yapısal değişimler, sırasıyla daha büyük zaman dilimlerini tetikleyerek HTF trend dönüşünü başlatır
+.
+Hayati Uyarı: 15 dakikalık grafikte bir kırılım görüp günlük grafikteki hedefi beklerseniz stop olursunuz
+. İşlem hangi zaman diliminde açıldıysa hedef de o zaman dilimine göre belirlenmelidir
+.
+Likidite (Liquidity): Likidite sadece swing tepe ve diplerinde aranmaz; her yerde olabilir
+. Ancak birbirine çok yakın (yakınsanmış) tepe ve dip seviyeleri en bariz ve yüksek likidite barındıran hedeflerdir
+. Sert hareketlerle boş bırakılan Imbalance (FVG - Dengesizlik) bölgeleri de fiyatı çeken doğal likidite alanlarıdır
+.
+Supply & Demand (Arz ve Talep):
+Demand (Talep): Fiyatın belirli bir bölgede konsolide olduktan sonra sert, istekli ve hacimli bir breakout mumuyla yukarı yönlü terk ettiği alanlardır
+.
+Supply (Arz): Konsolidasyon sonrası sert ve hacimli mumlarla aşağı yönlü kırılan ve fiyatın geri çekilmesinde direnç göstermesi beklenen bölgelerdir
+.
+Order Block (OB): Önemli bir swing bölgesinde oluşan tek bir küçük kararsızlık mumunun ardından gelen, çok sert ve hacimli bir breakout mumuyla tanımlanan kurumsal emir bloklarıdır
+.
+MSB (Market Structure Break) ve Swing Bölgelerin Keşfi: Market yapısının boğa (Bullish) veya ayı (Bearish) yönünde kırılmasıdır
+. Doğru swing tepe ve diplerini belirleyerek kuru gürültüden (noise) kaçınmak için Efloud şu kuralları kullanır
+:
+Dördüncü Mum Kuralı (4th Candle Rule): Oluşan en uç (en yüksek/en düşük) mumun ardından gelen mumların, o uç mumdan bir önceki mumun en düşük/en yüksek seviyesini (fitil veya gövde fark etmeksizin) ihlal etmesidir
+. Bu kural sağlandığında orası geçerli (valid) bir swing noktası kabul edilir
+.
+Breakout Mumu ile Terk Ediş: Bir seviyenin veya aralığın yavaş mumlarla değil, tek bir büyük, istekli ve hacimli mumla parçalanırcasına terk edilmesidir
+. Bu mumun varlığı o swing bölgesinin gücünü onaylar
+.
+Breaker ve Mitigation Konseptleri:
+Breaker (Likidite Temizliği İçeren Yapı): Fiyat bir swing low yaptıktan sonra yükselir, ardından o swing low'un altındaki likiditeyi süpürerek yeni bir dip (Lower Low) yapar
+. Sonrasında, bu düşüşü başlatan tepeyi hacimli bir breakout mumuyla yukarı kırdığında "Bullish Breaker" oluşur
+. Ayı versiyonu ise tepe likiditesini süpürüp (Higher High yapıp) dipten kırılan yapıdır
+. Retestinde işleme girilir
+.
+Mitigation (Likidite Temizliği Olmayan Yapı): Fiyat önceki dibi veya tepeyi ihlal edemeden (yani yeni bir dip/tepe yapamadan, başarısız kalarak) market yapısını kırdığında oluşan yapıdır
+. Gücü Breaker'a göre daha düşüktür
+.
+2. İşleme Giriş Onayları (Confirmations): Ne Zaman Girilmeli, Ne Zaman Girilmemeli?
+Ne Zaman Girilir?
+Fiyat yüksek zaman dilimindeki (HTF) önemli bir kurumsal seviyeye (Monthly Open, Weekly Open, Previous Weekly Open (POO/PWO))
+, bir arz/talep bölgesine
+ veya Range equilibrium (0.5) seviyesine geldiğinde
+,
+Düşük zaman diliminde (LTF - 15dk/30dk/1sa) V-Tipi Dönüş (V-Shape Recovery) (sert düşüşün ardından aynı hızla gerçekleşen hacimli toparlanma) görüldüğünde
+,
+LTF'de net bir Breaker veya Mitigation yapısı oluştuktan sonra, kırılımı gerçekleştiren hacimli breakout mumunun retestinde girilir
+.
+Trend Yönünde Giriş: Ana trend yönünde işlem alırken (uptrend ise long), fiyat optimal geri çekilme seviyelerine (Optimal Trade Entry - OTE: 0.618 - 0.79) veya Range'in 0.5 Equilibrium seviyesinin altındaki ucuzluk bölgesine sarktığında doğrudan veya minimal LTF onaylarıyla girilebilir
+.
+Ne Zaman Girilmez?
+Körü Körüne (Kör Cahilce) İşlem: Fiyat sadece destek veya dirence temas etti diye onay görmeden doğrudan emir atarak işleme girilmez
+.
+Trend Dışı (Counter-Trend) İşlemler: Ana trendin tersine (örn. HTF düşüş trendindeyken long) işlem alınacaksa, %100 oranında LTF onayı (likidite temizliği, Breaker ve hacimli dönüş mumu) beklenmelidir; onay yoksa kesinlikle girilmez
+.
+Kuru Gürültü (Noise): Düşük zaman dilimlerindeki (1dk, 5dk) karmaşık, belirsiz ve kararsız mum yapılarının ortasında işlem açılmaz; ekran başında sürekli kalmak insanı yanılsamaya sürükler
+.
+3. Farklı Market Koşullarında Pozisyon Kurma Stratejileri
+A. Kolay (Standart) Rangelerde Giriş Stratejisi
+Kolay rangeler, fiyatın Range High (RH), Equilibrium (EQ - 0.5) ve Range Low (RL) seviyeleri arasında nizami dalgalandığı yapılardır
+.
+RL Seviyesinde Giriş (Long): Fiyat RL seviyesinin altına sarkıp buradaki likiditeyi temizledikten sonra (Sapma/Deviation)
+, tekrar range içine girerek bir LTF Breaker yapısı veya V-Tipi dönüş sergilediğinde işleme girilir
+. Hedef EQ ve ardından RH'tır
+.
+RH Seviyesinde Giriş (Short): Fiyatın RH üzerinde sapma yapıp likiditeyi süpürmesinin ardından range içine geri dönüşünde retest ile shortlanır; hedef EQ ve RL'dir.
+EQ (0.5) Yönetimi: Fiyat range'in ucuzluk bölgesindeyken (EQ altı) alıcı, pahalılık bölgesindeyken (EQ üstü) satıcı olmak esastır
+. EQ seviyesinin hacimli kazanılması fiyatı bir sonraki kutu sınırına taşır
+.
+B. Karmaşık Yapılarda (Complex Structure) Giriş Stratejisi
+Piyasanın çok yavaş, belirsiz ve çok fazla swing noktasının olduğu "oyun parkı" görünümlü yapılarda şu adımlar izlenir
+:
+Tümdengelim ile Eleme: Grafik Aylık'tan başlanarak sadeleştirilir, önemsiz ara swingler elenir
+.
+Kesişim (Confluence) Avcılığı: Birden fazla Price Action konseptinin aynı noktada kesişmesi beklenir
+. Örneğin: Büyük zaman dilimi EQ seviyesi + Küçük zaman dilimi ucuzluk bölgesi (0.5 altı) + Imbalance (FVG) + Haftalık Açılış (Weekly Open) kesişimi en güvenli işlem alanıdır
+.
+Alt Range Kurgusu: Büyük bir range'in içerisinde oluşan mikro konsolidasyonlara kendi içinde geçici swing low/high çekilerek iç içe range (minor range) yapıları oluşturulur ve kesişim bölgelerinde LTF onayı aranır
+.
+C. Momentumlu Yapılarda (Sert Trendler) Giriş Stratejisi
+Boğa veya ayı trendinin "cayır cayır" aktığı, haber akışının güçlü olduğu (AI narrative vb.) durumlarda fiyat derin düzeltmeler yapmaz
+.
+Düzeltme Vermeden İlerleme: Bu durumlarda fiyatın OTE (0.618-0.79) seviyelerine veya dip talep kutularına dönmesi beklenmez (beklenirse tren kaçar)
+.
+Kırılan Tepelerin/Diplerin Testi: Fiyat, breakout mumuyla kırdığı bir önceki swing high/low seviyesini (untested high) milimetrik olarak test edip doğrudan yoluna devam eder
+. Girişler, bu kırılan eski tepelerin retestlerinde veya mikro zaman dilimindeki ufak konsolidasyon kırılımlarında aranmalıdır
+.
+Önemli Not: Momentum ne kadar güçlü olursa olsun, piyasada her zaman beklenmedik fakeout riskleri (pandemi, savaş, haber manipülasyonu) mevcuttur; bu yüzden statik stop her koşulda masada olmalıdır
+.
+4. Stop-Loss (SL) ve Take-Profit (TP) Yönetimi ve "Winning Trade Mentality"
+Statik ve Güvenli Stop-Loss (SL) Konumu: Stop-loss dinamik olarak sürekli değiştirilmemeli, statik kalmalıdır
+. Stop, "analizin iptal olduğu" teknik seviyedir
+.
+Long için: Giriş onayını veren Breaker yapısının veya likiditeyi süpüren son fitilin (V-Shape en dip noktası olan swing low) hemen altına yerleştirilir
+.
+Short için: Yapıyı kıran son swing high noktasının veya tepe fitilinin hemen üzerine yerleştirilir
+.
+Take-Profit (TP) Hedefleri: Kar al noktaları rastgele yüzdelerle değil; karşıt taraftaki Imbalance (FVG) boşlukları, geçmişte güçlü çalışmış Support/Resistance Flip (Destek/Direnç Değişim) seviyeleri veya karşıt Range sınırları olarak belirlenir
+.
+Winning Trade Mentality (Kazanan Pozisyonu Taşıma):
+Fiyat belirlenen ilk yapısal hedefe (TP1) ulaştığında pozisyonun %80 ila %90'ı kapatılarak kâr realize edilir
+.
+Kâr realizasyonunun hemen ardından Stop-Loss seviyesi derhal giriş noktasına (Entry/Breakeven) çekilir; böylece işlem tamamen risksiz (free trade) hale getirilir
+.
+Kalan %10 ila %20'lik kısım (Runner) asla kapatılmaz
+. Bu kısım, stop giriş seviyesinde kalacak şekilde büyük trendin sonuna kadar (swing trade) taşınır
+.
+Takipli Stop (Trailing Stop): Trend ilerledikçe, stop noktası her yeni oluşan swing low/high seviyesinin altına/üstüne taşınarak kâr maksimize edilir
+. Bu taktik, 1.4 AR'lık standart bir işlemi, karda oturma disipliniyle 14 AR'lık devasa bir kazanca dönüştürmenin tek yoludur
+.
+💡 Öneri: Bu teknik onay mekanizmalarını (özellikle dördüncü mum kuralı ve Breaker yapılarını) gerçek parayla denemeden önce, geçmiş grafiklerde TradingView Replay modunu açarak en az 50-100 kez test etmeniz (backtest) kuralları refleks haline getirmenizi sağlayacaktır
+--------------------------------------------------------
+
+Bölüm 2: Claude'un yorumu sana uyan kısımları alabilirsin veya daha farklı şeyler de önemliyse kendin de eksikleri düzeltebilirsin, önerileri yanlış ise boşverip uygulamayabilirsin. İlk olarak backtest yap gerçek olmayan bi parayla. başarılı seviyeye gelince gerçek para ile bot işlem alsın.
+
+Önce dürüst bir değerlendirme, sonra kod.
+
+Metodoloji hakkında gerçekçi bir bakış
+
+Bu doküman klasik Smart Money Concepts / Price Action terminolojisinin (MSB, breaker, order block, FVG, OTE, likidite süpürme) iyi derlenmiş bir özeti. Ama şunu net söylemeliyim:
+
+"Hacimli mum", "sert kırılım", "istekli breakout" gibi tanımlar öznel eşiklere dayanıyor. Bir insan gözle bakınca "bu güçlü bir mum" der ama kodda bunu objektif bir sayıya (örn. mumun body/ATR oranı, hacim ortalamanın X katı) çevirmek zorundasınız — ve bu eşiği nasıl seçtiğiniz stratejinin performansını kökten değiştirir. Yani "Efloud gibi" bir bot, aslında "benim seçtiğim eşiklere göre yorumlanmış bir versiyon" olacak.
+Dokümanda istatistiksel bir edge (win rate, ortalama R, örnek sayısı) verilmiyor — sadece kurallar var. Bu, kanıtlanmış değil, test edilmesi gereken bir hipotez.
+5x kaldıraç + otomatik TP/SL, likidite süpürme mantığıyla (fitilin biraz altına/üstüne inip geri dönmesi) çakışabilir; stop'un swing'in "hemen altına" konması ile 5x kaldıraçta küçük bir volatilite spike'ı bile pozisyonu likide edebilir.
+
+Bunu söyledikten sonra: dokümandaki kuralları elimden geldiğince objektif parametrelere çevirip çalışan bir bot iskeleti kuruyorum. Ama canlıya almadan önce mutlaka backtest + en az birkaç hafta paper/testnet öneririm — bu benim tavsiyem, zorunluluk değil, siz karar vereceksiniz.
+
+Varsaydığım parametreler (Codex'e devrederken kolayca değiştirilebilir):
+
+HTF = 1D + 1W (bias), LTF = 1H (yapı), giriş teyidi = 15M
+Risk/trade: sermayenin %1'i (değiştirilebilir)
+TP1'de %85 kapat → SL'i girişe çek → kalan %15 runner, trailing stop ile taşınır
+mum kuralı, MSB, breaker/mitigation, FVG, OTE (0.618-0.79) kodda ayrı fonksiyonlar olarak var, Codex kolayca ayarlayabilir
+
+-----------------------------------------------------------------
+
+Bölüm 3 : Claude Eflouddan çıkarım yaptığı kod ( Claude'un yorumu sana uyan kısımları alabilirsin veya daha farklı şeyler de önemliyse kendin de eksikleri düzeltebilirsin, önerileri yanlış ise boşverip uygulamayabilirsin. )
+
+Kod:
+
+"""
+MPA (Mixed Price Action) Strategy Bot - OKX
+=============================================
+Efloud'un dokümante ettiği price-action kurallarının (4. mum kuralı, MSB,
+Breaker/Mitigation, FVG, OTE, likidite süpürme) objektif parametrelerle
+kodlanmış hali. OKX'te ccxt üzerinden 5x kaldıraçla long/short açar,
+girişle birlikte SL ve TP emirlerini otomatik koyar, TP1'de kısmi kapatıp
+stop'u breakeven'a çeker, kalan runner'ı trailing stop ile taşır.
+
+!!! ÖNEMLİ !!!
+- Bu kod "Efloud'un anlattığı kurallar doğrudur" varsayımıyla YAZILMIŞTIR.
+  Öznel eşikler (hacim/mum gücü çarpanları vb.) VOLUME_MULT, BODY_ATR_MULT
+  gibi CONFIG parametreleriyle temsil edilmiştir - gerçek performans bu
+  eşiklerin doğru kalibre edilmesine bağlıdır.
+- Canlıya almadan önce mutlaka backtest ve DRY_RUN=True ile paper-trade
+  yapılması önerilir. Bu tavsiye niteliğindedir, zorunlu değildir.
+- Finansal tavsiye değildir.
+
+Kurulum:
+    pip install ccxt pandas numpy --break-system-packages
+
+Ortam değişkenleri (Codex bağlarken bunları set etmeli):
+    OKX_API_KEY, OKX_API_SECRET, OKX_API_PASSPHRASE
+"""
+
+from __future__ import annotations
+import os
+import time
+import math
+import logging
+from dataclasses import dataclass, field
+from typing import Optional, Literal
+
+import ccxt
+import pandas as pd
+import numpy as np
+
+# ----------------------------------------------------------------------------
+# CONFIG - burayı ihtiyaca göre ayarlayın
+# ----------------------------------------------------------------------------
+CONFIG = {
+    "SYMBOL": "BTC/USDT:USDT",       # OKX perpetual swap sembolü (ccxt unified)
+    "LEVERAGE": 5,
+    "RISK_PER_TRADE_PCT": 1.0,       # sermayenin yüzde kaçı riske edilecek
+    "DRY_RUN": True,                 # True: emir GÖNDERMEZ, sadece loglar. Canlıya geçmeden False yapın.
+
+    # Zaman dilimleri
+    "HTF_BIAS_TF": "1d",             # ana trend / bias için (dokümanda Aylık/Haftalık idealdir,
+                                       # ccxt+OKX rate limit ve pratiklik için 1D+1W kombinasyonu kullanıyoruz)
+    "HTF_BIAS_TF2": "1w",
+    "STRUCTURE_TF": "1h",            # MSB / breaker / swing tespiti
+    "ENTRY_TF": "15m",               # giriş teyidi (V-shape, retest)
+
+    "SWING_LOOKBACK": 200,           # yapı analizi için kaç mum geriye bakılacak
+    "ENTRY_LOOKBACK": 100,
+
+    # "Güçlü / hacimli breakout mumu" objektif tanımı:
+    "BODY_ATR_MULT": 1.3,            # mum gövdesi >= ATR * bu katsayı ise "güçlü mum"
+    "VOLUME_MULT": 1.5,              # mum hacmi >= son 20 mum ortalama hacim * bu katsayı
+
+    # OTE (Optimal Trade Entry) fib bandı
+    "OTE_MIN": 0.618,
+    "OTE_MAX": 0.79,
+
+    # Risk yönetimi / kar realizasyonu
+    "TP1_CLOSE_PCT": 0.85,           # TP1'de kapatılacak pozisyon yüzdesi
+    "SL_BUFFER_ATR_MULT": 0.15,      # SL'i swing'in bu kadar ATR ötesine koy (likidite avından kaçmak için)
+    "MIN_RR": 1.5,                   # TP1 hedefinin minimum risk/ödül oranı - altındaysa işleme girme
+
+    "POLL_INTERVAL_SEC": 60,         # ana döngü kaç saniyede bir kontrol etsin
+    "MAX_OPEN_POSITIONS": 1,         # sembol başına
+}
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+log = logging.getLogger("mpa_bot")
+
+
+# ----------------------------------------------------------------------------
+# Exchange bağlantısı
+# ----------------------------------------------------------------------------
+def make_exchange() -> ccxt.okx:
+    exchange = ccxt.okx({
+        "apiKey": os.environ.get("OKX_API_KEY", ""),
+        "secret": os.environ.get("OKX_API_SECRET", ""),
+        "password": os.environ.get("OKX_API_PASSPHRASE", ""),
+        "enableRateLimit": True,
+        "options": {"defaultType": "swap"},
+    })
+    return exchange
+
+
+# ----------------------------------------------------------------------------
+# Veri yapıları
+# ----------------------------------------------------------------------------
+@dataclass
+class Swing:
+    index: int
+    price: float
+    kind: Literal["high", "low"]
+    confirmed: bool = False
+
+
+@dataclass
+class TradeSignal:
+    side: Literal["long", "short"]
+    entry: float
+    stop: float
+    tp1: float
+    tp2: Optional[float] = None
+    reason: str = ""
+
+
+# ----------------------------------------------------------------------------
+# Yardımcı: OHLCV çekme
+# ----------------------------------------------------------------------------
+def fetch_df(exchange: ccxt.okx, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
+    raw = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+    df = pd.DataFrame(raw, columns=["ts", "open", "high", "low", "close", "volume"])
+    df["ts"] = pd.to_datetime(df["ts"], unit="ms")
+    return df
+
+
+def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    high, low, close = df["high"], df["low"], df["close"]
+    prev_close = close.shift(1)
+    tr = pd.concat([
+        (high - low).abs(),
+        (high - prev_close).abs(),
+        (low - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    return tr.rolling(period).mean()
+
+
+def is_strong_candle(df: pd.DataFrame, i: int) -> bool:
+    """'Sert, istekli, hacimli' mum = büyük gövde (ATR'ye göre) + yüksek hacim."""
+    row = df.iloc[i]
+    body = abs(row["close"] - row["open"])
+    a = df["atr"].iloc[i]
+    if pd.isna(a) or a == 0:
+        return False
+    vol_avg = df["volume"].iloc[max(0, i - 20):i].mean()
+    if pd.isna(vol_avg) or vol_avg == 0:
+        return False
+    return (body >= a * CONFIG["BODY_ATR_MULT"]) and (row["volume"] >= vol_avg * CONFIG["VOLUME_MULT"])
+
+
+# ----------------------------------------------------------------------------
+# 1) Swing tespiti - "4. Mum Kuralı" (4th Candle Rule)
+# ----------------------------------------------------------------------------
+def find_swings(df: pd.DataFrame) -> list[Swing]:
+    """
+    Dokümandaki kural: en uç mumdan (highest high / lowest low) sonra gelen
+    mumlardan biri, o uç mumdan BİR ÖNCEKİ mumun fitil/gövde seviyesini
+    (low/high) ihlal ederse, o uç nokta geçerli bir swing kabul edilir.
+    Basit ve objektif bir uygulama: fraktal + doğrulama taraması.
+    """
+    swings: list[Swing] = []
+    highs, lows = df["high"].values, df["low"].values
+    n = len(df)
+
+    for i in range(2, n - 1):
+        # potansiyel swing high: lokal maksimum aday
+        if highs[i] == max(highs[max(0, i - 3):i + 4]):
+            prev_level = lows[i - 1]  # uç mumdan bir önceki mumun low'u
+            confirmed = False
+            for j in range(i + 1, min(n, i + 15)):
+                if lows[j] < prev_level:
+                    confirmed = True
+                    break
+            swings.append(Swing(index=i, price=highs[i], kind="high", confirmed=confirmed))
+
+        if lows[i] == min(lows[max(0, i - 3):i + 4]):
+            prev_level = highs[i - 1]
+            confirmed = False
+            for j in range(i + 1, min(n, i + 15)):
+                if highs[j] > prev_level:
+                    confirmed = True
+                    break
+            swings.append(Swing(index=i, price=lows[i], kind="low", confirmed=confirmed))
+
+    return [s for s in swings if s.confirmed]
+
+
+def last_confirmed(swings: list[Swing], kind: str) -> Optional[Swing]:
+    matches = [s for s in swings if s.kind == kind]
+    return matches[-1] if matches else None
+
+
+# ----------------------------------------------------------------------------
+# 2) HTF Bias (Ana trend yönü)
+# ----------------------------------------------------------------------------
+def htf_bias(exchange: ccxt.okx, symbol: str) -> Literal["bullish", "bearish", "neutral"]:
+    """Aylık yerine 1W kullanıyoruz (pratik veri kısıtı); 1D ile teyitliyoruz."""
+    df_w = fetch_df(exchange, symbol, CONFIG["HTF_BIAS_TF2"], 60)
+    df_d = fetch_df(exchange, symbol, CONFIG["HTF_BIAS_TF"], 60)
+
+    def ema_bias(df):
+        ema20 = df["close"].ewm(span=20).mean().iloc[-1]
+        ema50 = df["close"].ewm(span=50).mean().iloc[-1] if len(df) >= 50 else df["close"].mean()
+        price = df["close"].iloc[-1]
+        if price > ema20 > ema50:
+            return "bullish"
+        if price < ema20 < ema50:
+            return "bearish"
+        return "neutral"
+
+    b_w, b_d = ema_bias(df_w), ema_bias(df_d)
+    if b_w == b_d and b_w != "neutral":
+        return b_w
+    return "neutral"  # HTF'ler uyuşmuyorsa -> trend dışı say, işlem alma
+
+
+# ----------------------------------------------------------------------------
+# 3) MSB / Breaker / Mitigation tespiti (STRUCTURE_TF üzerinde)
+# ----------------------------------------------------------------------------
+def detect_structure_signal(df: pd.DataFrame, bias: str) -> Optional[TradeSignal]:
+    df = df.copy()
+    df["atr"] = atr(df)
+    swings = find_swings(df)
+    if len(swings) < 3:
+        return None
+
+    last_high = last_confirmed(swings, "high")
+    last_low = last_confirmed(swings, "low")
+    if not last_high or not last_low:
+        return None
+
+    last_close = df["close"].iloc[-1]
+    last_idx = len(df) - 1
+
+    # ---- BULLISH: breaker / MSB yukarı ----
+    if bias == "bullish" and last_low.index < last_high.index:
+        # Fiyat, son swing high'ı hacimli bir mumla kırdı mı? (MSB yukarı)
+        for i in range(last_high.index + 1, len(df)):
+            if df["close"].iloc[i] > last_high.price and is_strong_candle(df, i):
+                # Breaker/Mitigation onaylandı. Girişi son swing low'un retesti / OTE bandında ara.
+                impulse_low = last_low.price
+                impulse_high = df["high"].iloc[i]
+                rng = impulse_high - impulse_low
+                if rng <= 0:
+                    continue
+                ote_top = impulse_high - rng * CONFIG["OTE_MIN"]
+                ote_bot = impulse_high - rng * CONFIG["OTE_MAX"]
+                if ote_bot <= last_close <= ote_top:
+                    stop = impulse_low - df["atr"].iloc[-1] * CONFIG["SL_BUFFER_ATR_MULT"]
+                    entry = last_close
+                    risk = entry - stop
+                    if risk <= 0:
+                        continue
+                    tp1 = entry + risk * CONFIG["MIN_RR"]
+                    return TradeSignal(
+                        side="long", entry=entry, stop=stop, tp1=tp1,
+                        reason=f"Bullish MSB+Breaker, OTE retest ({ote_bot:.4f}-{ote_top:.4f})",
+                    )
+
+    # ---- BEARISH: breaker / MSB aşağı ----
+    if bias == "bearish" and last_high.index < last_low.index:
+        for i in range(last_low.index + 1, len(df)):
+            if df["close"].iloc[i] < last_low.price and is_strong_candle(df, i):
+                impulse_high = last_high.price
+                impulse_low = df["low"].iloc[i]
+                rng = impulse_high - impulse_low
+                if rng <= 0:
+                    continue
+                ote_bot = impulse_low + rng * CONFIG["OTE_MIN"]
+                ote_top = impulse_low + rng * CONFIG["OTE_MAX"]
+                if ote_bot <= last_close <= ote_top:
+                    stop = impulse_high + df["atr"].iloc[-1] * CONFIG["SL_BUFFER_ATR_MULT"]
+                    entry = last_close
+                    risk = stop - entry
+                    if risk <= 0:
+                        continue
+                    tp1 = entry - risk * CONFIG["MIN_RR"]
+                    return TradeSignal(
+                        side="short", entry=entry, stop=stop, tp1=tp1,
+                        reason=f"Bearish MSB+Breaker, OTE retest ({ote_bot:.4f}-{ote_top:.4f})",
+                    )
+
+    return None
+
+
+# ----------------------------------------------------------------------------
+# 4) LTF giriş teyidi - V-Shape recovery / retest onayı
+# ----------------------------------------------------------------------------
+def entry_confirmation(df_entry: pd.DataFrame, side: str) -> bool:
+    """
+    Basit V-shape kontrolü: son N mumda sert bir düşüş (long için) ya da
+    yükseliş (short için) olup, hemen ardından güçlü bir dönüş mumu var mı.
+    """
+    df = df_entry.copy()
+    df["atr"] = atr(df)
+    if len(df) < 10:
+        return False
+
+    window = df.iloc[-8:]
+    last_i = len(df) - 1
+
+    if side == "long":
+        drop = window["high"].iloc[0] - window["low"].min()
+        recovered = df["close"].iloc[-1] > window["low"].min()
+        strong_reversal = is_strong_candle(df, last_i) and df["close"].iloc[-1] > df["open"].iloc[-1]
+        return drop > 0 and recovered and strong_reversal
+
+    if side == "short":
+        rise = window["high"].max() - window["low"].iloc[0]
+        recovered = df["close"].iloc[-1] < window["high"].max()
+        strong_reversal = is_strong_candle(df, last_i) and df["close"].iloc[-1] < df["open"].iloc[-1]
+        return rise > 0 and recovered and strong_reversal
+
+    return False
+
+
+# ----------------------------------------------------------------------------
+# 5) Pozisyon boyutlandırma
+# ----------------------------------------------------------------------------
+def calc_position_size(equity_usdt: float, entry: float, stop: float, leverage: int) -> float:
+    """Risk bazlı boyutlandırma: risk_tutari = equity * risk% ; miktar = risk_tutari / |entry-stop|"""
+    risk_amount = equity_usdt * (CONFIG["RISK_PER_TRADE_PCT"] / 100.0)
+    per_unit_risk = abs(entry - stop)
+    if per_unit_risk <= 0:
+        return 0.0
+    qty = risk_amount / per_unit_risk
+    # kaldıraçla mevcut marjin kontrolü (basit güvenlik payı, gerekirse azalt)
+    max_notional = equity_usdt * leverage * 0.9
+    if qty * entry > max_notional:
+        qty = max_notional / entry
+    return qty
+
+
+# ----------------------------------------------------------------------------
+# 6) Emir gönderme (OKX / ccxt)
+# ----------------------------------------------------------------------------
+def get_equity_usdt(exchange: ccxt.okx) -> float:
+    bal = exchange.fetch_balance()
+    return float(bal.get("USDT", {}).get("free", 0) or 0)
+
+
+def place_trade(exchange: ccxt.okx, symbol: str, signal: TradeSignal, qty: float):
+    side = "buy" if signal.side == "long" else "sell"
+    close_side = "sell" if signal.side == "long" else "buy"
+
+    log.info(
+        "SİNYAL: %s %s | entry=%.4f stop=%.4f tp1=%.4f qty=%.6f | %s",
+        symbol, signal.side.upper(), signal.entry, signal.stop, signal.tp1, qty, signal.reason,
+    )
+
+    if CONFIG["DRY_RUN"]:
+        log.info("[DRY_RUN] Emir gönderilmedi (test modu). CONFIG['DRY_RUN']=False yaparak canlıya alın.")
+        return
+
+    exchange.set_leverage(CONFIG["LEVERAGE"], symbol)
+
+    # 1) Piyasa emriyle giriş
+    order = exchange.create_order(symbol, type="market", side=side, amount=qty)
+    log.info("Giriş emri gönderildi: %s", order.get("id"))
+
+    tp1_qty = qty * CONFIG["TP1_CLOSE_PCT"]
+    runner_qty = qty - tp1_qty
+
+    # 2) Stop-loss (tüm pozisyon için, reduce-only stop-market)
+    exchange.create_order(
+        symbol, type="market", side=close_side, amount=qty,
+        params={"reduceOnly": True, "stopLossPrice": signal.stop, "triggerPrice": signal.stop},
+    )
+
+    # 3) TP1 (kısmi kapama, reduce-only limit)
+    exchange.create_order(
+        symbol, type="limit", side=close_side, amount=tp1_qty, price=signal.tp1,
+        params={"reduceOnly": True},
+    )
+
+    log.info(
+        "SL ve TP1 emirleri kondu. Runner miktarı (%.6f) TP1 sonrası trailing ile yönetilecek.",
+        runner_qty,
+    )
+
+
+# ----------------------------------------------------------------------------
+# 7) Runner / trailing stop yönetimi (basit iskelet - pozisyon state DB'siz)
+# ----------------------------------------------------------------------------
+def manage_open_position(exchange: ccxt.okx, symbol: str):
+    """
+    TP1 gerçekleşmiş mi kontrol edip, gerçekleştiyse:
+      - Kalan (runner) pozisyonun stop'unu breakeven'a çeker
+      - Yeni oluşan swing'lere göre stop'u trailing yapar
+    Not: Prod ortamda pozisyon/emir state'i bir DB veya dosyada tutulmalı;
+    burada en son açık pozisyon ve mevcut açık emirler exchange'den okunuyor.
+    """
+    positions = exchange.fetch_positions([symbol])
+    open_pos = next((p for p in positions if float(p.get("contracts") or 0) != 0), None)
+    if not open_pos:
+        return
+
+    side = "long" if float(open_pos["contracts"]) > 0 else "short"
+    entry_price = float(open_pos["entryPrice"])
+
+    df = fetch_df(exchange, symbol, CONFIG["STRUCTURE_TF"], CONFIG["SWING_LOOKBACK"])
+    df["atr"] = atr(df)
+    swings = find_swings(df)
+
+    if side == "long":
+        last_low = last_confirmed(swings, "low")
+        if last_low and last_low.price > entry_price:
+            new_stop = last_low.price - df["atr"].iloc[-1] * CONFIG["SL_BUFFER_ATR_MULT"]
+            log.info("Trailing: yeni stop breakeven üstünde swing low'a çekiliyor -> %.4f", new_stop)
+            if not CONFIG["DRY_RUN"]:
+                exchange.create_order(
+                    symbol, type="market", side="sell",
+                    amount=abs(float(open_pos["contracts"])),
+                    params={"reduceOnly": True, "stopLossPrice": new_stop, "triggerPrice": new_stop},
+                )
+    else:
+        last_high = last_confirmed(swings, "high")
+        if last_high and last_high.price < entry_price:
+            new_stop = last_high.price + df["atr"].iloc[-1] * CONFIG["SL_BUFFER_ATR_MULT"]
+            log.info("Trailing: yeni stop breakeven altında swing high'a çekiliyor -> %.4f", new_stop)
+            if not CONFIG["DRY_RUN"]:
+                exchange.create_order(
+                    symbol, type="market", side="buy",
+                    amount=abs(float(open_pos["contracts"])),
+                    params={"reduceOnly": True, "stopLossPrice": new_stop, "triggerPrice": new_stop},
+                )
+
+
+# ----------------------------------------------------------------------------
+# Ana döngü
+# ----------------------------------------------------------------------------
+def run_once(exchange: ccxt.okx):
+    symbol = CONFIG["SYMBOL"]
+
+    # Zaten açık pozisyon varsa -> sadece yönet, yeni sinyal arama
+    positions = exchange.fetch_positions([symbol])
+    open_positions = [p for p in positions if float(p.get("contracts") or 0) != 0]
+    if len(open_positions) >= CONFIG["MAX_OPEN_POSITIONS"]:
+        manage_open_position(exchange, symbol)
+        return
+
+    bias = htf_bias(exchange, symbol)
+    log.info("HTF bias: %s", bias)
+    if bias == "neutral":
+        log.info("HTF bias net değil -> trend dışı, işlem aranmıyor (kurala göre %%100 LTF onayı gerekirdi).")
+        return
+
+    df_struct = fetch_df(exchange, symbol, CONFIG["STRUCTURE_TF"], CONFIG["SWING_LOOKBACK"])
+    signal = detect_structure_signal(df_struct, bias)
+    if not signal:
+        log.info("Yapısal sinyal (MSB/Breaker+OTE) bulunamadı.")
+        return
+
+    df_entry = fetch_df(exchange, symbol, CONFIG["ENTRY_TF"], CONFIG["ENTRY_LOOKBACK"])
+    if not entry_confirmation(df_entry, signal.side):
+        log.info("LTF giriş teyidi (V-shape/retest) yok -> işlem atlanıyor.")
+        return
+
+    rr = abs(signal.tp1 - signal.entry) / abs(signal.entry - signal.stop)
+    if rr < CONFIG["MIN_RR"]:
+        log.info("R/R yetersiz (%.2f < %.2f) -> işlem atlanıyor.", rr, CONFIG["MIN_RR"])
+        return
+
+    equity = get_equity_usdt(exchange)
+    qty = calc_position_size(equity, signal.entry, signal.stop, CONFIG["LEVERAGE"])
+    if qty <= 0:
+        log.warning("Hesaplanan pozisyon miktarı 0 veya negatif, işlem atlanıyor.")
+        return
+
+    place_trade(exchange, symbol, signal, qty)
+
+
+def main():
+    exchange = make_exchange()
+    exchange.load_markets()
+    log.info("MPA Bot başlatıldı. Sembol=%s Kaldıraç=%sx DRY_RUN=%s",
+              CONFIG["SYMBOL"], CONFIG["LEVERAGE"], CONFIG["DRY_RUN"])
+
+    while True:
+        try:
+            run_once(exchange)
+        except ccxt.NetworkError as e:
+            log.warning("Ağ hatası, tekrar denenecek: %s", e)
+        except ccxt.ExchangeError as e:
+            log.error("Borsa hatası: %s", e)
+        except Exception as e:
+            log.exception("Beklenmeyen hata: %s", e)
+
+        time.sleep(CONFIG["POLL_INTERVAL_SEC"])
+
+
+if __name__ == "__main__":
+    main()
