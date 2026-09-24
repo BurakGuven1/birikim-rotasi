@@ -335,6 +335,25 @@ function renderStrategyCards() {
   }).join("");
 }
 
+function renderSeasonTests() {
+  const st = BT.seasonTests;
+  if (!st) return;
+  const html = st.tests.map((t) => {
+    const base = t.rows.find((r) => r.key === "base");
+    const head = `<tr><th>${esc(t.baseName)} tabanlı</th>${st.periods.map((p) => `<th>${esc(p.label)}</th>`).join("")}<th>Maks düşüş (20+ yıl)</th></tr>`;
+    const rows = t.rows.map((r) => {
+      const warn = r.key === "lookahead";
+      return `<tr style="${warn ? "color:var(--muted);font-style:italic" : r.key === "base" ? "font-weight:600" : ""}"><td style="white-space:normal">${esc(r.name)}</td>${st.periods.map((p) => {
+        const x = r.results[p.key].realIrr;
+        const d = x - base.results[p.key].realIrr;
+        return `<td>${pct(x)}${r.key === "base" ? "" : ` <small class="${d > 0.0005 ? "pos" : d < -0.0005 ? "neg" : ""}">(${Math.abs(d) < 0.0005 ? "0.0" : `${d > 0 ? "+" : ""}${(d * 100).toFixed(1)}`})</small>`}</td>`;
+      }).join("")}<td class="neg">${pct(r.results.long.maxDrawdown)}</td></tr>`;
+    }).join("");
+    return `<div class="scroll" style="margin-bottom:12px"><table>${head}${rows}</table></div>`;
+  }).join("");
+  document.getElementById("seasonTests").innerHTML = html + `<div class="warn"><b>Sonuç:</b> Gerçekte uygulanabilir takvim kuralı her iki tabanda da getiriyi 1–2 puan düşürdü ya da (Hibrit + 1,5x) hiç artırmadı. Düşüşü yalnız birkaç puan azalttı. Kazanıyor gibi görünen tek versiyon, bugünkü takvimi geçmişe uygulayan ileriye bakan versiyon. 10 gözlemlik aylık "8/10" istatistikleri büyük ölçüde şanstan oluşuyor ve ileriye taşınmıyor. Takvimi bir işlem kuralı olarak değil, bilgi notu olarak kullanın.</div>`;
+}
+
 // ------------------------------------------------------------------ bu ayın dağılımı
 let AL;
 let alStrategy = store.get("panel.alStrategy") || "hybrid";
@@ -550,6 +569,7 @@ function md(text) {
     period = BT.periods.some((p) => p.key === saved) ? saved : "long";
     renderPeriodChips();
     renderStrategyCards();
+    renderSeasonTests();
     initProjectionControls();
     setPeriod(period);
   } catch (e) {

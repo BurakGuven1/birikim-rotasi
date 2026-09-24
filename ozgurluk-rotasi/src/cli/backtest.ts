@@ -67,6 +67,35 @@ for (const p of periods) {
   for (const v of variants) results[p.key][v.key] = runCore(u.core, { ...v, start: p.start, end, contributions });
 }
 
+// ---------------------------------------------------------------- 4. test planı: takvim (mevsimsellik)
+// Aylık takvimdeki "≥7/10 yeşil" aylarda al/ağırlık artır, "≤3/10 yeşil" aylarda sat ve ay sonunda geri al.
+// walkforward: her ay yalnız o tarihe kadar bilinen yıllar kullanılır (gerçekte uygulanabilir olan).
+// insample: bugünkü takvim geçmişe uygulanır — ileriye bakar, yalnız yanılgıyı göstermek için.
+const seasonal = (mode: "walkforward" | "insample", overweight: number) => ({ lookback: 10, sellAt: 0.3, buyAt: 0.7, overweight, mode });
+const seasonVariants = [
+  { key: "base", name: "Temel strateji (takvimsiz)", seasonal: undefined },
+  { key: "sell", name: "Takvim: kırmızı ayda sat, ay sonunda geri al", seasonal: seasonal("walkforward", 1) },
+  { key: "sellbuy", name: "Takvim: kırmızıda sat + yeşil ayda 1,5x al", seasonal: seasonal("walkforward", 1.5) },
+  { key: "lookahead", name: "Aynı kural, bugünkü takvimle (ileriye bakan — gerçekte mümkün değil)", seasonal: seasonal("insample", 1) },
+];
+const seasonPeriods = ["y10", "y15", "long"];
+const seasonTests = (["static", "hybrid"] as const).map((base) => ({
+  base,
+  baseName: STRATEGIES[base].name,
+  rows: seasonVariants.map((sv) => ({
+    key: sv.key,
+    name: sv.name,
+    results: Object.fromEntries(
+      seasonPeriods.map((pk) => {
+        const p = periods.find((x) => x.key === pk)!;
+        const d = STRATEGIES[base];
+        const r = runCore(u.core, { name: sv.name, weights: STRATEGIC_WEIGHTS, rule: d.rule, trendFloor: d.rule === "none" ? undefined : d.trendFloor, seasonal: sv.seasonal, contributions, start: p.start, end });
+        return [pk, { realIrr: r.metrics.realIrr, maxDrawdown: r.metrics.maxDrawdown, sharpe: r.metrics.sharpe, finalValue: r.metrics.finalValue, avgExposure: r.metrics.avgExposure }];
+      }),
+    ),
+  })),
+}));
+
 // ---------------------------------------------------------------- 10 yıllık kayan pencereler
 const rolling: { variant: string; windows: { start: string; realIrr: number; realFinal: number }[] }[] = [];
 for (const v of variants) {
@@ -110,6 +139,7 @@ const json = {
     ),
   })),
   rolling,
+  seasonTests: { periods: seasonPeriods.map((k) => ({ key: k, label: periods.find((p) => p.key === k)!.label })), tests: seasonTests },
   swing: allRuns.map((r) => ({ strategy: r.strategy, asset: r.asset, stats: r.result.stats, trades: r.result.trades.slice(-40) })),
   sleeve: SWING.sleeve,
   monteCarlo: mcBy,
@@ -158,6 +188,13 @@ L.push(
   ),
   "",
 );
+L.push(`## 4. test planı: Takvim (mevsimsellik) stratejisi`, "");
+L.push(`Kural: bir sonraki ay, son 10 yılın ≤3'ünde yeşil kapandıysa o varlık ay başında satılır, ay sonunda geri alınır (art arda kırmızı aylarda dışarıda kalır); ≥7/10 yeşil aylarda ağırlık 1,5 katına çıkarılır (yalnız "sat + al" varyantında). "WF" = her ay yalnız o tarihe kadar bilinen veriyle.`, "");
+for (const t of seasonTests) {
+  L.push(`**Taban: ${t.baseName}**`, "");
+  L.push(mdTable(["Varyant", ...seasonPeriods.map((k) => `${periods.find((p) => p.key === k)!.label} reel IRR`), "20+ yıl maks DD"], t.rows.map((r) => [r.name, ...seasonPeriods.map((k) => pct(r.results[k].realIrr)), pct(r.results.long.maxDrawdown)])), "");
+}
+L.push(`_Sonuç: gerçekte uygulanabilir (WF) takvim kuralı getiriyi 1–2 puan düşürdü ya da (Hibrit + 1,5x) hiç artırmadı; düşüşü yalnız birkaç puan azalttı. Yalnız bugünkü takvimi geçmişe uygulayan (ileriye bakan) versiyon kazanıyor gibi görünür; bu bir yanılgıdır._`, "");
 L.push(`## Swing stratejileri (günlük, işlem bazlı)`, "");
 L.push(`Sinyal kapanışta, dolum ertesi açılışta; komisyon+kayma ve perp fonlama maliyeti dahil. ✓ = ana plandaki uydu kolunda (önceden kayıtlı).`, "");
 L.push(

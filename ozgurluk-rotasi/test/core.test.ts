@@ -45,3 +45,14 @@ test("gereken getiri, futureValue ile tutarlı", () => {
   const r = requiredReturn(1_500_000, 20, 1000, 3500);
   assert.ok(Math.abs(futureValue(r, 20, 1000, 3500) - 1_500_000) < 1);
 });
+
+test("takvim oranı: walk-forward yalnız verilen indekse kadar olan yılları kullanır", async () => {
+  const { seasonalUpRatio } = await import("../src/engine/core.ts");
+  const months = monthRange("2000-01", "2003-12");
+  // Ocak ayları: 2001 ↑, 2002 ↓, 2003 ↑
+  const closes = months.map((m) => (m === "2001-01" ? 110 : m === "2002-01" ? 90 : m === "2003-01" ? 120 : 100));
+  const upto2002 = seasonalUpRatio(months, closes, 1, months.indexOf("2002-12"), 10);
+  assert.deepEqual(upto2002, { up: 1, n: 2 }); // 2000-01 öncesi veri yok; 2001 ↑, 2002 ↓ (2003 henüz bilinmiyor)
+  const all = seasonalUpRatio(months, closes, 1, months.length - 1, 10);
+  assert.equal(all.up, 2);
+});
