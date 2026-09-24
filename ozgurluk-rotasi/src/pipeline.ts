@@ -1,5 +1,5 @@
 import { ASSETS, ASSET_IDS, SWING, type AssetId, type SwingStrategyId } from "./config.ts";
-import { loadAll, loadCpi, loadTbill } from "./data/load.ts";
+import { loadAll, loadCpi, loadTbill, setForceRefresh } from "./data/load.ts";
 import type { Bar } from "./data/types.ts";
 import type { CoreData } from "./engine/core.ts";
 import { forwardFill, monthRange, monthlyCloses, monthlyPoints } from "./engine/series.ts";
@@ -12,9 +12,16 @@ export interface Universe {
   lastFullMonth: string;
 }
 
-export async function loadUniverse(): Promise<Universe> {
-  const bars = await loadAll(ASSET_IDS);
-  const [cpiPts, tbillBars] = await Promise.all([loadCpi(), loadTbill()]);
+export async function loadUniverse(opts: { refresh?: boolean } = {}): Promise<Universe> {
+  setForceRefresh(!!opts.refresh);
+  let bars: Record<AssetId, Bar[]>;
+  let cpiPts, tbillBars;
+  try {
+    bars = await loadAll(ASSET_IDS);
+    [cpiPts, tbillBars] = await Promise.all([loadCpi(), loadTbill()]);
+  } finally {
+    setForceRefresh(false);
+  }
   const today = new Date().toISOString().slice(0, 7);
   const lastDates = ASSET_IDS.map((id) => bars[id][bars[id].length - 1].date.slice(0, 7));
   const lastData = lastDates.sort()[0];

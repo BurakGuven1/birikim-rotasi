@@ -8,7 +8,8 @@ import { ROOT, env, loadEnv } from "../src/env.ts";
 import { atr, donchian, sma } from "../src/engine/indicators.ts";
 import { runSwing } from "../src/pipeline.ts";
 import { buildCalendar, type CalendarPayload } from "../src/calendar.ts";
-import { loadUniverse } from "../src/pipeline.ts";
+import { loadUniverse, type Universe } from "../src/pipeline.ts";
+import { buildBacktest } from "../src/report/backtest.ts";
 import { currentAllocation, type AllocationPayload } from "../src/allocation.ts";
 import { executeOrder } from "../src/live/orders.ts";
 
@@ -42,19 +43,47 @@ async function calendar(): Promise<CalendarPayload> {
   return calCache.data;
 }
 
-// Aylık dağılım: ay sonu sinyali ay içinde değişmez; saatlik yeniden hesap yeterli.
-let allocCache: { at: number; data: AllocationPayload } | undefined;
-async function allocation(): Promise<AllocationPayload> {
-  if (!allocCache || Date.now() - allocCache.at > 3_600_000) allocCache = { at: Date.now(), data: currentAllocation(await loadUniverse()) };
-  return allocCache.data;
+// Evren (fiyat verisi), dağılım ve backtest bellekte tutulur. Veri önbelleği 12 saatte bir
+// kendiliğinden tazelenir; /api/refresh verileri hemen yeniden indirip her şeyi yeniden hesaplar.
+interface State { at: number; universe: Universe; allocation: AllocationPayload; backtest: Record<string, unknown> }
+let state: State | undefined;
+let building: Promise<State> | undefined;
+let lastForced = 0;
+
+async function build(refresh: boolean): Promise<State> {
+  const universe = await loadUniverse({ refresh });
+  const allocation = currentAllocation(universe);
+  const backtest = buildBacktest(universe).json;
+  return { at: Date.now(), universe, allocation, backtest };
+}
+
+async function getState(opts: { refresh?: boolean } = {}): Promise<State> {
+  const stale = !state || Date.now() - state.at > 3_600_000;
+  if (!building && (stale || opts.refresh)) {
+    building = build(!!opts.refresh).finally(() => (building = undefined));
+  }
+  if (building && (stale || opts.refresh)) state = await building;
+  return state!;
 }
 
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   try {
-    if (url.pathname === "/api/allocation") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify(await allocation()));
+    if (url.pathname === "/api/allocation" || url.pathname === "/api/backtest") {
+      const st = await getState();
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+      res.end(JSON.stringify(url.pathname === "/api/allocation" ? st.allocation : st.backtest));
+      return;
+    }
+    if (url.pathname === "/api/refresh" && req.method === "POST") {
+      // Veri sağlayıcılarını yormamak için zorla yenileme en fazla 2 dakikada bir
+      const force = Date.now() - lastForced > 120_000;
+      if (force) lastForced = Date.now();
+      const before = state?.allocation;
+      const st = await getState({ refresh: force });
+      calCache = undefined;
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+      res.end(JSON.stringify({ refreshed: force, at: new Date(st.at).toISOString(), previousSignalMonth: before?.signalMonth, allocation: st.allocation }));
       return;
     }
     if (url.pathname === "/api/takvim") {

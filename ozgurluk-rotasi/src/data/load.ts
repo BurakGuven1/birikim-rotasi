@@ -8,8 +8,15 @@ import { fetchYahooDaily } from "./yahoo.ts";
 
 const MAX_AGE_H = 12;
 
+let forceRefresh = false;
+/** true iken önbellek yaşına bakılmadan veriler yeniden indirilir (ağ hatasında eski önbellek kullanılır). */
+export function setForceRefresh(v: boolean): void {
+  forceRefresh = v;
+}
+const maxAge = (h: number) => (forceRefresh ? 0 : h);
+
 async function daily(symbol: string, eodhd?: string): Promise<Bar[]> {
-  return cached(`yahoo_${symbol}`, MAX_AGE_H, async () => {
+  return cached(`yahoo_${symbol}`, maxAge(MAX_AGE_H), async () => {
     try {
       return await fetchYahooDaily(symbol);
     } catch (err) {
@@ -59,7 +66,7 @@ export async function loadAll(ids: AssetId[]): Promise<Record<AssetId, Bar[]>> {
 }
 
 export async function loadCpi(): Promise<Point[]> {
-  return cached(`fred_${MACRO.cpi}`, 24, () => fetchFred(MACRO.cpi, env("FRED_API_KEY")));
+  return cached(`fred_${MACRO.cpi}`, maxAge(24), () => fetchFred(MACRO.cpi, env("FRED_API_KEY")));
 }
 
 /** Hazine bonosu faizi (yıllık %, ^IRX). */

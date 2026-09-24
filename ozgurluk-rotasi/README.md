@@ -46,13 +46,18 @@ Böylece portföy satış yapmadan dengelenir.
 
 ## Panel (http://localhost:4173)
 
-- **Bu ay ne yapmalıyım?** Maaş yatınca paneli açın ve stratejinizi seçin: **Al-tut çoklu**, **Hibrit** ya da **Ana plan**. Panel yatırılacak tutarı (ör. $1.000) son ay kapanışının trend sinyallerine göre kalemlere dağıtır ve her kalemin nereden alınacağını gösterir. Ocak ayında yıllık $3.500 ek otomatik işaretlenir. Trendi zayıflayan varlıklar için satış/hedge oranı da yazılır. "Mevcut portföyüm" alanına pozisyonlarınızı girerseniz katkı önce hedefin altında kalan kalemlere yönlendirilir, böylece satış yapmadan dengelenir. "Listeyi kopyala" düğmesi emir listesini panoya alır. Sinyal ay içinde değişmez; bir sonraki ay kapanışında yenilenir.
-- **Üç strateji kartı:** Her stratejinin ne yaptığı, kimin için uygun olduğu, riski, 20+ yıllık ve son 10 yıllık reel getirisi, en büyük düşüşü ve 20 yılda hedefe ulaşma olasılığı.
+`npm run web` ile açılır. Sunucu fiyatları indirir, sinyalleri ve backtest'i **canlı** hesaplar; ayrıca `npm run backtest` çalıştırmanız gerekmez.
 
-- **Dönem filtresi:** Son 1 / 2 / 3 / 5 / 7 / 10 / 15 yıl, 20+ yıl (2006'dan beri) ve 2018+ seçilebilir. Her pencere o tarihte $0 ile başlanıp aynı katkıların yapıldığı varsayımıyla hesaplanır. KPI'lar, grafik ve tablo seçili döneme göre güncellenir.
-- **Dönem matrisi:** Tüm stratejilerin tüm dönemlerdeki reel getirisi tek tabloda görünür. Böylece hangi stratejinin tutarlı olduğu, hangisinin yalnız belirli bir dönemde parladığı görülür.
-- **Gelecek projeksiyonu:** "Bu başarı devam ederse" sorusunu yanıtlar. Seçilen dönemin reel getirisi 20 yıl ileri taşınır. Tablo 1, 3, 5, 10, 15 ve 20 yıl sonra hangi yılda ne kadar yatırımla hangi değere ulaşılacağını ve hedefe hangi tarihte ulaşılacağını gösterir. Mevcut birikim, katkılar, **yıllık katkı artışı** (nominal %X ya da enflasyon + %X), harcama hedefi, enflasyon ve reel/nominal gösterim ayarlanabilir. "Katkı artışının etkisi" kutusu hedefe kaç yıl erken ulaşıldığını gösterir. Hedef tarihi 30 yıla kadar aranır. Ana plan için Monte Carlo bandı (kötü %10 – iyi %90) çizilir.
-- **Kalıcılık:** Strateji çizgileri lejanttan açılıp kapatılır. Seçimler tarayıcıda hatırlanır.
+- **Verileri yenile (sağ üst):** Fiyatları hemen yeniden indirir, dağılımı ve backtest'i yeniden hesaplar ve değişen oranları bildirim olarak gösterir. Veri sağlayıcılarını yormamak için en fazla 2 dakikada bir çalışır. Sunucu ayrıca verileri 12 saatte bir kendiliğinden tazeler.
+- **Bu ay ne yapmalıyım?** Al-tut çoklu, Hibrit ya da Ana plan'dan birini seçin. Tutarı girin ya da hızlı tutarlardan birini seçin; Ocak'ta yıllık ek otomatik açılır. Bu ayın **alım listesi** çıkar: her kalem için tutar, pay, trend durumu ve nereden alınacağı yazar. Aldıklarınızı işaretleyebilirsiniz; ilerleme çubuğu o ay için tarayıcıda saklanır. Animasyonlu dağılım halkası ve "Listeyi kopyala" da bu bölümde. "Mevcut portföyüm" alanı satış yapmadan dengeleme sağlar. Sinyal ay içinde değişmez; bir sonraki güncelleme tarihi ve kaç gün kaldığı gösterilir.
+- **Üç strateji:** Her kartta 20 yıllık büyüme eğrisi, karşılaştırmalı metrik çubukları, nasıl çalıştığı, kimin için uygun olduğu ve riski yer alır.
+- **Geçmiş performans:** Dönem filtresi (1 / 2 / 3 / 5 / 7 / 10 / 15 yıl, 20+ yıl, 2018+) ve strateji başına özet kartlar. Üç grafik görünümü var:
+  - **Portföy değeri:** Hangi stratejinin ayların yüzde kaçında önde olduğunu da yazar.
+  - **Fark ($):** İki strateji arasındaki dolar farkı. Yeşil alan, ilk stratejinin önde olduğu ayları gösterir; en çok geride kalınan an ve dönem sonu farkı da yazılır.
+  - **Zirveden düşüş (%):** Katkılardan bağımsız strateji getirisi üzerinden hesaplanır.
+
+  Altında ısı renkli dönem tablosu yer alır. `?view=diff&period=y10` gibi bağlantılarla doğrudan bir görünüm açılabilir.
+- **Gelecek projeksiyonu:** Seçili stratejinin getirisiyle Monte Carlo bandı ve katkı artışının etkisi.
 
 ## Aylık Getiri Takvimi (http://localhost:4173/takvim)
 
