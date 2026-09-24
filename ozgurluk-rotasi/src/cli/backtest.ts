@@ -64,10 +64,24 @@ const variants: Variant[] = [
   },
 ];
 
-const periods = [
+const addMonths = (m: string, k: number): string => {
+  const [y, mo] = m.split("-").map(Number);
+  const t = y * 12 + (mo - 1) + k;
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
+};
+/** Son N yıl pencereleri: katkılar pencere başında başlar (o tarihte başlamış olsaydınız). */
+const windowPeriods = [1, 2, 3, 5, 7, 10, 15].map((n) => ({
+  key: `y${n}`,
+  label: `Son ${n} yıl`,
+  start: addMonths(end, -12 * n),
+  note: `${addMonths(end, -12 * n)} başında $0 ile başlayıp aynı katkıları yapsaydınız.`,
+  window: true,
+}));
+const detailPeriods = [
   { key: "long", label: "Uzun dönem", start: "2006-01", note: "BTC 2015-09, ETH 2018-11 itibarıyla dahil olur; öncesinde ağırlıkları diğer varlıklara dağıtılır." },
   { key: "crypto", label: "Tüm varlıklar mevcut", start: "2018-11", note: "Yedi varlığın hepsi 12 aylık geçmişe sahip." },
 ];
+const periods = [...windowPeriods, ...detailPeriods.map((p) => ({ ...p, window: false }))];
 
 const results: Record<string, Record<string, CoreResult>> = {};
 for (const p of periods) {
@@ -114,7 +128,7 @@ const json = {
   periods: periods.map((p) => ({
     ...p,
     results: Object.fromEntries(
-      Object.entries(results[p.key]).map(([k, r]) => [k, { metrics: r.metrics, months: r.months, value: r.value, contributed: r.contributed, realValue: r.realValue, lastWeights: r.lastWeights, years: calendarYears(r.months.slice(1), r.twr.slice(1).map((v, i) => v / r.twr[i] - 1)) }]),
+      Object.entries(results[p.key]).map(([k, r]) => [k, { metrics: r.metrics, months: r.months, value: r.value, contributed: r.contributed, realValue: r.realValue, realTwr: p.key === "long" ? r.realTwr : undefined, lastWeights: r.lastWeights, years: calendarYears(r.months.slice(1), r.twr.slice(1).map((v, i) => v / r.twr[i] - 1)) }]),
     ),
   })),
   rolling,
@@ -130,7 +144,17 @@ const L: string[] = [];
 L.push(`# Özgürlük Rotası — Backtest Raporu`, "");
 L.push(`Oluşturma: ${json.generatedAt.slice(0, 10)} · Veri sonu: ${end} · Katkı: ${usd(PLAN.monthlyUsd)}/ay + ${usd(PLAN.annualExtraUsd)} her ${PLAN.annualMonth}. ay (nominal sabit)`, "");
 L.push(`Hedef: reel %${PLAN.targetRealReturn * 100}/yıl. Finansal özgürlük sayısı: ${usd(PLAN.monthlySpendingReal)}/ay reel harcama ÷ %${PLAN.safeWithdrawalRate * 100} = **${usd(targetWealth)}** (bugünün doları).`, "");
-for (const p of periods) {
+L.push(`## Dönemlere göre reel IRR (aynı katkılar, pencere başında $0)`, "");
+L.push(
+  mdTable(
+    ["Strateji", ...windowPeriods.map((p) => p.label.replace("Son ", "")), "20+ yıl"],
+    variants.map((v) => [v.name, ...windowPeriods.map((p) => pct(results[p.key][v.key].metrics.realIrr)), pct(results.long[v.key].metrics.realIrr)]),
+  ),
+  "",
+  `_Kısa pencereler (1–3 yıl) tek bir piyasa rejimini yansıtır; geleceğe taşınacak getiri için 10+ yıllık pencereler ve Monte Carlo daha güvenilirdir._`,
+  "",
+);
+for (const p of detailPeriods) {
   const first = results[p.key].spy;
   L.push(`## ${p.label}: ${p.start} → ${end} (${num(first.metrics.years, 1)} yıl)`, "", `_${p.note}_`, "");
   L.push(

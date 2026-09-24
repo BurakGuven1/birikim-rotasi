@@ -3,62 +3,280 @@ const LC = LightweightCharts;
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const pct = (x, d = 1) => (Number.isFinite(x) ? (x * 100).toFixed(d) + "%" : "—");
 const usd = (x) => (Number.isFinite(x) ? "$" + Math.round(x).toLocaleString("en-US") : "—");
-const PALETTE = ["#8b949e", "#bf8700", "#8250df", "#0a7ea4", "#d1242f", "#57606a", "#1a7f37", "#e16f24", "#6e7781"];
+const usdShort = (x) => (!Number.isFinite(x) ? "—" : x >= 1e6 ? "$" + (x / 1e6).toFixed(2) + "M" : x >= 1e3 ? "$" + Math.round(x / 1e3) + "K" : "$" + Math.round(x));
+const cls = (x) => (x > 0 ? "pos" : x < 0 ? "neg" : "");
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* yok say */ } },
+};
 
-function baseChart(el) {
+// Kimlik rengi stratejiye sabit bağlıdır (filtre değişince yeniden boyanmaz)
+const SERIES = { main: "--s1", aggr: "--s2", static: "--s3", spy: "--s6", hybrid: "--s4", blend: "--s7", sma10: "--s5", prereg: "--s8" };
+const DEFAULT_ON = ["main", "aggr", "static", "spy"];
+const color = (key) => css(SERIES[key] || "--muted");
+
+let BT;
+let period = "long";
+const visible = new Set(JSON.parse(store.get("panel.visible") || "null") || DEFAULT_ON);
+
+function baseChart(el, opts = {}) {
   return LC.createChart(el, {
     autoSize: true,
-    layout: { background: { color: "transparent" }, textColor: css("--muted") },
-    grid: { vertLines: { color: css("--line") }, horzLines: { color: css("--line") } },
-    rightPriceScale: { borderColor: css("--line") },
-    timeScale: { borderColor: css("--line") },
+    layout: { background: { color: "transparent" }, textColor: css("--muted"), fontSize: 12 },
+    grid: { vertLines: { visible: false }, horzLines: { color: css("--line") } },
+    rightPriceScale: { borderVisible: false },
+    timeScale: { borderVisible: false },
+    localization: { priceFormatter: usdShort },
+    crosshair: { mode: 0 },
+    ...opts,
   });
 }
 
-async function loadBacktest() {
-  const res = await fetch("/out/backtest.json");
-  if (!res.ok) throw new Error("out/backtest.json yok — `npm run backtest` çalıştırın");
-  return res.json();
+const P = () => BT.periods.find((p) => p.key === period);
+const periodShort = (p) => (p.key === "long" ? `20+ yıl` : p.key === "crypto" ? "2018+" : p.label.replace("Son ", ""));
+
+// ------------------------------------------------------------------ dönem seçici
+function renderPeriodChips() {
+  document.getElementById("periods").innerHTML = BT.periods
+    .map((p) => `<button class="chip" data-k="${p.key}" aria-pressed="${p.key === period}" title="${esc(p.start)} → ${BT.end}">${periodShort(p)}</button>`)
+    .join("");
+  document.querySelectorAll("#periods .chip").forEach((b) => (b.onclick = () => setPeriod(b.dataset.k)));
 }
 
-function renderKpis(bt) {
-  const m = bt.periods[0].results.main.metrics;
-  document.getElementById("meta").textContent = `Veri sonu ${bt.end} · hedef ${usd(bt.plan.targetWealth)} (bugünün doları)`;
+function setPeriod(k) {
+  period = k;
+  store.set("panel.period", k);
+  document.querySelectorAll("#periods .chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === k)));
+  renderKpis();
+  renderMatrix();
+  renderEquity();
+  renderTable();
+  renderProjection();
+}
+
+// ------------------------------------------------------------------ KPI
+function renderKpis() {
+  const p = P();
+  const m = p.results.main.metrics;
+  document.getElementById("kpiTitle").textContent = `Ana plan — ${p.label}`;
+  document.getElementById("kpiLead").textContent = `${p.start} → ${BT.end} · ${p.note}`;
   const items = [
-    ["Reel IRR", pct(m.realIrr)], ["Reel CAGR", pct(m.realCagr)], ["Maks düşüş", pct(m.maxDrawdown)],
-    ["Sharpe", m.sharpe.toFixed(2)], ["Yatırılan", usd(m.totalContributed)], ["Son değer", usd(m.finalValue)],
+    ["Reel getiri (IRR)", pct(m.realIrr), cls(m.realIrr)],
+    ["Reel CAGR (strateji)", pct(m.realCagr), cls(m.realCagr)],
+    ["Maks düşüş", pct(m.maxDrawdown), "neg"],
+    ["Toplam yatırılan", usd(m.totalContributed), ""],
+    ["Son değer", usd(m.finalValue), ""],
+    ["Kâr", usd(m.finalValue - m.totalContributed), cls(m.finalValue - m.totalContributed)],
   ];
-  document.getElementById("kpis").innerHTML = items.map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${v}</b></div>`).join("");
+  document.getElementById("kpis").innerHTML = items.map(([k, v, c]) => `<div class="kpi"><span>${k}</span><b class="${c}">${v}</b></div>`).join("");
+  document.getElementById("shortWarn").innerHTML = m.years < 5
+    ? `<div class="warn">${m.years.toFixed(0)} yıllık pencere tek bir piyasa rejimini yansıtır; getiriyi yıllıklandırmak yanıltıcı olabilir. Karar için 10+ yıl ve Monte Carlo'ya bakın.</div>` : "";
 }
 
-let equityChart;
-function renderEquity(bt, pIdx) {
-  const el = document.getElementById("equity");
-  if (equityChart) equityChart.remove();
-  equityChart = baseChart(el);
-  equityChart.priceScale("right").applyOptions({ mode: LC.PriceScaleMode.Logarithmic });
-  const p = bt.periods[pIdx];
-  const legend = [];
-  bt.variants.forEach((v, k) => {
-    const r = p.results[v.key];
-    const color = v.key === "main" ? css("--accent") : PALETTE[k % PALETTE.length];
-    const s = equityChart.addSeries(LC.LineSeries, { color, lineWidth: v.key === "main" ? 3 : 1.5, priceLineVisible: false, lastValueVisible: false });
-    s.setData(r.months.map((m, i) => ({ time: m + "-01", value: r.value[i] })));
-    legend.push(`<span><i style="background:${color}"></i>${v.name}</span>`);
-  });
-  const first = p.results.main;
-  const c = equityChart.addSeries(LC.LineSeries, { color: css("--muted"), lineStyle: 2, lineWidth: 1, priceLineVisible: false });
-  c.setData(first.months.map((m, i) => ({ time: m + "-01", value: first.contributed[i] })));
-  legend.push(`<span><i style="background:${css("--muted")}"></i>Yatırılan</span>`);
-  document.getElementById("legend").innerHTML = legend.join("");
-  equityChart.timeScale().fitContent();
+// ------------------------------------------------------------------ dönem matrisi
+function renderMatrix() {
+  const head = `<tr><th>Strateji</th>${BT.periods.map((p) => `<th class="${p.key === period ? "sel" : ""}" data-k="${p.key}" style="cursor:pointer">${periodShort(p)}</th>`).join("")}</tr>`;
+  const rows = BT.variants.map((v) => `<tr class="${v.key === "main" ? "main" : ""}"><td><span class="sw" style="background:${color(v.key)}"></span>${esc(v.name)}</td>${BT.periods.map((p) => {
+    const x = p.results[v.key].metrics.realIrr;
+    const best = Math.max(...BT.variants.map((w) => p.results[w.key].metrics.realIrr));
+    return `<td class="${cls(x)} ${p.key === period ? "sel" : ""}" style="${x === best ? "font-weight:700" : ""}">${pct(x)}</td>`;
+  }).join("")}</tr>`).join("");
+  document.getElementById("matrix").innerHTML = `<table>${head}${rows}</table><div class="note">Kalın = o dönemin en iyisi. Kısa dönemin kazananı genelde uzun dönemin kazananı değildir; tutarlılık için satır boyunca bakın.</div>`;
+  document.querySelectorAll("#matrix th[data-k]").forEach((th) => (th.onclick = () => setPeriod(th.dataset.k)));
+}
 
-  const head = ["Strateji", "Reel IRR", "Reel CAGR", "Maks DD", "Sharpe", "En kötü yıl", "Son değer"];
-  const rows = bt.variants.map((v) => {
+// ------------------------------------------------------------------ özsermaye
+let equityChart;
+function renderEquity() {
+  const p = P();
+  if (equityChart) equityChart.remove();
+  equityChart = baseChart(document.getElementById("equity"));
+  const long = p.results.main.months.length > 60;
+  if (long) equityChart.priceScale("right").applyOptions({ mode: LC.PriceScaleMode.Logarithmic });
+  document.getElementById("eqLead").textContent = `${p.start} → ${BT.end}${long ? " · logaritmik ölçek" : ""} · strateji adına tıklayarak gizleyin/gösterin`;
+  const main = p.results.main;
+  const c = equityChart.addSeries(LC.LineSeries, { color: css("--muted"), lineStyle: 2, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, title: "Yatırılan" });
+  c.setData(main.months.map((m, i) => ({ time: m + "-01", value: Math.max(main.contributed[i], 1) })));
+  for (const v of BT.variants) {
+    if (!visible.has(v.key)) continue;
+    const r = p.results[v.key];
+    const s = equityChart.addSeries(LC.LineSeries, { color: color(v.key), lineWidth: 2, priceLineVisible: false, lastValueVisible: v.key === "main" });
+    s.setData(r.months.map((m, i) => ({ time: m + "-01", value: Math.max(r.value[i], 1) })));
+  }
+  equityChart.timeScale().fitContent();
+  document.getElementById("legend").innerHTML =
+    BT.variants.map((v) => `<button data-k="${v.key}" aria-pressed="${visible.has(v.key)}"><span class="sw" style="background:${color(v.key)}"></span>${esc(v.name)}</button>`).join("") +
+    `<span style="color:var(--muted)"><span class="sw" style="background:var(--muted)"></span>Yatırılan</span>`;
+  document.querySelectorAll("#legend button").forEach((b) => (b.onclick = () => {
+    const k = b.dataset.k;
+    visible.has(k) ? visible.delete(k) : visible.add(k);
+    store.set("panel.visible", JSON.stringify([...visible]));
+    renderEquity();
+    renderProjection();
+  }));
+}
+
+// ------------------------------------------------------------------ tablo
+function renderTable() {
+  const p = P();
+  document.getElementById("tblLead").textContent = `${p.label}: ${p.start} → ${BT.end}`;
+  const head = ["Strateji", "Reel IRR", "Reel CAGR", "Nominal CAGR", "Maks DD", "Sharpe", "En kötü yıl", "Yatırılan", "Son değer", "Kat"];
+  const rows = BT.variants.map((v) => {
     const m = p.results[v.key].metrics;
-    return [v.name, pct(m.realIrr), pct(m.realCagr), pct(m.maxDrawdown), m.sharpe.toFixed(2), pct(m.worstYear), usd(m.finalValue)];
-  });
-  document.getElementById("table").innerHTML = `<table><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</table>`;
+    return `<tr class="${v.key === "main" ? "main" : ""}"><td><span class="sw" style="background:${color(v.key)}"></span>${esc(v.name)}</td>
+      <td class="${cls(m.realIrr)}">${pct(m.realIrr)}</td><td class="${cls(m.realCagr)}">${pct(m.realCagr)}</td><td>${pct(m.cagr)}</td>
+      <td class="neg">${pct(m.maxDrawdown)}</td><td>${m.sharpe.toFixed(2)}</td><td class="${cls(m.worstYear)}">${m.years >= 1 ? pct(m.worstYear) : "—"}</td>
+      <td>${usd(m.totalContributed)}</td><td>${usd(m.finalValue)}</td><td>${(m.finalValue / m.totalContributed).toFixed(2)}x</td></tr>`;
+  }).join("");
+  document.getElementById("table").innerHTML = `<table><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr>${rows}</table>`;
+}
+
+// ------------------------------------------------------------------ projeksiyon
+const HORIZONS = [1, 3, 5, 10, 15, 20];
+let projChart;
+let mcCache = { key: "", bands: null };
+
+function pjInputs() {
+  const num = (id) => Math.max(0, Number(document.getElementById(id).value) || 0);
+  return {
+    start: num("pjStart"),
+    monthly: num("pjMonthly"),
+    annual: num("pjAnnual"),
+    spend: num("pjSpend"),
+    inf: num("pjInf") / 100,
+    indexed: document.getElementById("pjIndex").checked,
+    mode: document.querySelector("#pjMode button[aria-pressed=true]").dataset.v,
+    source: document.getElementById("pjSource").value,
+  };
+}
+
+/** Aylık reel getiri dizisiyle birikim yolu (bugünün doları). Yıl sonlarındaki değerleri döndürür. */
+function simulatePath(realMonthly, inp, months, nextMonth) {
+  let v = inp.start;
+  const out = [];
+  for (let m = 0; m < months; m++) {
+    const calMonth = ((nextMonth - 1 + m) % 12) + 1;
+    const infl = (1 + inp.inf) ** (m / 12);
+    const k = inp.indexed ? 1 : 1 / infl; // nominal sabit katkının reel değeri erir
+    v += inp.monthly * k + (calMonth === 1 ? inp.annual * k : 0);
+    v *= 1 + realMonthly(m);
+    out.push(v);
+  }
+  return out;
+}
+
+function monteCarlo(inp, months, nextMonth) {
+  const key = JSON.stringify([inp.start, inp.monthly, inp.annual, inp.inf, inp.indexed, months]);
+  if (mcCache.key === key) return mcCache.bands;
+  const twr = BT.periods.find((p) => p.key === "long").results.main.realTwr;
+  const rets = twr.slice(1).map((v, i) => v / twr[i] - 1);
+  let seed = 42;
+  const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const paths = 3000, block = 12;
+  const at = Array.from({ length: months }, () => new Float64Array(paths));
+  for (let p = 0; p < paths; p++) {
+    let s = 0;
+    const path = simulatePath((m) => {
+      if (m % block === 0) s = Math.floor(rand() * (rets.length - block));
+      return rets[s + (m % block)];
+    }, inp, months, nextMonth);
+    path.forEach((v, m) => (at[m][p] = v));
+  }
+  const q = (arr, f) => { const a = Array.from(arr).sort((x, y) => x - y); return a[Math.floor(f * (a.length - 1))]; };
+  const bands = at.map((arr) => ({ p10: q(arr, 0.1), p50: q(arr, 0.5), p90: q(arr, 0.9) }));
+  mcCache = { key, bands };
+  return bands;
+}
+
+function renderProjection() {
+  const inp = pjInputs();
+  const src = BT.periods.find((p) => p.key === (inp.source === "sel" ? period : inp.source));
+  const months = 20 * 12;
+  const endYM = BT.end.split("-").map(Number);
+  const nextMonth = (endYM[1] % 12) + 1;
+  const startYear = endYM[1] === 12 ? endYM[0] + 1 : endYM[0];
+  const dateAt = (m) => { const t = endYM[0] * 12 + endYM[1] + m; return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}-01`; };
+  const show = (v, m) => (inp.mode === "nominal" ? v * (1 + inp.inf) ** ((m + 1) / 12) : v);
+  const target = (inp.spend * 12) / 0.04;
+
+  document.getElementById("pjWarn").innerHTML = src.results.main.metrics.years < 5
+    ? `<div class="warn">Getiri varsayımı ${src.label.toLowerCase()} penceresinden alınıyor. Kısa dönem getirisini 20 yıla taşımak çok iyimser ya da çok kötümser olabilir.</div>` : "";
+
+  const keys = BT.variants.map((v) => v.key).filter((k) => visible.has(k));
+  const paths = {};
+  for (const k of keys) {
+    const r = src.results[k].metrics.realCagr;
+    const rm = (1 + r) ** (1 / 12) - 1;
+    paths[k] = simulatePath(() => rm, inp, months, nextMonth);
+  }
+  const bands = monteCarlo(inp, months, nextMonth);
+
+  if (projChart) projChart.remove();
+  projChart = baseChart(document.getElementById("projection"));
+  const line = (data, o) => { const s = projChart.addSeries(LC.LineSeries, { priceLineVisible: false, lastValueVisible: false, lineWidth: 2, ...o }); s.setData(data); return s; };
+  const blue = color("main");
+  line(bands.map((b, m) => ({ time: dateAt(m), value: show(b.p90, m) })), { color: blue, lineWidth: 1, lineStyle: 2 });
+  line(bands.map((b, m) => ({ time: dateAt(m), value: show(b.p10, m) })), { color: blue, lineWidth: 1, lineStyle: 2 });
+  const invested = [];
+  let inv = inp.start;
+  for (let m = 0; m < months; m++) {
+    const calMonth = ((nextMonth - 1 + m) % 12) + 1;
+    const infl = (1 + inp.inf) ** ((m + 1) / 12);
+    const nominalC = (inp.monthly + (calMonth === 1 ? inp.annual : 0)) * (inp.indexed ? infl : 1);
+    inv += inp.mode === "nominal" ? nominalC : nominalC / infl;
+    invested.push(inv);
+  }
+  line(invested.map((v, m) => ({ time: dateAt(m), value: v })), { color: css("--muted"), lineWidth: 1, lineStyle: 2 });
+  line(Array.from({ length: months }, (_, m) => ({ time: dateAt(m), value: show(target, m) })), { color: css("--warn"), lineWidth: 1, lineStyle: 1 });
+  for (const k of keys) line(paths[k].map((v, m) => ({ time: dateAt(m), value: show(v, m) })), { color: color(k), lastValueVisible: k === "main" });
+  projChart.timeScale().fitContent();
+
+  document.getElementById("pjLegend").innerHTML =
+    keys.map((k) => `<span><span class="sw" style="background:${color(k)}"></span>${esc(BT.variants.find((v) => v.key === k).name)} (${pct(src.results[k].metrics.realCagr)}/yıl)</span>`).join("") +
+    `<span><span class="sw" style="background:transparent;border:1px dashed ${blue}"></span>Ana plan Monte Carlo %10–%90</span>` +
+    `<span><span class="sw" style="background:var(--muted)"></span>Yatırılan</span><span><span class="sw" style="background:var(--warn)"></span>Hedef ${usdShort(target)}</span>`;
+
+  const head = `<tr><th>Ufuk</th><th>Yıl</th><th>Toplam yatırım</th>${keys.map((k) => `<th><span class="sw" style="background:${color(k)}"></span>${esc(shortName(k))}</th>`).join("")}<th>Ana plan MC (kötü / medyan / iyi)</th></tr>`;
+  const rows = HORIZONS.map((h) => {
+    const m = h * 12 - 1;
+    const t = show(target, m);
+    return `<tr><td>${h} yıl sonra</td><td>${Number(dateAt(m).slice(0, 4))}</td><td>${usd(invested[m])}</td>${keys.map((k) => {
+      const v = show(paths[k][m], m);
+      return `<td class="${v >= t ? "hit" : ""}">${usd(v)}${v >= t ? " ✓" : ""}</td>`;
+    }).join("")}<td>${usdShort(show(bands[m].p10, m))} / ${usdShort(show(bands[m].p50, m))} / ${usdShort(show(bands[m].p90, m))}</td></tr>`;
+  }).join("");
+  const reach = `<tr><td colspan="3"><b>Hedefe ulaşma (${usdShort(target)} bugünün doları)</b></td>${keys.map((k) => {
+    const i = paths[k].findIndex((v) => v >= target);
+    return `<td>${i < 0 ? "20 yılda yok" : `<b>${dateAt(i).slice(0, 7)}</b> (${((i + 1) / 12).toFixed(1)} yıl)`}</td>`;
+  }).join("")}<td>${(() => { const i = bands.findIndex((b) => b.p50 >= target); return i < 0 ? "medyanda 20 yılda yok" : `medyan ${dateAt(i).slice(0, 7)}`; })()}</td></tr>`;
+  document.getElementById("pjTable").innerHTML = `<table>${head}${rows}${reach}</table>`;
+  document.getElementById("pjNote").textContent =
+    `Getiri kaynağı: ${src.label} (${src.start} → ${BT.end}), her stratejinin reel CAGR'ı. Başlangıç: ${startYear}. ` +
+    `${inp.mode === "nominal" ? `Nominal gösterimde %${(inp.inf * 100).toFixed(1)} enflasyon varsayılır. ` : "Tutarlar bugünün alım gücüyle. "}` +
+    `Hedef = aylık harcama × 12 ÷ %4 güvenli çekim oranı. Geçmiş getiri geleceği garanti etmez.`;
+}
+
+function shortName(k) {
+  return { main: "Ana plan", aggr: "Agresif", static: "Al-tut çoklu", spy: "S&P 500", hybrid: "Hibrit", blend: "Trend (blend)", sma10: "Trend (SMA10)", prereg: "İlk plan" }[k] || k;
+}
+
+function initProjectionControls() {
+  const sel = document.getElementById("pjSource");
+  sel.innerHTML = `<option value="sel">Seçili backtest dönemi</option>` + BT.periods.map((p) => `<option value="${p.key}">${p.label} (${p.start}→)</option>`).join("");
+  sel.value = store.get("panel.pjSource") || "long";
+  sel.onchange = () => { store.set("panel.pjSource", sel.value); renderProjection(); };
+  for (const id of ["pjStart", "pjMonthly", "pjAnnual", "pjSpend", "pjInf"]) {
+    const el = document.getElementById(id);
+    const saved = store.get("panel." + id);
+    if (saved !== null) el.value = saved;
+    el.oninput = () => { store.set("panel." + id, el.value); renderProjection(); };
+  }
+  document.getElementById("pjIndex").onchange = renderProjection;
+  document.querySelectorAll("#pjMode button").forEach((b) => (b.onclick = () => {
+    document.querySelectorAll("#pjMode button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    renderProjection();
+  }));
 }
 
 let candleChart;
@@ -120,12 +338,15 @@ function md(text) {
 
 (async () => {
   try {
-    const bt = await loadBacktest();
-    renderKpis(bt);
-    const sel = document.getElementById("period");
-    sel.innerHTML = bt.periods.map((p, i) => `<option value="${i}">${p.label}: ${p.start} → ${bt.end}</option>`).join("");
-    sel.onchange = () => renderEquity(bt, Number(sel.value));
-    renderEquity(bt, 0);
+    const res = await fetch("/out/backtest.json");
+    if (!res.ok) throw new Error("out/backtest.json yok — `npm run backtest` çalıştırın");
+    BT = await res.json();
+    document.getElementById("meta").textContent = `Veri sonu ${BT.end} · reel (ABD enflasyonundan arındırılmış) USD · $${BT.plan.monthlyUsd.toLocaleString("en-US")}/ay + $${BT.plan.annualExtraUsd.toLocaleString("en-US")}/yıl`;
+    const saved = store.get("panel.period");
+    period = BT.periods.some((p) => p.key === saved) ? saved : "long";
+    renderPeriodChips();
+    initProjectionControls();
+    setPeriod(period);
   } catch (e) {
     document.getElementById("kpis").textContent = e.message;
   }
