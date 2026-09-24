@@ -145,21 +145,37 @@ function pjInputs() {
     annual: num("pjAnnual"),
     spend: num("pjSpend"),
     inf: num("pjInf") / 100,
-    indexed: document.getElementById("pjIndex").checked,
+    growth: (Number(document.getElementById("pjGrowth").value) || 0) / 100,
+    growthMode: document.getElementById("pjGrowthMode").value,
     mode: document.querySelector("#pjMode button[aria-pressed=true]").dataset.v,
     source: document.getElementById("pjSource").value,
   };
 }
 
-/** Aylık reel getiri dizisiyle birikim yolu (bugünün doları). Yıl sonlarındaki değerleri döndürür. */
+/**
+ * Katkı çarpanı (nominal): her 12 ayda bir artar.
+ *  nominal: (1+g)^yıl  ·  real: ((1+enflasyon)(1+g))^yıl  ·  flat: 1
+ */
+function contribFactor(inp, m) {
+  const y = Math.floor(m / 12);
+  if (inp.growthMode === "flat") return 1;
+  if (inp.growthMode === "real") return ((1 + inp.inf) * (1 + inp.growth)) ** y;
+  return (1 + inp.growth) ** y;
+}
+
+/** m. aydaki katkı: nominal tutar ve bugünün dolarıyla değeri */
+function contribution(inp, m, nextMonth) {
+  const calMonth = ((nextMonth - 1 + m) % 12) + 1;
+  const nominal = (inp.monthly + (calMonth === 1 ? inp.annual : 0)) * contribFactor(inp, m);
+  return { nominal, real: nominal / (1 + inp.inf) ** (m / 12) };
+}
+
+/** Aylık reel getiri dizisiyle birikim yolu (bugünün doları), her ay sonu değeri. */
 function simulatePath(realMonthly, inp, months, nextMonth) {
   let v = inp.start;
   const out = [];
   for (let m = 0; m < months; m++) {
-    const calMonth = ((nextMonth - 1 + m) % 12) + 1;
-    const infl = (1 + inp.inf) ** (m / 12);
-    const k = inp.indexed ? 1 : 1 / infl; // nominal sabit katkının reel değeri erir
-    v += inp.monthly * k + (calMonth === 1 ? inp.annual * k : 0);
+    v += contribution(inp, m, nextMonth).real;
     v *= 1 + realMonthly(m);
     out.push(v);
   }
@@ -167,7 +183,7 @@ function simulatePath(realMonthly, inp, months, nextMonth) {
 }
 
 function monteCarlo(inp, months, nextMonth) {
-  const key = JSON.stringify([inp.start, inp.monthly, inp.annual, inp.inf, inp.indexed, months]);
+  const key = JSON.stringify([inp.start, inp.monthly, inp.annual, inp.inf, inp.growth, inp.growthMode, months]);
   if (mcCache.key === key) return mcCache.bands;
   const twr = BT.periods.find((p) => p.key === "long").results.main.realTwr;
   const rets = twr.slice(1).map((v, i) => v / twr[i] - 1);
@@ -192,7 +208,8 @@ function monteCarlo(inp, months, nextMonth) {
 function renderProjection() {
   const inp = pjInputs();
   const src = BT.periods.find((p) => p.key === (inp.source === "sel" ? period : inp.source));
-  const months = 20 * 12;
+  const months = 30 * 12; // hedef tarihi 30 yıla kadar aranır
+  const shown = 20 * 12; // grafik 20 yıl
   const endYM = BT.end.split("-").map(Number);
   const nextMonth = (endYM[1] % 12) + 1;
   const startYear = endYM[1] === 12 ? endYM[0] + 1 : endYM[0];
@@ -216,20 +233,22 @@ function renderProjection() {
   projChart = baseChart(document.getElementById("projection"));
   const line = (data, o) => { const s = projChart.addSeries(LC.LineSeries, { priceLineVisible: false, lastValueVisible: false, lineWidth: 2, ...o }); s.setData(data); return s; };
   const blue = color("main");
-  line(bands.map((b, m) => ({ time: dateAt(m), value: show(b.p90, m) })), { color: blue, lineWidth: 1, lineStyle: 2 });
-  line(bands.map((b, m) => ({ time: dateAt(m), value: show(b.p10, m) })), { color: blue, lineWidth: 1, lineStyle: 2 });
+  const cut = (arr) => arr.slice(0, shown);
+  line(cut(bands).map((b, m) => ({ time: dateAt(m), value: show(b.p90, m) })), { color: blue, lineWidth: 1, lineStyle: 2 });
+  line(cut(bands).map((b, m) => ({ time: dateAt(m), value: show(b.p10, m) })), { color: blue, lineWidth: 1, lineStyle: 2 });
   const invested = [];
   let inv = inp.start;
   for (let m = 0; m < months; m++) {
-    const calMonth = ((nextMonth - 1 + m) % 12) + 1;
-    const infl = (1 + inp.inf) ** ((m + 1) / 12);
-    const nominalC = (inp.monthly + (calMonth === 1 ? inp.annual : 0)) * (inp.indexed ? infl : 1);
-    inv += inp.mode === "nominal" ? nominalC : nominalC / infl;
+    const c = contribution(inp, m, nextMonth);
+    inv += inp.mode === "nominal" ? c.nominal : c.real;
     invested.push(inv);
   }
-  line(invested.map((v, m) => ({ time: dateAt(m), value: v })), { color: css("--muted"), lineWidth: 1, lineStyle: 2 });
-  line(Array.from({ length: months }, (_, m) => ({ time: dateAt(m), value: show(target, m) })), { color: css("--warn"), lineWidth: 1, lineStyle: 1 });
-  for (const k of keys) line(paths[k].map((v, m) => ({ time: dateAt(m), value: show(v, m) })), { color: color(k), lastValueVisible: k === "main" });
+  // Katkı artışının etkisi: aynı getiriyle, artışsız (sabit $) senaryo
+  const mainRm = (1 + src.results.main.metrics.realCagr) ** (1 / 12) - 1;
+  const flatMain = simulatePath(() => mainRm, { ...inp, growthMode: "flat" }, months, nextMonth);
+  line(cut(invested).map((v, m) => ({ time: dateAt(m), value: v })), { color: css("--muted"), lineWidth: 1, lineStyle: 2 });
+  line(Array.from({ length: shown }, (_, m) => ({ time: dateAt(m), value: show(target, m) })), { color: css("--warn"), lineWidth: 1, lineStyle: 1 });
+  for (const k of keys) line(cut(paths[k]).map((v, m) => ({ time: dateAt(m), value: show(v, m) })), { color: color(k), lastValueVisible: k === "main" });
   projChart.timeScale().fitContent();
 
   document.getElementById("pjLegend").innerHTML =
@@ -237,24 +256,39 @@ function renderProjection() {
     `<span><span class="sw" style="background:transparent;border:1px dashed ${blue}"></span>Ana plan Monte Carlo %10–%90</span>` +
     `<span><span class="sw" style="background:var(--muted)"></span>Yatırılan</span><span><span class="sw" style="background:var(--warn)"></span>Hedef ${usdShort(target)}</span>`;
 
-  const head = `<tr><th>Ufuk</th><th>Yıl</th><th>Toplam yatırım</th>${keys.map((k) => `<th><span class="sw" style="background:${color(k)}"></span>${esc(shortName(k))}</th>`).join("")}<th>Ana plan MC (kötü / medyan / iyi)</th></tr>`;
+  const head = `<tr><th>Ufuk</th><th>Yıl</th><th>O yıl aylık katkı</th><th>Toplam yatırım</th>${keys.map((k) => `<th><span class="sw" style="background:${color(k)}"></span>${esc(shortName(k))}</th>`).join("")}<th>Ana plan MC (kötü / medyan / iyi)</th></tr>`;
   const rows = HORIZONS.map((h) => {
     const m = h * 12 - 1;
     const t = show(target, m);
-    return `<tr><td>${h} yıl sonra</td><td>${Number(dateAt(m).slice(0, 4))}</td><td>${usd(invested[m])}</td>${keys.map((k) => {
+    const monthlyThen = inp.monthly * contribFactor(inp, m);
+    return `<tr><td>${h} yıl sonra</td><td>${Number(dateAt(m).slice(0, 4))}</td><td>${usd(monthlyThen)}<small style="color:var(--muted)">${inp.mode === "real" && inp.growthMode !== "flat" ? ` (${usdShort(monthlyThen / (1 + inp.inf) ** (m / 12))} bugün)` : ""}</small></td><td>${usd(invested[m])}</td>${keys.map((k) => {
       const v = show(paths[k][m], m);
       return `<td class="${v >= t ? "hit" : ""}">${usd(v)}${v >= t ? " ✓" : ""}</td>`;
     }).join("")}<td>${usdShort(show(bands[m].p10, m))} / ${usdShort(show(bands[m].p50, m))} / ${usdShort(show(bands[m].p90, m))}</td></tr>`;
   }).join("");
-  const reach = `<tr><td colspan="3"><b>Hedefe ulaşma (${usdShort(target)} bugünün doları)</b></td>${keys.map((k) => {
+  const reach = `<tr><td colspan="4"><b>Hedefe ulaşma (${usdShort(target)} bugünün doları)</b></td>${keys.map((k) => {
     const i = paths[k].findIndex((v) => v >= target);
-    return `<td>${i < 0 ? "20 yılda yok" : `<b>${dateAt(i).slice(0, 7)}</b> (${((i + 1) / 12).toFixed(1)} yıl)`}</td>`;
-  }).join("")}<td>${(() => { const i = bands.findIndex((b) => b.p50 >= target); return i < 0 ? "medyanda 20 yılda yok" : `medyan ${dateAt(i).slice(0, 7)}`; })()}</td></tr>`;
+    return `<td>${i < 0 ? "30 yılda yok" : `<b>${dateAt(i).slice(0, 7)}</b> (${((i + 1) / 12).toFixed(1)} yıl)`}</td>`;
+  }).join("")}<td>${(() => { const i = bands.findIndex((b) => b.p50 >= target); return i < 0 ? "medyanda 30 yılda yok" : `medyan ${dateAt(i).slice(0, 7)}`; })()}</td></tr>`;
   document.getElementById("pjTable").innerHTML = `<table>${head}${rows}${reach}</table>`;
+  document.getElementById("pjImpact").innerHTML = growthImpact(paths.main || null, flatMain, target, dateAt, inp);
   document.getElementById("pjNote").textContent =
     `Getiri kaynağı: ${src.label} (${src.start} → ${BT.end}), her stratejinin reel CAGR'ı. Başlangıç: ${startYear}. ` +
     `${inp.mode === "nominal" ? `Nominal gösterimde %${(inp.inf * 100).toFixed(1)} enflasyon varsayılır. ` : "Tutarlar bugünün alım gücüyle. "}` +
+    `Katkılar her 12 ayda bir artar (${inp.growthMode === "flat" ? "artış yok" : inp.growthMode === "real" ? `enflasyon %${(inp.inf * 100).toFixed(1)} + %${(inp.growth * 100).toFixed(1)}` : `nominal %${(inp.growth * 100).toFixed(1)}`}); enflasyonun altındaki nominal artış, katkının bugünkü değerini eritir. ` +
     `Hedef = aylık harcama × 12 ÷ %4 güvenli çekim oranı. Geçmiş getiri geleceği garanti etmez.`;
+}
+
+function growthImpact(withGrowth, flat, target, dateAt, inp) {
+  if (inp.growthMode === "flat" || !(inp.growth > 0 || inp.growthMode === "real")) return "";
+  const mainPath = withGrowth || null;
+  const iFlat = flat.findIndex((v) => v >= target);
+  const iGrow = mainPath ? mainPath.findIndex((v) => v >= target) : -1;
+  const at = (i) => (i < 0 ? "30 yılda yok" : `${dateAt(i).slice(0, 7)} (${((i + 1) / 12).toFixed(1)} yıl)`);
+  const gain = iFlat >= 0 && iGrow >= 0 ? ` → <b class="hit">${((iFlat - iGrow) / 12).toFixed(1)} yıl erken</b>` : "";
+  const end20 = mainPath ? ` · 20. yıl değeri ${usdShort(flat[239])} → <b>${usdShort(mainPath[239])}</b>` : "";
+  const label = inp.growthMode === "real" ? `enflasyon + %${(inp.growth * 100).toFixed(1)}` : `%${(inp.growth * 100).toFixed(1)} nominal`;
+  return `<div class="warn" style="border-left-color:var(--up)"><b>Katkı artışının etkisi (Ana plan, ${label}/yıl):</b> hedefe ulaşma sabit katkıyla ${at(iFlat)}, artışla ${mainPath ? at(iGrow) : "—"}${gain}${end20} (bugünün doları).${mainPath ? "" : " Karşılaştırma için Ana plan çizgisini açın."}</div>`;
 }
 
 function shortName(k) {
@@ -272,7 +306,12 @@ function initProjectionControls() {
     if (saved !== null) el.value = saved;
     el.oninput = () => { store.set("panel." + id, el.value); renderProjection(); };
   }
-  document.getElementById("pjIndex").onchange = renderProjection;
+  for (const id of ["pjGrowth", "pjGrowthMode"]) {
+    const el = document.getElementById(id);
+    const saved = store.get("panel." + id);
+    if (saved !== null) el.value = saved;
+    el.oninput = el.onchange = () => { store.set("panel." + id, el.value); renderProjection(); };
+  }
   document.querySelectorAll("#pjMode button").forEach((b) => (b.onclick = () => {
     document.querySelectorAll("#pjMode button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     renderProjection();

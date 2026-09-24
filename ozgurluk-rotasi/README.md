@@ -48,7 +48,7 @@ Böylece portföy satış yapmadan dengelenir.
 
 - **Dönem filtresi:** Son 1 / 2 / 3 / 5 / 7 / 10 / 15 yıl, 20+ yıl (2006'dan beri) ve 2018+ seçilebilir. Her pencere o tarihte $0 ile başlanıp aynı katkıların yapıldığı varsayımıyla hesaplanır. KPI'lar, grafik ve tablo seçili döneme göre güncellenir.
 - **Dönem matrisi:** Tüm stratejilerin tüm dönemlerdeki reel getirisi tek tabloda görünür. Böylece hangi stratejinin tutarlı olduğu, hangisinin yalnız belirli bir dönemde parladığı görülür.
-- **Gelecek projeksiyonu:** "Bu başarı devam ederse" sorusunu yanıtlar. Seçilen dönemin reel getirisi 20 yıl ileri taşınır. Tablo 1, 3, 5, 10, 15 ve 20 yıl sonra hangi yılda ne kadar yatırımla hangi değere ulaşılacağını ve hedefe hangi tarihte ulaşılacağını gösterir. Mevcut birikim, katkılar, harcama hedefi, enflasyon ve reel/nominal gösterim ayarlanabilir. Ana plan için Monte Carlo bandı (kötü %10 – iyi %90) çizilir.
+- **Gelecek projeksiyonu:** "Bu başarı devam ederse" sorusunu yanıtlar. Seçilen dönemin reel getirisi 20 yıl ileri taşınır. Tablo 1, 3, 5, 10, 15 ve 20 yıl sonra hangi yılda ne kadar yatırımla hangi değere ulaşılacağını ve hedefe hangi tarihte ulaşılacağını gösterir. Mevcut birikim, katkılar, **yıllık katkı artışı** (nominal %X ya da enflasyon + %X), harcama hedefi, enflasyon ve reel/nominal gösterim ayarlanabilir. "Katkı artışının etkisi" kutusu hedefe kaç yıl erken ulaşıldığını gösterir. Hedef tarihi 30 yıla kadar aranır. Ana plan için Monte Carlo bandı (kötü %10 – iyi %90) çizilir.
 - **Kalıcılık:** Strateji çizgileri lejanttan açılıp kapatılır. Seçimler tarayıcıda hatırlanır.
 
 ## Aylık Getiri Takvimi (http://localhost:4173/takvim)

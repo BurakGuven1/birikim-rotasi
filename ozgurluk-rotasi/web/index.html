@@ -104,12 +104,18 @@
       <label>Aylık harcama hedefi ($, bugünün)<input type="number" id="pjSpend" value="5000" min="0" step="500" /></label>
       <label>Gösterim<span class="seg" id="pjMode"><button data-v="real" aria-pressed="true">Bugünün doları</button><button data-v="nominal" aria-pressed="false">Nominal</button></span></label>
       <label>Enflasyon (%)<input type="number" id="pjInf" value="3" min="0" step="0.5" /></label>
-      <label class="check"><input type="checkbox" id="pjIndex" checked /> Katkıları enflasyonla artır</label>
+      <label>Katkı artışı (%/yıl)<input type="number" id="pjGrowth" value="2.5" min="0" max="50" step="0.5" /></label>
+      <label>Artış türü<select id="pjGrowthMode">
+        <option value="nominal">Nominal: $1.000 → $1.025 → …</option>
+        <option value="real">Enflasyon + artış (reel büyür)</option>
+        <option value="flat">Artış yok (sabit $)</option>
+      </select></label>
     </div>
     <div id="pjWarn"></div>
     <div class="chart" id="projection"></div>
     <div class="legend" id="pjLegend"></div>
     <div class="scroll" style="margin-top:14px" id="pjTable"></div>
+    <div id="pjImpact"></div>
     <div class="note" id="pjNote"></div>
   </section>
 
