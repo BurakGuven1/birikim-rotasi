@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ASSET_IDS, ASSETS, CORE, PLAN, STRATEGIC_WEIGHTS, SWING, type AssetId } from "../config.ts";
+import { ASSETS, CORE, PLAN, STRATEGIES, STRATEGY_KEYS, SWING, type AssetId } from "../config.ts";
+import { BUCKET_NAMES, BUCKET_VENUES, currentAllocation, splitContribution, type Bucket } from "../allocation.ts";
 import { fetchFundingRate, fetchOkxDaily, fetchTickers } from "../data/okx.ts";
 import { ROOT, loadEnv } from "../env.ts";
 import { trendScore } from "../engine/core.ts";
@@ -24,80 +25,47 @@ L.push(`# Aylık Sinyal Raporu — ${today}`, "");
 L.push(`Çekirdek sinyal: **${u.lastFullMonth} ay sonu kapanışı** (ay içinde değişmez, whipsaw'u azaltır). Swing sinyalleri: son günlük kapanış.`, "");
 
 // ---------------------------------------------------------------- 1) çekirdek rejim
-const coreRows: (string | number)[][] = [];
-const target: Record<string, number> = {};
-const sumW = ASSET_IDS.reduce((a, id) => a + STRATEGIC_WEIGHTS[id], 0);
-for (const id of ASSET_IDS) {
-  const closes = months.map((m) => u.core.prices[id].get(m));
-  const score = trendScore(closes, iLast, CORE.rule, tb);
-  const sma10 = closes.slice(iLast - 9, iLast + 1) as number[];
-  const smaV = sma10.reduce((a, b) => a + b, 0) / 10;
-  const mom = (closes[iLast] as number) / (closes[iLast - 12] as number) - 1;
-  const w = (STRATEGIC_WEIGHTS[id] / sumW) * (1 - CORE.swingSleeve) * (CORE.trendFloor + (1 - CORE.trendFloor) * score);
-  target[id] = w;
-  const bars = u.bars[id];
-  const live = bars[bars.length - 1].close;
-  const liveNote = live > smaV ? "üstünde" : "ALTINDA";
-  coreRows.push([
-    ASSETS[id].name,
-    score === 1 ? "🟢 AÇIK" : score === 0.5 ? "🟡 YARIM" : "🔴 KAPALI",
-    num(closes[iLast] as number),
-    num(smaV),
-    pct(mom),
-    `${num(live)} (${liveNote})`,
-    pct(w),
-  ]);
-}
-target.SWING = CORE.swingSleeve;
-target.NAKIT = 1 - Object.values(target).reduce((a, b) => a + b, 0);
-L.push(`## 1) Çekirdek rejim ve hedef ağırlıklar`, "");
-L.push(mdTable(["Varlık", "Trend", "Ay sonu (USD)", "SMA10a", "12a getiri", "Şu an (canlı)", "Hedef ağırlık"], coreRows), "");
-L.push(`- Nakit (T-bill / USDT Earn / TL para piyasası): **${pct(target.NAKIT)}** · Swing kasası (OKX USDT, teminat): **${pct(target.SWING)}**`);
-L.push(`- 🟡 YARIM = SMA10 ve 12a momentumdan yalnız biri olumlu. KAPALI varlığın trend yarısı nakde geçer ya da perp short ile hedge edilir (aşağıda).`, "");
-
-// ---------------------------------------------------------------- 2) bu ayın katkısı
-const contribution = PLAN.monthlyUsd + (withAnnual ? PLAN.annualExtraUsd : 0);
-const pfFile = join(ROOT, "portfoy.json");
-let holdings: Record<string, number> | undefined;
-if (existsSync(pfFile)) holdings = JSON.parse(readFileSync(pfFile, "utf8")) as Record<string, number>;
-const buckets = [...ASSET_IDS, "SWING", "NAKIT"];
-const buy: Record<string, number> = {};
-if (holdings) {
-  // Önce katkıyla dengele: hedefin en çok altında kalan kalemlere yatır (satış/vergi yok)
-  const total = buckets.reduce((a, k) => a + (holdings![k] ?? 0), 0) + contribution;
-  const deficit: Record<string, number> = {};
-  for (const k of buckets) deficit[k] = Math.max(0, target[k] * total - (holdings[k] ?? 0));
-  const dsum = Object.values(deficit).reduce((a, b) => a + b, 0);
-  for (const k of buckets) buy[k] = dsum > 0 ? (deficit[k] / dsum) * contribution : target[k] * contribution;
-} else {
-  for (const k of buckets) buy[k] = target[k] * contribution;
-}
-L.push(`## 2) Bu ayın katkısı: ${usd(contribution)}${withAnnual ? " (yıllık ek dahil)" : ""}`, "");
-L.push(holdings ? `_portfoy.json bulundu: katkı, hedefin altında kalan kalemlere yönlendirildi (satış gerektirmeyen dengeleme)._` : `_portfoy.json yok: katkı hedef ağırlıklarla bölündü. Mevcut pozisyonlarınızı portfoy.json'a yazarsanız sapmaya göre dağıtılır._`, "");
+mkdirSync(join(ROOT, "out"), { recursive: true });
+const alloc = currentAllocation(u);
+writeFileSync(join(ROOT, "out", "allocation.json"), JSON.stringify(alloc));
+const trendLabel = (s: number) => (s === 1 ? "🟢 AÇIK" : s === 0.5 ? "🟡 YARIM" : "🔴 KAPALI");
+L.push(`## 1) Trend durumu (${alloc.signalMonth} ay sonu)`, "");
 L.push(
   mdTable(
-    ["Kalem", "Alınacak", "Nerede"],
-    buckets.filter((k) => buy[k] >= 1).map((k) => [
-      k === "SWING" ? "Swing kasası" : k === "NAKIT" ? "Nakit / fırsat kasası" : ASSETS[k as AssetId].name,
-      usd(buy[k]),
-      k === "SWING" ? "OKX Trading hesabı USDT (yalnız sinyalde kullanılır)" : k === "NAKIT" ? "USDT Earn / T-bill ETF / TL para piyasası fonu" : ASSETS[k as AssetId].venue,
-    ]),
+    ["Varlık", "Trend", "Ay sonu (USD)", "SMA10a", "12a getiri", "Şu an (canlı)"],
+    alloc.assets.map((a) => [a.name, trendLabel(a.score), num(a.monthClose), num(a.sma10), pct(a.mom12), `${num(a.liveClose)} (${a.liveClose > a.sma10 ? "üstünde" : "ALTINDA"})`]),
+  ),
+  "",
+  `🟡 YARIM = SMA10 ve 12a momentumdan yalnız biri olumlu. Sinyal bir sonraki ay kapanışında güncellenir (${alloc.nextUpdate}).`,
+  "",
+);
+
+// ---------------------------------------------------------------- 2) bu ayın katkısı — üç strateji
+const contribution = PLAN.monthlyUsd + (withAnnual ? PLAN.annualExtraUsd : 0);
+const pfFile = join(ROOT, "portfoy.json");
+const holdings = existsSync(pfFile) ? (JSON.parse(readFileSync(pfFile, "utf8")) as Record<string, number>) : undefined;
+L.push(`## 2) Bu ayın katkısı: ${usd(contribution)}${withAnnual ? " (yıllık ek dahil)" : ""}`, "");
+L.push(holdings ? `_portfoy.json bulundu: katkı, hedefin altında kalan kalemlere yönlendirildi (satış gerektirmeyen dengeleme)._` : `_portfoy.json yok: katkı hedef ağırlıklarla bölündü._`, "");
+const splits = Object.fromEntries(STRATEGY_KEYS.map((k) => [k, splitContribution(alloc.strategies[k].weights, contribution, holdings)]));
+const buckets = Object.keys(alloc.strategies.main.weights) as Bucket[];
+L.push(
+  mdTable(
+    ["Kalem", ...STRATEGY_KEYS.map((k) => STRATEGIES[k].name), "Nerede"],
+    buckets
+      .filter((b) => STRATEGY_KEYS.some((k) => splits[k][b] > 0))
+      .map((b) => [BUCKET_NAMES[b], ...STRATEGY_KEYS.map((k) => (splits[k][b] > 0 ? `${usd(splits[k][b])} (${pct(alloc.strategies[k].weights[b], 0)})` : "—")), BUCKET_VENUES[b]]),
   ),
   "",
 );
 
 // ---------------------------------------------------------------- 3) hedge
-L.push(`## 3) Hedge (satmak yerine perp short)`, "");
-const hedgeRows = ASSET_IDS.filter((id) => target[id] < (STRATEGIC_WEIGHTS[id] / sumW) * (1 - CORE.swingSleeve) - 1e-9).map((id) => {
-  const full = (STRATEGIC_WEIGHTS[id] / sumW) * (1 - CORE.swingSleeve);
-  return [ASSETS[id].name, pct((full - target[id]) / full, 0), ASSETS[id].venue];
-});
+L.push(`## 3) Hedge (satmak yerine perp short) — Hibrit ve Ana plan`, "");
+const hedge = alloc.strategies.main.hedge;
+const hedgeRows = (Object.keys(hedge) as AssetId[]).map((id) => [ASSETS[id].name, pct(hedge[id] ?? 0, 0), ASSETS[id].venue]);
 L.push(
-  hedgeRows.length
-    ? mdTable(["Varlık", "Spot pozisyonun hedge oranı", "Araç"], hedgeRows)
-    : "Tüm çekirdek varlıklar trendde — hedge gerekmiyor.",
+  hedgeRows.length ? mdTable(["Varlık", "Spot pozisyonun hedge oranı", "Araç"], hedgeRows) : "Tüm çekirdek varlıklar trendde — hedge gerekmiyor.",
   "",
-  "Kural: Spotu satmak istemiyorsanız (vergi, soğuk cüzdan, uzun vade), kapalı trend payı kadar 1x perp short açın. Trend yeniden AÇIK olduğunda (ay sonu) short'u kapatın. Fonlama oranını aşağıdan kontrol edin.",
+  "Kural: Spotu satmak istemiyorsanız (vergi, soğuk cüzdan, uzun vade), kapalı trend payı kadar 1x perp short açın. Trend yeniden AÇIK olduğunda (ay sonu) short'u kapatın. Al-tut çoklu stratejisinde hedge yapılmaz.",
   "",
 );
 
@@ -200,5 +168,5 @@ try {
 L.push(`> Bu rapor sistematik kurallardan üretilir; yatırım tavsiyesi değildir. Emirleri kendiniz kontrol ederek girin.`);
 mkdirSync(join(ROOT, "out"), { recursive: true });
 writeFileSync(join(ROOT, "out", "SINYAL.md"), L.join("\n"));
-writeFileSync(join(ROOT, "out", "signals.json"), JSON.stringify({ date: today, month: u.lastFullMonth, target, buy, contribution }));
+writeFileSync(join(ROOT, "out", "signals.json"), JSON.stringify({ date: today, month: u.lastFullMonth, contribution, splits }));
 console.log(L.join("\n"));

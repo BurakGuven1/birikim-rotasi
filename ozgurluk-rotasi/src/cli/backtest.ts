@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ASSET_IDS, ASSETS, CORE, PLAN, STRATEGIC_WEIGHTS, SWING, type SwingStrategyId } from "../config.ts";
+import { ASSET_IDS, ASSETS, PLAN, STRATEGIC_WEIGHTS, STRATEGIES, STRATEGY_KEYS, SWING, type SwingStrategyId } from "../config.ts";
 import { ROOT, loadEnv } from "../env.ts";
 import { runCore, type CoreOptions, type CoreResult } from "../engine/core.ts";
 import { futureValue, monteCarlo } from "../engine/montecarlo.ts";
@@ -27,42 +27,20 @@ const sleeve = sleeveReturns(sleeveRuns, u.core.tbill);
 // ---------------------------------------------------------------- çekirdek varyantları
 const contributions = { monthly: PLAN.monthlyUsd, annual: PLAN.annualExtraUsd, annualMonth: PLAN.annualMonth, inflationIndexed: false };
 type Variant = Omit<CoreOptions, "start" | "end" | "contributions"> & { key: string; note: string };
-const variants: Variant[] = [
-  { key: "spy", name: "Sadece S&P 500 (DCA, al-tut)", note: "Kıyas", weights: { SPY: 1 }, rule: "none" },
-  { key: "static", name: "Statik çoklu varlık (DCA, al-tut)", note: "Kıyas: aynı ağırlıklar, filtre yok", weights: STRATEGIC_WEIGHTS, rule: "none" },
-  { key: "sma10", name: "Trend filtreli (SMA10)", note: "Faber kuralı", weights: STRATEGIC_WEIGHTS, rule: "sma10" },
-  { key: "blend", name: "Trend filtreli (SMA10 + 12a momentum)", note: "Çekirdek", weights: STRATEGIC_WEIGHTS, rule: "blend" },
-  { key: "hybrid", name: "Hibrit: yarı al-tut + yarı trend filtreli", note: "Faber Trinity yaklaşımı; sonuçlardan sonra eklendi", weights: STRATEGIC_WEIGHTS, rule: "blend", trendFloor: CORE.trendFloor },
-  {
-    key: "prereg",
-    name: "İlk kayıtlı plan: trend çekirdek %80 + swing %20",
-    note: "Sonuçlardan ÖNCE kaydedilen plan",
+// Panelde sunulan üç strateji (bkz. config.ts STRATEGIES). Diğer denenmiş varyantlar
+// (sadece S&P 500, tam trend filtresi, kaldıraçlı) docs/SONUCLAR.md arşivinde.
+const variants: Variant[] = STRATEGY_KEYS.map((key) => {
+  const d = STRATEGIES[key];
+  return {
+    key,
+    name: d.name,
+    note: d.summary,
     weights: STRATEGIC_WEIGHTS,
-    rule: "blend",
-    sleeve: { returns: sleeve, weight: CORE.swingSleeve },
-  },
-  {
-    key: "main",
-    name: "ANA PLAN: Hibrit çekirdek %80 + swing %20",
-    note: "Faber 'Trinity' tarzı yarı al-tut/yarı trend + swing uydu",
-    weights: STRATEGIC_WEIGHTS,
-    rule: "blend",
-    trendFloor: CORE.trendFloor,
-    sleeve: { returns: sleeve, weight: CORE.swingSleeve },
-  },
-  {
-    key: "aggr",
-    name: "AGRESİF: Ana plan + oynaklık hedefi (≤1.5x)",
-    note: "Kaldıraçlı seçenek",
-    weights: STRATEGIC_WEIGHTS,
-    rule: "blend",
-    trendFloor: CORE.trendFloor,
-    volTarget: CORE.volTarget,
-    maxGross: CORE.maxGross,
-    borrowSpread: CORE.borrowSpread,
-    sleeve: { returns: sleeve, weight: CORE.swingSleeve },
-  },
-];
+    rule: d.rule,
+    trendFloor: d.rule === "none" ? undefined : d.trendFloor,
+    sleeve: d.sleeve > 0 ? { returns: sleeve, weight: d.sleeve } : undefined,
+  };
+});
 
 const addMonths = (m: string, k: number): string => {
   const [y, mo] = m.split("-").map(Number);
@@ -107,13 +85,12 @@ for (const v of variants) {
 // ---------------------------------------------------------------- hedef ve Monte Carlo
 const targetWealth = (PLAN.monthlySpendingReal * 12) / PLAN.safeWithdrawalRate;
 const horizons = [10, 15, 20];
-const main = results.long.main;
-const realMonthly = main.realTwr.slice(1).map((v, i) => v / main.realTwr[i] - 1);
-const mc = monteCarlo(realMonthly, { monthly: PLAN.monthlyUsd, annual: PLAN.annualExtraUsd, horizons, target: targetWealth });
-const aggr = results.long.aggr;
-const mcAggr = monteCarlo(aggr.realTwr.slice(1).map((v, i) => v / aggr.realTwr[i] - 1), {
-  monthly: PLAN.monthlyUsd, annual: PLAN.annualExtraUsd, horizons, target: targetWealth,
-});
+const mcBy = Object.fromEntries(
+  STRATEGY_KEYS.map((k) => {
+    const r = results.long[k];
+    return [k, monteCarlo(r.realTwr.slice(1).map((v, i) => v / r.realTwr[i] - 1), { monthly: PLAN.monthlyUsd, annual: PLAN.annualExtraUsd, horizons, target: targetWealth })];
+  }),
+);
 const scenarios = [0.05, 0.07, 0.1, 0.12, 0.15].map((r) => ({
   real: r,
   values: horizons.map((h) => futureValue(r, h, PLAN.monthlyUsd, PLAN.annualExtraUsd)),
@@ -125,6 +102,7 @@ const json = {
   end,
   plan: { ...PLAN, targetWealth },
   variants: variants.map((v) => ({ key: v.key, name: v.name, note: v.note })),
+  strategies: STRATEGIES,
   periods: periods.map((p) => ({
     ...p,
     results: Object.fromEntries(
@@ -134,7 +112,7 @@ const json = {
   rolling,
   swing: allRuns.map((r) => ({ strategy: r.strategy, asset: r.asset, stats: r.result.stats, trades: r.result.trades.slice(-40) })),
   sleeve: SWING.sleeve,
-  monteCarlo: { main: mc, aggressive: mcAggr },
+  monteCarlo: mcBy,
   scenarios,
 };
 writeFileSync(join(OUT, "backtest.json"), JSON.stringify(json));
@@ -155,7 +133,7 @@ L.push(
   "",
 );
 for (const p of detailPeriods) {
-  const first = results[p.key].spy;
+  const first = results[p.key].main;
   L.push(`## ${p.label}: ${p.start} → ${end} (${num(first.metrics.years, 1)} yıl)`, "", `_${p.note}_`, "");
   L.push(
     mdTable(
@@ -197,12 +175,12 @@ L.push(`## Hedefe ulaşma: sabit reel getiri senaryoları (bugünün doları)`, 
 L.push(mdTable(["Reel getiri", ...horizons.map((h) => `${h} yıl`)], scenarios.map((s) => [pct(s.real, 0), ...s.values.map(usd)])), "");
 L.push(`## Monte Carlo (uzun dönem reel aylık getirilerden 12 aylık blok bootstrap, 5000 yol)`, "");
 L.push(`Katkıların enflasyonla artırıldığı (reel sabit) varsayılır. Hedef: ${usd(targetWealth)}.`, "");
-for (const [label, res] of [["Ana plan", mc], ["Agresif", mcAggr]] as const) {
+for (const [label, res] of STRATEGY_KEYS.map((k) => [STRATEGIES[k].name, mcBy[k]] as const)) {
   L.push(`**${label}**`, "");
   L.push(mdTable(["Ufuk", "Kötü (P10)", "Medyan", "İyi (P90)", "Hedefe ulaşma olasılığı"], res.map((r) => [`${r.horizonYears} yıl`, usd(r.p10), usd(r.p50), usd(r.p90), pct(r.probTarget, 0)])), "");
 }
 L.push(`## Güncel çekirdek ağırlıkları (${end} sonu sinyali)`, "");
-L.push(mdTable(["Kalem", "Ana plan", "Agresif"], Object.keys({ ...results.long.aggr.lastWeights, ...results.long.main.lastWeights }).map((k) => [k === "SLEEVE" ? "Swing uydu" : ASSETS[k as keyof typeof ASSETS]?.name ?? k, pct(results.long.main.lastWeights[k] ?? 0), pct(results.long.aggr.lastWeights[k] ?? 0)])), "");
+L.push(mdTable(["Kalem", ...STRATEGY_KEYS.map((k) => STRATEGIES[k].name)], Object.keys(results.long.main.lastWeights).map((k) => [k === "SLEEVE" ? "Swing uydu" : ASSETS[k as keyof typeof ASSETS]?.name ?? k, ...STRATEGY_KEYS.map((s) => pct(results.long[s].lastWeights[k] ?? 0))])), "");
 L.push(`> Geçmiş performans gelecekteki sonuçları garanti etmez. Bu rapor yatırım tavsiyesi değildir; araştırma ve karar desteği içindir.`);
 writeFileSync(join(OUT, "RAPOR.md"), L.join("\n"));
 console.log(L.join("\n"));

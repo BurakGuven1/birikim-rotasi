@@ -12,13 +12,14 @@ const store = {
 };
 
 // Kimlik rengi stratejiye sabit bağlıdır (filtre değişince yeniden boyanmaz)
-const SERIES = { main: "--s1", aggr: "--s2", static: "--s3", spy: "--s6", hybrid: "--s4", blend: "--s7", sma10: "--s5", prereg: "--s8" };
-const DEFAULT_ON = ["main", "aggr", "static", "spy"];
+const SERIES = { main: "--s1", static: "--s3", hybrid: "--s4" };
+const DEFAULT_ON = ["static", "hybrid", "main"];
 const color = (key) => css(SERIES[key] || "--muted");
 
 let BT;
 let period = "long";
-const visible = new Set(JSON.parse(store.get("panel.visible") || "null") || DEFAULT_ON);
+const savedVisible = (JSON.parse(store.get("panel.visible") || "null") || []).filter((k) => k in SERIES);
+const visible = new Set(savedVisible.length ? savedVisible : DEFAULT_ON);
 
 function baseChart(el, opts = {}) {
   return LC.createChart(el, {
@@ -307,23 +308,147 @@ function growthImpact(withGrowth, flat, target, dateAt, inp) {
   return `<div class="warn" style="border-left-color:var(--up)"><b>Katkı artışının etkisi (Ana plan, ${label}/yıl):</b> hedefe ulaşma sabit katkıyla ${at(iFlat)}, artışla ${mainPath ? at(iGrow) : "—"}${gain}${end20} (bugünün doları).${mainPath ? "" : " Karşılaştırma için Ana plan çizgisini açın."}</div>`;
 }
 
-const DESCRIPTIONS = {
-  spy: ["Kıyas", "Her ay tüm katkıyla yalnız S&P 500 alınır, hiç satılmaz. En basit ve en düşük maliyetli yol; tüm getiri tek bir piyasaya bağlı."],
-  static: ["Kıyas", "Yedi varlık sabit ağırlıkla tutulur: S&P %30 · Nasdaq %20 · Altın %15 · BIST %10 · BTC %15 · ETH %5 · Emtia %5. Her ay bu ağırlıklara geri dengelenir; hiçbir zaman nakde geçilmez. Getirisinin yaklaşık yarısı kriptodan gelir."],
-  sma10: ["Trend", "Aynı ağırlıklar; ay sonu fiyatı 10 aylık ortalamanın altındaki varlık tamamen nakde geçer (Faber). Düşüşü çok azaltır, hızlı toparlanmaları kaçırır."],
-  blend: ["Trend", "SMA10 + 12 aylık momentum: iki sinyalden biri olumsuzsa varlığın yarısı, ikisi de olumsuzsa tamamı nakde geçer."],
-  hybrid: ["Trend", "Her varlığın yarısı her zaman tutulur (al-tut), yarısı trend kuralına göre nakde geçer (Faber'in 'Trinity' yaklaşımı). Getiri ile düşüş arasında denge."],
-  prereg: ["Arşiv", "İlk yazılan plan: tam trend filtresi + %20 swing. Sonuçlardan önce kaydedildiği için dürüst bir kıyas olarak tutuluyor."],
-  main: ["Plan", "Portföyün %80'i Hibrit çekirdek, %20'si swing sistemleri (RSI2 + Donchian, OKX perp). Swing kolu düşüşü azaltır ama bu backtestlerde getiriyi artırmadı."],
-  aggr: ["Plan", "Ana plan + oynaklık hedefi: piyasa sakinken kaldıraçla 1,5 kata kadar büyütür, oynaklık artınca küçültür. Daha yüksek getiri, daha derin düşüş."],
-};
+function renderStrategyCards() {
+  const long = BT.periods.find((p) => p.key === "long");
+  const y10 = BT.periods.find((p) => p.key === "y10");
+  const order = ["static", "hybrid", "main"];
+  document.getElementById("stratCards").innerHTML = order.map((k) => {
+    const d = BT.strategies[k];
+    const m = long.results[k].metrics;
+    const m10 = y10.results[k].metrics;
+    const mc = BT.monteCarlo?.[k]?.find((x) => x.horizonYears === 20);
+    return `<div class="scard">
+      <h3><span class="sw" style="background:${color(k)}"></span>${esc(d.name)}</h3>
+      <p><b>${esc(d.summary)}</b></p>
+      <p>${esc(d.how)}</p>
+      <dl>
+        <dt>Reel getiri, 20+ yıl</dt><dd class="${cls(m.realIrr)}">${pct(m.realIrr)}</dd>
+        <dt>Reel getiri, son 10 yıl</dt><dd class="${cls(m10.realIrr)}">${pct(m10.realIrr)}</dd>
+        <dt>En büyük düşüş</dt><dd class="neg">${pct(m.maxDrawdown)}</dd>
+        <dt>En kötü yıl</dt><dd class="neg">${pct(m.worstYear)}</dd>
+        <dt>Getiri/risk (Sharpe)</dt><dd>${m.sharpe.toFixed(2)}</dd>
+        ${mc ? `<dt>20 yılda hedefe ulaşma olasılığı</dt><dd>${pct(mc.probTarget, 0)}</dd>` : ""}
+      </dl>
+      <p><span class="badge">Kimin için</span> ${esc(d.forWhom)}</p>
+      <p><span class="badge off">Risk</span> ${esc(d.risk)}</p>
+    </div>`;
+  }).join("");
+}
 
-function renderDescriptions() {
-  document.getElementById("desc").innerHTML = `<table><tr><th>Strateji</th><th>Tür</th><th style="text-align:left">Ne yapar?</th></tr>${BT.variants.map((v) => `<tr><td><span class="sw" style="background:${color(v.key)}"></span>${esc(v.name)}</td><td>${DESCRIPTIONS[v.key]?.[0] ?? ""}</td><td style="text-align:left;white-space:normal;min-width:320px">${esc(DESCRIPTIONS[v.key]?.[1] ?? v.note)}</td></tr>`).join("")}</table>`;
+// ------------------------------------------------------------------ bu ayın dağılımı
+let AL;
+let alStrategy = store.get("panel.alStrategy") || "hybrid";
+const TREND = { 1: ["on", "Trend açık"], 0.5: ["half", "Trend yarım"], 0: ["off", "Trend kapalı"] };
+
+function holdingsFromInputs() {
+  const h = {};
+  let any = false;
+  document.querySelectorAll("#alHoldings input").forEach((i) => {
+    const v = Number(i.value) || 0;
+    h[i.dataset.k] = v;
+    if (v > 0) any = true;
+  });
+  return any ? h : undefined;
+}
+
+/** Sunucudaki splitContribution ile aynı mantık (katkıyla dengeleme + tam dolara yuvarlama). */
+function split(weights, amount, holdings) {
+  const keys = Object.keys(weights);
+  let raw;
+  const held = holdings ? keys.reduce((a, k) => a + (holdings[k] || 0), 0) : 0;
+  if (holdings && held > 0) {
+    const total = held + amount;
+    const deficit = Object.fromEntries(keys.map((k) => [k, Math.max(0, weights[k] * total - (holdings[k] || 0))]));
+    const dsum = Object.values(deficit).reduce((a, b) => a + b, 0);
+    raw = Object.fromEntries(keys.map((k) => [k, dsum > 0 ? (deficit[k] / dsum) * Math.min(amount, dsum) + (dsum < amount ? weights[k] * (amount - dsum) : 0) : weights[k] * amount]));
+  } else raw = Object.fromEntries(keys.map((k) => [k, weights[k] * amount]));
+  const fl = Object.fromEntries(keys.map((k) => [k, Math.floor(raw[k])]));
+  let rest = Math.round(amount) - Object.values(fl).reduce((a, b) => a + b, 0);
+  for (const k of [...keys].sort((a, b) => (raw[b] - fl[b]) - (raw[a] - fl[a]))) { if (rest <= 0) break; if (raw[k] > 0) { fl[k]++; rest--; } }
+  return fl;
+}
+
+function alAmount() {
+  const base = Math.max(0, Number(document.getElementById("alAmount").value) || 0);
+  return base + (document.getElementById("alAnnual").checked ? AL.annualExtraUsd : 0);
+}
+
+function renderAllocation() {
+  if (!AL) return;
+  const order = ["static", "hybrid", "main"];
+  document.getElementById("stratTabs").innerHTML = order.map((k) => {
+    const s = AL.strategies[k];
+    return `<button class="tab" data-k="${k}" aria-pressed="${k === alStrategy}"><b><span class="sw" style="background:${color(k)}"></span>${esc(s.name)}</b><span>${esc(s.summary)}</span></button>`;
+  }).join("");
+  document.querySelectorAll("#stratTabs .tab").forEach((b) => (b.onclick = () => { alStrategy = b.dataset.k; store.set("panel.alStrategy", alStrategy); renderAllocation(); }));
+
+  const amount = alAmount();
+  const holdings = holdingsFromInputs();
+  const st = AL.strategies[alStrategy];
+  const parts = split(st.weights, amount, holdings);
+  document.getElementById("alTotal").textContent = usd(amount);
+  const score = Object.fromEntries(AL.assets.map((a) => [a.id, a.score]));
+  const rows = Object.keys(st.weights).filter((k) => st.weights[k] > 0 || parts[k] > 0).map((k) => {
+    const t = TREND[score[k]];
+    const badge = t ? `<span class="badge ${t[0]}">${t[1]}</span>` : k === "SWING" ? `<span class="badge">Sinyal bekler</span>` : `<span class="badge">Güvenli liman</span>`;
+    const maxW = Math.max(...Object.values(st.weights));
+    return `<tr><td>${esc(AL.bucketNames[k])}</td><td>${badge}</td><td>${pct(st.weights[k], 1)}<div class="rowbar"><i style="width:${(st.weights[k] / maxW) * 100}%"></i></div></td><td><b>${usd(parts[k])}</b></td><td class="venue">${esc(AL.bucketVenues[k])}</td></tr>`;
+  }).join("");
+  document.getElementById("alTable").innerHTML = `<table><tr><th>Kalem</th><th>Durum</th><th>Hedef pay</th><th>Bu ay alınacak</th><th style="text-align:left">Nerede</th></tr>${rows}<tr><th>Toplam</th><th></th><th>${pct(Object.values(st.weights).reduce((a, b) => a + b, 0), 0)}</th><th>${usd(Object.values(parts).reduce((a, b) => a + b, 0))}</th><th></th></tr></table>`;
+
+  const hedges = Object.entries(st.hedge || {});
+  document.getElementById("alHedge").innerHTML = alStrategy === "static"
+    ? `<div class="note">Al-tut çoklu stratejisinde trend ne olursa olsun ağırlıklar sabittir; satış ya da hedge yapılmaz.</div>`
+    : hedges.length
+      ? `<div class="warn"><b>Trendi zayıflayan varlıklar:</b> ${hedges.map(([id, f]) => `${esc(AL.bucketNames[id])} (%${Math.round(f * 100)})`).join(", ")}. Bu varlıkların payı azaltıldı ve fark nakitte bekliyor. Elinizde bu varlıklardan varsa, parantezdeki oran kadarını satın ya da OKX'te o kadar 1x perp short ile hedge edin; trend ay sonunda dönünce geri alın.</div>`
+      : `<div class="note">Bütün varlıklar trendde; satış ya da hedge gerekmiyor.</div>`;
+
+  const cmp = Object.keys(AL.strategies.main.weights);
+  const splits = Object.fromEntries(order.map((k) => [k, split(AL.strategies[k].weights, amount, holdings)]));
+  document.getElementById("alCompare").innerHTML = `<table><tr><th>Kalem</th>${order.map((k) => `<th><span class="sw" style="background:${color(k)}"></span>${esc(AL.strategies[k].name)}</th>`).join("")}</tr>${cmp.filter((b) => order.some((k) => splits[k][b] > 0)).map((b) => `<tr><td>${esc(AL.bucketNames[b])}</td>${order.map((k) => `<td>${splits[k][b] > 0 ? `${usd(splits[k][b])} <small style="color:var(--muted)">${pct(AL.strategies[k].weights[b], 0)}</small>` : "—"}</td>`).join("")}</tr>`).join("")}</table>`;
+
+  document.getElementById("allocLead").innerHTML = `Stratejinizi seçin ve tutarı girin. Sinyal: <b>${AL.signalMonth} ay sonu</b> kapanışı; ay içinde değişmez, <b>${AL.nextUpdate}</b> itibarıyla yenilenir.`;
+  document.getElementById("alStatus").textContent = `Hesaplandı: ${new Date(AL.generatedAt).toLocaleString("tr-TR")}`;
+}
+
+function initAllocationControls() {
+  const month = new Date().getMonth() + 1;
+  const ann = document.getElementById("alAnnual");
+  document.getElementById("alAnnualLbl").textContent = `Yıllık ek ${usd(AL.annualExtraUsd)}'ü ekle${month === AL.annualMonth ? " (bu ay Ocak)" : ""}`;
+  ann.checked = month === AL.annualMonth;
+  const amt = document.getElementById("alAmount");
+  amt.value = store.get("panel.alAmount") || String(AL.monthlyUsd);
+  amt.oninput = () => { store.set("panel.alAmount", amt.value); renderAllocation(); };
+  ann.onchange = renderAllocation;
+  const saved = JSON.parse(store.get("panel.holdings") || "{}");
+  document.getElementById("alHoldings").innerHTML = Object.keys(AL.strategies.main.weights)
+    .map((k) => `<label>${esc(AL.bucketNames[k])}<input type="number" min="0" step="100" data-k="${k}" value="${saved[k] ?? ""}" placeholder="0" /></label>`).join("");
+  document.querySelectorAll("#alHoldings input").forEach((i) => (i.oninput = () => {
+    const h = {};
+    document.querySelectorAll("#alHoldings input").forEach((x) => { if (x.value) h[x.dataset.k] = Number(x.value); });
+    store.set("panel.holdings", JSON.stringify(h));
+    renderAllocation();
+  }));
+  document.getElementById("alCopy").onclick = async () => {
+    const st = AL.strategies[alStrategy];
+    const parts = split(st.weights, alAmount(), holdingsFromInputs());
+    const text = [`${st.name} — ${AL.signalMonth} sinyali — toplam ${usd(alAmount())}`,
+      ...Object.keys(parts).filter((k) => parts[k] > 0).map((k) => `• ${AL.bucketNames[k]}: ${usd(parts[k])} (${pct(st.weights[k], 1)}) → ${AL.bucketVenues[k]}`)].join("\n");
+    try { await navigator.clipboard.writeText(text); document.getElementById("alStatus").textContent = "Kopyalandı."; }
+    catch { document.getElementById("alStatus").textContent = "Kopyalanamadı; tabloyu elle seçin."; }
+  };
+  document.getElementById("alRefresh").onclick = async () => { await loadAllocation(); renderAllocation(); };
+}
+
+async function loadAllocation() {
+  let res = await fetch("/api/allocation").catch(() => null);
+  if (!res || !res.ok) res = await fetch("/out/allocation.json").catch(() => null);
+  if (!res || !res.ok) throw new Error("Dağılım alınamadı — `npm run web` ile sunucuyu başlatın veya `npm run sinyal` çalıştırın.");
+  AL = await res.json();
 }
 
 function shortName(k) {
-  return { main: "Ana plan", aggr: "Agresif", static: "Al-tut çoklu", spy: "S&P 500", hybrid: "Hibrit", blend: "Trend (blend)", sma10: "Trend (SMA10)", prereg: "İlk plan" }[k] || k;
+  return { main: "Ana plan", static: "Al-tut çoklu", hybrid: "Hibrit" }[k] || k;
 }
 
 function initProjectionControls() {
@@ -413,6 +538,9 @@ function md(text) {
 }
 
 (async () => {
+  loadAllocation()
+    .then(() => { initAllocationControls(); renderAllocation(); })
+    .catch((e) => (document.getElementById("alTable").textContent = e.message));
   try {
     const res = await fetch("/out/backtest.json");
     if (!res.ok) throw new Error("out/backtest.json yok — `npm run backtest` çalıştırın");
@@ -421,7 +549,7 @@ function md(text) {
     const saved = store.get("panel.period");
     period = BT.periods.some((p) => p.key === saved) ? saved : "long";
     renderPeriodChips();
-    renderDescriptions();
+    renderStrategyCards();
     initProjectionControls();
     setPeriod(period);
   } catch (e) {

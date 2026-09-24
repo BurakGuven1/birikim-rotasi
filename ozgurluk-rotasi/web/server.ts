@@ -8,6 +8,8 @@ import { ROOT, env, loadEnv } from "../src/env.ts";
 import { atr, donchian, sma } from "../src/engine/indicators.ts";
 import { runSwing } from "../src/pipeline.ts";
 import { buildCalendar, type CalendarPayload } from "../src/calendar.ts";
+import { loadUniverse } from "../src/pipeline.ts";
+import { currentAllocation, type AllocationPayload } from "../src/allocation.ts";
 import { executeOrder } from "../src/live/orders.ts";
 
 loadEnv();
@@ -40,9 +42,21 @@ async function calendar(): Promise<CalendarPayload> {
   return calCache.data;
 }
 
+// Aylık dağılım: ay sonu sinyali ay içinde değişmez; saatlik yeniden hesap yeterli.
+let allocCache: { at: number; data: AllocationPayload } | undefined;
+async function allocation(): Promise<AllocationPayload> {
+  if (!allocCache || Date.now() - allocCache.at > 3_600_000) allocCache = { at: Date.now(), data: currentAllocation(await loadUniverse()) };
+  return allocCache.data;
+}
+
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   try {
+    if (url.pathname === "/api/allocation") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(await allocation()));
+      return;
+    }
     if (url.pathname === "/api/takvim") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify(await calendar()));
