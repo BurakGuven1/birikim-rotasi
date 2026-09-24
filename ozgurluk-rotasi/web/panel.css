@@ -230,3 +230,24 @@ td.heat { font-weight: 600; }
   .chart { height: 320px; }
   .field input, .field select { width: 140px; }
 }
+
+/* ---------- portföy */
+.pf-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 12px; margin-top: 8px; }
+.pf-kpi { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+.pf-kpi small { display: block; font-size: 12px; }
+.pf-kpi b { display: block; font-size: 24px; letter-spacing: -.02em; margin-top: 2px; }
+.pf-kpi span { font-size: 12.5px; }
+.pf-bars { display: grid; gap: 8px; margin-top: 16px; }
+.pf-bar { display: grid; grid-template-columns: 170px minmax(0, 1fr) 140px; gap: 10px; align-items: center; font-size: 12.5px; }
+.pf-bar .tr { position: relative; height: 14px; border-radius: 4px; background: var(--line2); overflow: hidden; }
+.pf-bar .tr i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; width: 0; transition: width .7s cubic-bezier(.2,.8,.2,1); }
+.pf-bar .tr em { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
+.pf-bar .dv { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .pf-bar { grid-template-columns: 110px minmax(0, 1fr) 90px; } }
+.icon-btn { font: inherit; background: none; border: 1px solid transparent; border-radius: 7px; padding: 4px 8px; color: var(--muted); cursor: pointer; }
+.icon-btn:hover { color: var(--down); border-color: var(--line); }
+tr.flash td { animation: flash 1.2s ease; }
+@keyframes flash { from { background: var(--up-soft); } to { background: transparent; } }
+.warn { border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-top: 10px; background: var(--warn-soft); color: var(--ink2); }
+.brand small { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1100px) { .brand small { display: none; } }

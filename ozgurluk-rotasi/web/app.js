@@ -1,5 +1,6 @@
 /* global LightweightCharts */
-const LC = LightweightCharts;
+const LC = window.LightweightCharts;
+const NO_CHART = `<div class="callout warn">Grafik kütüphanesi yüklenemedi (internet bağlantısını kontrol edin). Tablolar çalışmaya devam eder.</div>`;
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const pct = (x, d = 1) => (Number.isFinite(x) ? (x * 100).toFixed(d) + "%" : "—");
 const usd = (x) => (Number.isFinite(x) ? "$" + Math.round(x).toLocaleString("en-US") : "—");
@@ -33,8 +34,15 @@ let chartView = QP.get("view") || store.get("panel.chartView") || "value";
 const savedVisible = (JSON.parse(store.get("panel.visible") || "null") || []).filter((k) => k in SERIES);
 const visible = new Set(savedVisible.length ? savedVisible : ORDER);
 
+const FALLBACK_STRATEGIES = {
+  static: { name: "Al-tut çoklu", summary: "Yedi varlık sabit ağırlıkla, her zaman yatırımda.", how: "Katkı her ay aynı sabit ağırlıklarla yedi varlığa gider; nakde geçilmez, hedge yapılmaz.", forWhom: "−%40 düşüşlerde satmadan bekleyebilen.", risk: "En derin düşüş; getirinin yarısı kriptodan." },
+  hybrid: { name: "Hibrit", summary: "Her varlığın yarısı hep tutulur, yarısı trend kuralına göre nakde geçer.", how: "Trend bozulan varlığın yarısı ay sonunda nakde geçer, trend dönünce geri alınır.", forWhom: "Getiri/risk dengesi isteyen.", risk: "Hızlı V-dönüşlerde geç kalır." },
+  main: { name: "Ana plan", summary: "Hibrit çekirdek %80 + OKX'te swing sistemleri %20.", how: "Katkının %20'si swing kasasına gider; sinyal gelince işlem açılır.", forWhom: "En düşük düşüşü isteyen.", risk: "Swing kolu getiriyi düşürdü; zaman ister." },
+};
+
 // ------------------------------------------------------------------ yardımcılar
 function baseChart(el, opts = {}) {
+  if (!LC) { el.innerHTML = NO_CHART; throw new Error("grafik yok"); }
   return LC.createChart(el, {
     autoSize: true,
     layout: { background: { color: "transparent" }, textColor: css("--muted"), fontSize: 12, attributionLogo: false },
@@ -102,7 +110,7 @@ function renderFreshness() {
   const ageDays = (Date.now() - Date.parse(last)) / 86_400_000;
   pill.className = `pill ${ageDays < 4 ? "ok" : "warn"}`;
   pill.querySelector("span").textContent = `Fiyatlar ${dayLabel(last)} · sinyal ${monthLabel(AL.signalMonth)} sonu`;
-  $("meta").textContent = `Reel (enflasyondan arındırılmış) USD · son hesap ${new Date(AL.generatedAt).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`;
+  $("meta").textContent = `Reel USD · son hesap ${new Date(AL.generatedAt).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`;
 }
 
 function weightChanges(prev, next, key) {
@@ -187,7 +195,7 @@ function renderStratTabs() {
     store.set("panel.alStrategy", alStrategy);
     renderStratTabs();
     renderAllocation();
-    renderProjection();
+    safe(renderProjection);
   }));
 }
 
@@ -300,6 +308,47 @@ function initAllocationControls() {
     catch { toast("Kopyalanamadı; listeyi elle seçin."); }
   };
   $("alReset").onclick = () => { store.set(doneKey(), "[]"); renderAllocation(); };
+  $("alSave").onclick = saveMonthToPortfolio;
+  $("alFill").onclick = async () => {
+    const pf = await fetchJSON(["/api/portfolio"]);
+    if (!pf) { toast("Portföy okunamadı — sunucuyu yeniden başlatın (npm run web)."); return; }
+    const vals = Object.fromEntries(pf.valuation.positions.map((p) => [p.asset, Math.round(p.value)]));
+    document.querySelectorAll("#alHoldings input").forEach((i) => (i.value = vals[i.dataset.k] || ""));
+    store.set("panel.holdings", JSON.stringify(vals));
+    renderAllocation();
+    toast(pf.valuation.positions.length ? "Mevcut portföy değerleri dolduruldu; katkı hedefin altındaki kalemlere yönlendirildi." : "Portföyünüzde henüz işlem yok.");
+  };
+  $("alClear").onclick = () => { document.querySelectorAll("#alHoldings input").forEach((i) => (i.value = "")); store.set("panel.holdings", "{}"); renderAllocation(); };
+}
+
+async function saveMonthToPortfolio() {
+  const st = AL.strategies[alStrategy];
+  const parts = split(st.weights, alAmount(), holdingsFromInputs());
+  const keys = Object.keys(parts).filter((k) => parts[k] > 0);
+  if (!keys.length) { toast("Kaydedilecek tutar yok."); return; }
+  const key = `panel.saved.${AL.signalMonth}.${alStrategy}`;
+  const already = store.get(key);
+  const msg = `${st.name} dağılımıyla ${usd(alAmount())} tutarındaki ${keys.length} alım, bugünkü fiyatlardan portföyünüze kaydedilsin mi?` + (already ? `\n\nDikkat: bu ay için ${already} tarihinde zaten kayıt yapılmış.` : "");
+  if (!confirm(msg)) return;
+  const btn = $("alSave");
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/portfolio/tx", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ transactions: keys.map((k) => ({ asset: k, side: "buy", usd: parts[k], strategy: `${st.name} · ${monthLabel(AL.signalMonth)} sinyali` })) }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    store.set(key, new Date().toLocaleDateString("tr-TR"));
+    store.set(doneKey(), JSON.stringify(keys));
+    renderAllocation();
+    toast(`<b>${keys.length} alım portföye kaydedildi.</b> Toplam portföy: ${usd(j.valuation.totals.value)}. <a href="/portfoy" style="color:inherit">Portföyüme git →</a>`, 7000);
+  } catch (e) {
+    toast(`Kaydedilemedi: ${esc(e.message)}. Sunucuyu yeniden başlatmanız gerekebilir (npm run web).`, 7000);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ------------------------------------------------------------------ STRATEJİ KARTLARI
@@ -354,10 +403,15 @@ function setPeriod(k) {
   store.set("panel.period", k);
   document.querySelectorAll("#periods button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.k === k)));
   renderKpis();
-  renderPerfChart();
+  safe(renderPerfChart);
   renderMatrix();
   renderTable();
-  renderProjection();
+  safe(renderProjection);
+}
+
+/** Grafik hatası (ör. kütüphane yüklenemedi) sayfanın geri kalanını durdurmasın. */
+function safe(fn) {
+  try { fn(); } catch (e) { if (String(e.message) !== "grafik yok") console.error(e); }
 }
 
 function renderKpis() {
@@ -379,8 +433,8 @@ function toggleVisible(k) {
   if (!visible.size) visible.add(k);
   store.set("panel.visible", JSON.stringify([...visible]));
   renderKpis();
-  renderPerfChart();
-  renderProjection();
+  safe(renderPerfChart);
+  safe(renderProjection);
 }
 
 let perfChart;
@@ -437,7 +491,7 @@ function renderPerfChart() {
     // Zirveden düşüş: katkılardan arındırılmış strateji getirisi (TWR) üzerinden
     const worst = {};
     for (const k of keys) {
-      const tw = R[k].twr;
+      const tw = R[k].twr || R[k].value;
       let peak = -Infinity;
       const dd = tw.map((v, i) => { peak = Math.max(peak, v); const x = (v / peak - 1) * 100; if (!worst[k] || x < worst[k].v) worst[k] = { v: x, m: R[k].months[i] }; return { time: t(R[k].months[i]), value: x }; });
       const s = perfChart.addSeries(LC.AreaSeries, { lineColor: color(k), topColor: color(k) + "00", bottomColor: color(k) + "30", invertFilledArea: true, lineWidth: 2, priceLineVisible: false, lastValueVisible: false });
@@ -753,10 +807,16 @@ function renderEverything() {
 (async () => {
   $("alList").innerHTML = `<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>`;
   reveal();
+  const health = await fetchJSON(["/api/health"]);
   [AL, BT] = await Promise.all([fetchJSON(["/api/allocation", "/out/allocation.json"]), fetchJSON(["/api/backtest", "/out/backtest.json"])]);
+  if (!health) {
+    $("staleBanner").innerHTML = `<div class="banner"><b>Panel sunucusu eski sürüm çalışıyor ya da kapalı.</b> Terminalde çalışan <code>npm run web</code>'i <b>Ctrl+C</b> ile durdurup yeniden başlatın. Yeni sürüm kod değişince kendini otomatik yeniden başlatır; bu uyarı bir daha çıkmaz.</div>`;
+  }
   if (BT && !BT.strategies) {
-    $("staleBanner").innerHTML = `<div class="banner">Eski bir <code>out/backtest.json</code> yüklendi. Panel sunucusunu çalıştırın (<code>npm run web</code>); sunucu backtest'i canlı hesaplar.</div>`;
-    BT = null;
+    // Eski out/backtest.json: stratejiler alanı yok — yerleşik tanımlarla göster, boş sayfa bırakma
+    const ok = BT.periods?.every((p) => ORDER.every((k) => p.results?.[k]));
+    if (ok) BT.strategies = FALLBACK_STRATEGIES;
+    else BT = null;
   }
   if (!AL) $("alList").innerHTML = `<div class="callout warn">Dağılım alınamadı — <code>npm run web</code> ile sunucuyu başlatın.</div>`;
   else initAllocationControls();

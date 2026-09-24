@@ -14,7 +14,7 @@
     "plan": "node src/cli/plan.ts",
     "takvim": "node src/cli/calendar.ts",
     "okx": "node src/cli/okx.ts",
-    "web": "node web/server.ts",
+    "web": "node --watch web/server.ts",
     "test": "node --test \"test/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },

@@ -11,7 +11,7 @@
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand"><span class="logo" aria-hidden="true"></span><div><b>Özgürlük Rotası</b><small id="meta">Reel (enflasyondan arındırılmış) USD</small></div></div>
-    <nav class="nav"><a href="/" aria-current="page">Panel</a><a href="/takvim">Aylık Takvim</a></nav>
+    <nav class="nav"><a href="/" aria-current="page">Panel</a><a href="/portfoy">Portföyüm</a><a href="/takvim">Aylık Takvim</a></nav>
     <div class="top-actions">
       <span class="pill" id="freshness"><i class="dot"></i><span>Yükleniyor…</span></span>
       <button class="btn" id="refreshAll" title="Fiyatları yeniden indir, sinyalleri ve backtest'i yeniden hesapla"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg><span>Verileri yenile</span></button>
@@ -50,6 +50,7 @@
 
         <div class="actions">
           <button class="btn primary" id="alCopy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Listeyi kopyala</button>
+          <button class="btn" id="alSave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Bu ayı portföye kaydet</button>
           <button class="btn ghost" id="alReset">İşaretleri temizle</button>
         </div>
       </div>
@@ -63,6 +64,7 @@
 
     <details class="fold"><summary>Mevcut portföyüm <small>— satış yapmadan dengelemek için (isteğe bağlı)</small></summary>
       <p class="note">Güncel USD değerlerini girin; katkı önce hedefin en çok altında kalan kalemlere yönlendirilir. Yalnız bu tarayıcıda saklanır.</p>
+      <div class="actions" style="margin-top:4px"><button class="btn" id="alFill">Portföyümden doldur</button><button class="btn ghost" id="alClear">Temizle</button></div>
       <div class="holdings" id="alHoldings"></div>
     </details>
     <details class="fold"><summary>Üç stratejiyi yan yana gör</summary><div class="scroll" id="alCompare"></div></details>

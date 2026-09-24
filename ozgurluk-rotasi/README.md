@@ -46,7 +46,7 @@ Böylece portföy satış yapmadan dengelenir.
 
 ## Panel (http://localhost:4173)
 
-`npm run web` ile açılır. Sunucu fiyatları indirir, sinyalleri ve backtest'i **canlı** hesaplar; ayrıca `npm run backtest` çalıştırmanız gerekmez.
+`npm run web` ile açılır. Sunucu **kod değiştiğinde kendini otomatik yeniden başlatır** (`node --watch`); `git pull` sonrası elle yeniden başlatmanız gerekmez. Eski bir sunucu çalışıyorsa panel bunu algılar ve uyarı gösterir. O durumda terminalde Ctrl+C ile durdurup `npm run web` ile yeniden başlatın. Sunucu fiyatları indirir, sinyalleri ve backtest'i **canlı** hesaplar; ayrıca `npm run backtest` çalıştırmanız gerekmez.
 
 - **Verileri yenile (sağ üst):** Fiyatları hemen yeniden indirir, dağılımı ve backtest'i yeniden hesaplar ve değişen oranları bildirim olarak gösterir. Veri sağlayıcılarını yormamak için en fazla 2 dakikada bir çalışır. Sunucu ayrıca verileri 12 saatte bir kendiliğinden tazeler.
 - **Bu ay ne yapmalıyım?** Al-tut çoklu, Hibrit ya da Ana plan'dan birini seçin. Tutarı girin ya da hızlı tutarlardan birini seçin; Ocak'ta yıllık ek otomatik açılır. Bu ayın **alım listesi** çıkar: her kalem için tutar, pay, trend durumu ve nereden alınacağı yazar. Aldıklarınızı işaretleyebilirsiniz; ilerleme çubuğu o ay için tarayıcıda saklanır. Animasyonlu dağılım halkası ve "Listeyi kopyala" da bu bölümde. "Mevcut portföyüm" alanı satış yapmadan dengeleme sağlar. Sinyal ay içinde değişmez; bir sonraki güncelleme tarihi ve kaç gün kaldığı gösterilir.
@@ -58,6 +58,30 @@ Böylece portföy satış yapmadan dengelenir.
 
   Altında ısı renkli dönem tablosu yer alır. `?view=diff&period=y10` gibi bağlantılarla doğrudan bir görünüm açılabilir.
 - **Gelecek projeksiyonu:** Seçili stratejinin getirisiyle Monte Carlo bandı ve katkı artışının etkisi.
+
+## Portföyüm (http://localhost:4173/portfoy)
+
+- **Kayıt:** Panelde **Bu ayı portföye kaydet** düğmesine basınca o ayın alım listesi anlık fiyatlarla portföye eklenir. Örnek: $400 altın, XAU/USD 4.000 iken **0,1 ons** olarak kaydedilir. Tek tek işlem eklemek için sayfadaki formu kullanın: tarih, varlık, alış/satış, tutar veya miktar, fiyat. Geçmiş bir tarih seçilirse fiyat alanı o günün kapanışıyla dolar.
+- **Fiyatlar:**
+
+  | Varlık | Kaynak |
+  | --- | --- |
+  | Altın | XAU/USD ons (OKX XAUT) |
+  | BTC, ETH | OKX |
+  | SPY, QQQ, DBC | Yahoo |
+  | BIST 100 | USD'ye çevrilmiş endeks |
+
+  "Fiyatları yenile" düğmesi bunları anlık olarak yeniden alır.
+- **Gösterilenler:**
+  - Toplam değer, maliyet, kâr/zarar ($ ve %) ve gerçekleşen kâr.
+  - Aylık değer grafiği.
+  - Pozisyon tablosu: miktar, ortalama maliyet, güncel fiyat, değer, kâr/zarar, pay.
+  - Seçilen stratejinin hedefine göre sapma ve mevcut ↔ hedef dağılım çubukları.
+  - Silinebilir işlem geçmişi.
+
+  Örnek: altın %10 yükselirse $440 değer ve +$40 kâr görünür.
+- **Kullanım:** Paneldeki "Mevcut portföyüm → Portföyümden doldur" düğmesi değerleri dağılım hesabına aktarır. Böylece yeni katkı hedefin altında kalan kalemlere gider.
+- **Saklama:** Veriler bu bilgisayarda `data/portfoy.json` dosyasında durur (Git'e girmez). JSON olarak yedeklenip geri yüklenebilir.
 
 ## Aylık Getiri Takvimi (http://localhost:4173/takvim)
 
