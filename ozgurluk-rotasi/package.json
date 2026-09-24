@@ -1,0 +1,24 @@
+{
+  "name": "ozgurluk-rotasi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "10-20 yıllık reel getiri hedefli, trend filtreli çekirdek + swing uydu portföy araştırma ve sinyal motoru",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "veri": "node src/cli/fetch.ts",
+    "backtest": "node src/cli/backtest.ts",
+    "sinyal": "node src/cli/signals.ts",
+    "plan": "node src/cli/plan.ts",
+    "okx": "node src/cli/okx.ts",
+    "web": "node web/server.ts",
+    "test": "node --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "typescript": "5.9.2"
+  }
+}

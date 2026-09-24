@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Özgürlük Rotası</title>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root { --bg:#f7f7f5; --panel:#fff; --ink:#1b1f24; --muted:#5d6570; --line:#e3e5e8; --accent:#1f6feb; --up:#1a7f37; --down:#cf222e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --panel:#171a21; --ink:#e6e8eb; --muted:#9aa3ad; --line:#2a2f3a; --accent:#58a6ff; --up:#3fb950; --down:#f85149; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:20px 16px 8px; max-width:1200px; margin:auto; }
+  h1 { margin:0; font-size:22px; } h2 { font-size:17px; margin:0 0 12px; }
+  .sub { color:var(--muted); }
+  main { max-width:1200px; margin:auto; padding:0 16px 40px; display:grid; gap:16px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; overflow:hidden; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+  .kpi { border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .kpi b { display:block; font-size:20px; } .kpi span { color:var(--muted); font-size:12px; }
+  .chart { height:380px; width:100%; }
+  .scroll { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th, td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; white-space:nowrap; }
+  th { color:var(--muted); font-weight:600; }
+  .controls { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  select, button { font:inherit; padding:6px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--ink); }
+  .legend { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:8px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:middle; }
+  .md h1 { font-size:18px; } .md h2 { font-size:15px; margin-top:18px; } .md blockquote { color:var(--muted); margin:8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Özgürlük Rotası</h1>
+  <div class="sub" id="meta">Hibrit trend çekirdeği ve swing uydusu · reel (enflasyondan arındırılmış) USD</div>
+</header>
+<main>
+  <section><h2>Ana plan — uzun dönem backtest</h2><div class="kpis" id="kpis"></div></section>
+  <section>
+    <h2>Portföy değeri: aynı katkı ($1.000/ay + $3.500/yıl)</h2>
+    <div class="controls"><select id="period"></select></div>
+    <div class="chart" id="equity"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+  <section><h2>Strateji karşılaştırması</h2><div class="scroll" id="table"></div></section>
+  <section>
+    <h2>Varlık grafiği ve swing işlemleri</h2>
+    <div class="controls"><select id="asset"></select><select id="strategy">
+      <option value="donchian">Donchian 55/20 (trend)</option>
+      <option value="rsi2">RSI(2) geri çekilme</option>
+      <option value="sweep">Range sapma + geri alım</option>
+    </select></div>
+    <div class="chart" id="candles"></div>
+    <div class="legend" id="stats"></div>
+  </section>
+  <section class="md"><div id="signals">Sinyal raporu yükleniyor…</div></section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

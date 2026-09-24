@@ -1,0 +1,7 @@
+node_modules/
+data/cache/
+out/
+.env
+.env.*
+!.env.example
+portfoy.json
