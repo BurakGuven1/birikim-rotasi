@@ -13,6 +13,9 @@
   header { padding:20px 16px 8px; max-width:1200px; margin:auto; }
   h1 { margin:0; font-size:22px; } h2 { font-size:17px; margin:0 0 12px; }
   .sub { color:var(--muted); }
+  .nav { display:flex; gap:4px; margin-bottom:12px; }
+  .nav a { color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:6px; border:1px solid transparent; }
+  .nav a[aria-current] { color:var(--ink); border-color:var(--line); background:var(--panel); }
   main { max-width:1200px; margin:auto; padding:0 16px 40px; display:grid; gap:16px; }
   section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; overflow:hidden; }
   .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
@@ -32,6 +35,7 @@
 </head>
 <body>
 <header>
+  <nav class="nav"><a href="/" aria-current="page">Panel</a><a href="/takvim">Aylık Takvim</a></nav>
   <h1>Özgürlük Rotası</h1>
   <div class="sub" id="meta">Hibrit trend çekirdeği ve swing uydusu · reel (enflasyondan arındırılmış) USD</div>
 </header>

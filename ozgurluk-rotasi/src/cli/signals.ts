@@ -7,6 +7,7 @@ import { trendScore } from "../engine/core.ts";
 import { atr, donchian, rsi, sma } from "../engine/indicators.ts";
 import { mdTable, num, pct, usd } from "../format.ts";
 import { loadUniverse, runSwing } from "../pipeline.ts";
+import { buildCalendar } from "../calendar.ts";
 
 loadEnv();
 const args = process.argv.slice(2);
@@ -183,6 +184,17 @@ if (!skipAlts) {
   } catch (err) {
     L.push(`Altcoin radarı alınamadı: ${(err as Error).message}`, "");
   }
+}
+
+// ---------------------------------------------------------------- 7) takvim notları
+try {
+  const cal = await buildCalendar();
+  L.push(`## 7) Mevsimsellik ve olay takvimi (son ${cal.lookbackYears} yıl)`, "");
+  for (const f of cal.focus) L.push(`**${f.label}:** ${f.lines.join(" · ")}`, "");
+  for (const up of cal.upcoming.filter((x) => x.daysLeft <= 120)) L.push(`**Yaklaşan: ${up.title} (${up.date}, ${up.daysLeft} gün)**`, "", ...up.lines.map((l) => `- ${l}`), "");
+  L.push(`_Mevsimsellik, trend kuralının önüne geçmez; yalnız zamanlama notudur. Ayrıntı: \`npm run web\` → Aylık Takvim._`, "");
+} catch (err) {
+  L.push(`Takvim hesaplanamadı: ${(err as Error).message}`, "");
 }
 
 L.push(`> Bu rapor sistematik kurallardan üretilir; yatırım tavsiyesi değildir. Emirleri kendiniz kontrol ederek girin.`);

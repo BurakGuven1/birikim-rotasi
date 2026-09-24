@@ -7,6 +7,7 @@ import { loadAsset } from "../src/data/load.ts";
 import { ROOT, env, loadEnv } from "../src/env.ts";
 import { atr, donchian, sma } from "../src/engine/indicators.ts";
 import { runSwing } from "../src/pipeline.ts";
+import { buildCalendar, type CalendarPayload } from "../src/calendar.ts";
 import { executeOrder } from "../src/live/orders.ts";
 
 loadEnv();
@@ -32,9 +33,21 @@ function safeEqual(a: string, b: string): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
+// Takvim: veri önbelleği 12 saatte bir tazelenir; ay kapanınca yeni ay otomatik eklenir.
+let calCache: { at: number; data: CalendarPayload } | undefined;
+async function calendar(): Promise<CalendarPayload> {
+  if (!calCache || Date.now() - calCache.at > 3_600_000) calCache = { at: Date.now(), data: await buildCalendar() };
+  return calCache.data;
+}
+
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   try {
+    if (url.pathname === "/api/takvim") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(await calendar()));
+      return;
+    }
     if (url.pathname === "/api/bars") {
       const asset = url.searchParams.get("asset") as AssetId;
       const strategy = (url.searchParams.get("strategy") ?? "donchian") as SwingStrategyId;
@@ -72,7 +85,7 @@ createServer(async (req, res) => {
     }
     const isOut = url.pathname.startsWith("/out/");
     const base = isOut ? OUT : WEB;
-    const rel = isOut ? url.pathname.slice(5) : url.pathname === "/" ? "index.html" : url.pathname.slice(1);
+    const rel = isOut ? url.pathname.slice(5) : url.pathname === "/" ? "index.html" : url.pathname === "/takvim" ? "takvim.html" : url.pathname.slice(1);
     const file = normalize(join(base, rel));
     if (!file.startsWith(base) || !existsSync(file)) {
       res.writeHead(404).end("bulunamadı — önce `npm run backtest` ve `npm run sinyal` çalıştırın");

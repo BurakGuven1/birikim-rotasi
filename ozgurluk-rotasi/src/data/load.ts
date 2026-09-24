@@ -39,6 +39,11 @@ export function convertByFx(bars: Bar[], fx: Bar[]): Bar[] {
   return out;
 }
 
+/** Kur dönüşümü olmadan ham seri (örn. BIST 100 TL) */
+export async function loadRaw(symbol: string, eodhd?: string): Promise<Bar[]> {
+  return daily(symbol, eodhd);
+}
+
 export async function loadAsset(id: AssetId): Promise<Bar[]> {
   const def = ASSETS[id];
   const bars = await daily(def.yahoo, def.eodhd);
