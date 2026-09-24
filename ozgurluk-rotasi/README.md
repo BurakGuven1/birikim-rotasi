@@ -14,6 +14,12 @@ en üst düzeye çıkarmak ve 10–20 yılda finansal özgürlük sermayesine ul
 
 📘 Strateji el kitabı: [docs/STRATEJI.md](docs/STRATEJI.md) · 📊 Backtest sonuçları: [docs/SONUCLAR.md](docs/SONUCLAR.md) · 📚 Kaynaklar: [docs/ARASTIRMA.md](docs/ARASTIRMA.md)
 
+## Hızlı başlangıç
+
+Windows'ta `ozgurluk-rotasi\baslat-windows.bat` dosyasına çift tıklayın. Bağımlılıklar kurulur, sunucu başlar ve tarayıcıda http://localhost:4173 açılır. macOS/Linux: `./baslat.sh`.
+
+> **Kodu güncelledikten sonra** (`git pull`) açık kalan eski bir terminal varsa kapatıp yeniden başlatın. Yeni sürüm bundan sonra kod değişince kendini otomatik yeniden başlatır.
+
 ## Kurulum
 
 Node.js ≥ 22.18 gerekir. TypeScript, derleme adımı olmadan doğrudan çalışır. Çalışma zamanında bağımlılık yok.

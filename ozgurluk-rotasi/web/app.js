@@ -343,7 +343,7 @@ async function saveMonthToPortfolio() {
     store.set(key, new Date().toLocaleDateString("tr-TR"));
     store.set(doneKey(), JSON.stringify(keys));
     renderAllocation();
-    toast(`<b>${keys.length} alım portföye kaydedildi.</b> Toplam portföy: ${usd(j.valuation.totals.value)}. <a href="/portfoy" style="color:inherit">Portföyüme git →</a>`, 7000);
+    toast(`<b>${keys.length} alım portföye kaydedildi.</b> Toplam portföy: ${usd(j.valuation.totals.value)}. <a href="/portfoy.html" style="color:inherit">Portföyüme git →</a>`, 7000);
   } catch (e) {
     toast(`Kaydedilemedi: ${esc(e.message)}. Sunucuyu yeniden başlatmanız gerekebilir (npm run web).`, 7000);
   } finally {
