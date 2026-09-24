@@ -29,8 +29,15 @@ function baseChart(el, opts = {}) {
     timeScale: { borderVisible: false },
     localization: { priceFormatter: usdShort },
     crosshair: { mode: 0 },
+    // Sayfayı kaydırırken grafiğin yakınlaşıp tarih aralığını değiştirmesini engelle
+    handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
     ...opts,
   });
+}
+
+function fitOnDblClick(el, chart) {
+  el.ondblclick = () => chart.timeScale().fitContent();
 }
 
 const P = () => BT.periods.find((p) => p.key === period);
@@ -105,6 +112,7 @@ function renderEquity() {
     s.setData(r.months.map((m, i) => ({ time: m + "-01", value: Math.max(r.value[i], 1) })));
   }
   equityChart.timeScale().fitContent();
+  fitOnDblClick(document.getElementById("equity"), equityChart);
   document.getElementById("legend").innerHTML =
     BT.variants.map((v) => `<button data-k="${v.key}" aria-pressed="${visible.has(v.key)}"><span class="sw" style="background:${color(v.key)}"></span>${esc(v.name)}</button>`).join("") +
     `<span style="color:var(--muted)"><span class="sw" style="background:var(--muted)"></span>Yatırılan</span>`;
@@ -149,6 +157,7 @@ function pjInputs() {
     growthMode: document.getElementById("pjGrowthMode").value,
     mode: document.querySelector("#pjMode button[aria-pressed=true]").dataset.v,
     source: document.getElementById("pjSource").value,
+    measure: document.querySelector("#pjMeasure button[aria-pressed=true]").dataset.v,
   };
 }
 
@@ -217,13 +226,19 @@ function renderProjection() {
   const show = (v, m) => (inp.mode === "nominal" ? v * (1 + inp.inf) ** ((m + 1) / 12) : v);
   const target = (inp.spend * 12) / 0.04;
 
-  document.getElementById("pjWarn").innerHTML = src.results.main.metrics.years < 5
-    ? `<div class="warn">Getiri varsayımı ${src.label.toLowerCase()} penceresinden alınıyor. Kısa dönem getirisini 20 yıla taşımak çok iyimser ya da çok kötümser olabilir.</div>` : "";
+  const rateOf = (k) => (inp.measure === "irr" ? src.results[k].metrics.realIrr : src.results[k].metrics.realCagr);
+  const measureLbl = inp.measure === "irr" ? "backtest deneyimi (IRR)" : "strateji getirisi (CAGR)";
+  const warns = [];
+  if (inp.source !== "sel" && src.key !== period)
+    warns.push(`Getiri varsayımı <b>${src.label}</b> döneminden alınıyor; yukarıda seçili dönem <b>${P().label}</b>. İkisini karşılaştırırken aynı dönemi seçin (Getiri varsayımı → "Seçili backtest dönemi").`);
+  if (src.results.main.metrics.years < 5)
+    warns.push(`${src.label} kısa bir pencere; bu getiriyi 20 yıla taşımak çok iyimser ya da çok kötümser olabilir.`);
+  document.getElementById("pjWarn").innerHTML = warns.map((w) => `<div class="warn">${w}</div>`).join("");
 
   const keys = BT.variants.map((v) => v.key).filter((k) => visible.has(k));
   const paths = {};
   for (const k of keys) {
-    const r = src.results[k].metrics.realCagr;
+    const r = rateOf(k);
     const rm = (1 + r) ** (1 / 12) - 1;
     paths[k] = simulatePath(() => rm, inp, months, nextMonth);
   }
@@ -244,16 +259,17 @@ function renderProjection() {
     invested.push(inv);
   }
   // Katkı artışının etkisi: aynı getiriyle, artışsız (sabit $) senaryo
-  const mainRm = (1 + src.results.main.metrics.realCagr) ** (1 / 12) - 1;
+  const mainRm = (1 + rateOf("main")) ** (1 / 12) - 1;
   const flatMain = simulatePath(() => mainRm, { ...inp, growthMode: "flat" }, months, nextMonth);
   line(cut(invested).map((v, m) => ({ time: dateAt(m), value: v })), { color: css("--muted"), lineWidth: 1, lineStyle: 2 });
   line(Array.from({ length: shown }, (_, m) => ({ time: dateAt(m), value: show(target, m) })), { color: css("--warn"), lineWidth: 1, lineStyle: 1 });
   for (const k of keys) line(cut(paths[k]).map((v, m) => ({ time: dateAt(m), value: show(v, m) })), { color: color(k), lastValueVisible: k === "main" });
   projChart.timeScale().fitContent();
+  fitOnDblClick(document.getElementById("projection"), projChart);
 
   document.getElementById("pjLegend").innerHTML =
-    keys.map((k) => `<span><span class="sw" style="background:${color(k)}"></span>${esc(BT.variants.find((v) => v.key === k).name)} (${pct(src.results[k].metrics.realCagr)}/yıl)</span>`).join("") +
-    `<span><span class="sw" style="background:transparent;border:1px dashed ${blue}"></span>Ana plan Monte Carlo %10–%90</span>` +
+    keys.map((k) => `<span><span class="sw" style="background:${color(k)}"></span>${esc(BT.variants.find((v) => v.key === k).name)} (${pct(rateOf(k))}/yıl)</span>`).join("") +
+    `<span><span class="sw" style="background:transparent;border:1px dashed ${blue}"></span>Ana plan Monte Carlo %10–%90 (her zaman 20+ yıl verisi)</span>` +
     `<span><span class="sw" style="background:var(--muted)"></span>Yatırılan</span><span><span class="sw" style="background:var(--warn)"></span>Hedef ${usdShort(target)}</span>`;
 
   const head = `<tr><th>Ufuk</th><th>Yıl</th><th>O yıl aylık katkı</th><th>Toplam yatırım</th>${keys.map((k) => `<th><span class="sw" style="background:${color(k)}"></span>${esc(shortName(k))}</th>`).join("")}<th>Ana plan MC (kötü / medyan / iyi)</th></tr>`;
@@ -273,7 +289,7 @@ function renderProjection() {
   document.getElementById("pjTable").innerHTML = `<table>${head}${rows}${reach}</table>`;
   document.getElementById("pjImpact").innerHTML = growthImpact(paths.main || null, flatMain, target, dateAt, inp);
   document.getElementById("pjNote").textContent =
-    `Getiri kaynağı: ${src.label} (${src.start} → ${BT.end}), her stratejinin reel CAGR'ı. Başlangıç: ${startYear}. ` +
+    `Getiri kaynağı: ${src.label} (${src.start} → ${BT.end}), her stratejinin ${measureLbl}. Başlangıç: ${startYear}. ` +
     `${inp.mode === "nominal" ? `Nominal gösterimde %${(inp.inf * 100).toFixed(1)} enflasyon varsayılır. ` : "Tutarlar bugünün alım gücüyle. "}` +
     `Katkılar her 12 ayda bir artar (${inp.growthMode === "flat" ? "artış yok" : inp.growthMode === "real" ? `enflasyon %${(inp.inf * 100).toFixed(1)} + %${(inp.growth * 100).toFixed(1)}` : `nominal %${(inp.growth * 100).toFixed(1)}`}); enflasyonun altındaki nominal artış, katkının bugünkü değerini eritir. ` +
     `Hedef = aylık harcama × 12 ÷ %4 güvenli çekim oranı. Geçmiş getiri geleceği garanti etmez.`;
@@ -291,6 +307,21 @@ function growthImpact(withGrowth, flat, target, dateAt, inp) {
   return `<div class="warn" style="border-left-color:var(--up)"><b>Katkı artışının etkisi (Ana plan, ${label}/yıl):</b> hedefe ulaşma sabit katkıyla ${at(iFlat)}, artışla ${mainPath ? at(iGrow) : "—"}${gain}${end20} (bugünün doları).${mainPath ? "" : " Karşılaştırma için Ana plan çizgisini açın."}</div>`;
 }
 
+const DESCRIPTIONS = {
+  spy: ["Kıyas", "Her ay tüm katkıyla yalnız S&P 500 alınır, hiç satılmaz. En basit ve en düşük maliyetli yol; tüm getiri tek bir piyasaya bağlı."],
+  static: ["Kıyas", "Yedi varlık sabit ağırlıkla tutulur: S&P %30 · Nasdaq %20 · Altın %15 · BIST %10 · BTC %15 · ETH %5 · Emtia %5. Her ay bu ağırlıklara geri dengelenir; hiçbir zaman nakde geçilmez. Getirisinin yaklaşık yarısı kriptodan gelir."],
+  sma10: ["Trend", "Aynı ağırlıklar; ay sonu fiyatı 10 aylık ortalamanın altındaki varlık tamamen nakde geçer (Faber). Düşüşü çok azaltır, hızlı toparlanmaları kaçırır."],
+  blend: ["Trend", "SMA10 + 12 aylık momentum: iki sinyalden biri olumsuzsa varlığın yarısı, ikisi de olumsuzsa tamamı nakde geçer."],
+  hybrid: ["Trend", "Her varlığın yarısı her zaman tutulur (al-tut), yarısı trend kuralına göre nakde geçer (Faber'in 'Trinity' yaklaşımı). Getiri ile düşüş arasında denge."],
+  prereg: ["Arşiv", "İlk yazılan plan: tam trend filtresi + %20 swing. Sonuçlardan önce kaydedildiği için dürüst bir kıyas olarak tutuluyor."],
+  main: ["Plan", "Portföyün %80'i Hibrit çekirdek, %20'si swing sistemleri (RSI2 + Donchian, OKX perp). Swing kolu düşüşü azaltır ama bu backtestlerde getiriyi artırmadı."],
+  aggr: ["Plan", "Ana plan + oynaklık hedefi: piyasa sakinken kaldıraçla 1,5 kata kadar büyütür, oynaklık artınca küçültür. Daha yüksek getiri, daha derin düşüş."],
+};
+
+function renderDescriptions() {
+  document.getElementById("desc").innerHTML = `<table><tr><th>Strateji</th><th>Tür</th><th style="text-align:left">Ne yapar?</th></tr>${BT.variants.map((v) => `<tr><td><span class="sw" style="background:${color(v.key)}"></span>${esc(v.name)}</td><td>${DESCRIPTIONS[v.key]?.[0] ?? ""}</td><td style="text-align:left;white-space:normal;min-width:320px">${esc(DESCRIPTIONS[v.key]?.[1] ?? v.note)}</td></tr>`).join("")}</table>`;
+}
+
 function shortName(k) {
   return { main: "Ana plan", aggr: "Agresif", static: "Al-tut çoklu", spy: "S&P 500", hybrid: "Hibrit", blend: "Trend (blend)", sma10: "Trend (SMA10)", prereg: "İlk plan" }[k] || k;
 }
@@ -298,7 +329,7 @@ function shortName(k) {
 function initProjectionControls() {
   const sel = document.getElementById("pjSource");
   sel.innerHTML = `<option value="sel">Seçili backtest dönemi</option>` + BT.periods.map((p) => `<option value="${p.key}">${p.label} (${p.start}→)</option>`).join("");
-  sel.value = store.get("panel.pjSource") || "long";
+  sel.value = store.get("panel.pjSource") || "sel";
   sel.onchange = () => { store.set("panel.pjSource", sel.value); renderProjection(); };
   for (const id of ["pjStart", "pjMonthly", "pjAnnual", "pjSpend", "pjInf"]) {
     const el = document.getElementById(id);
@@ -312,10 +343,16 @@ function initProjectionControls() {
     if (saved !== null) el.value = saved;
     el.oninput = el.onchange = () => { store.set("panel." + id, el.value); renderProjection(); };
   }
-  document.querySelectorAll("#pjMode button").forEach((b) => (b.onclick = () => {
-    document.querySelectorAll("#pjMode button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    renderProjection();
-  }));
+  for (const id of ["pjMode", "pjMeasure"]) {
+    const saved = store.get("panel." + id);
+    const btns = document.querySelectorAll(`#${id} button`);
+    if (saved) btns.forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.v === saved)));
+    btns.forEach((b) => (b.onclick = () => {
+      btns.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      store.set("panel." + id, b.dataset.v);
+      renderProjection();
+    }));
+  }
 }
 
 let candleChart;
@@ -384,6 +421,7 @@ function md(text) {
     const saved = store.get("panel.period");
     period = BT.periods.some((p) => p.key === saved) ? saved : "long";
     renderPeriodChips();
+    renderDescriptions();
     initProjectionControls();
     setPeriod(period);
   } catch (e) {

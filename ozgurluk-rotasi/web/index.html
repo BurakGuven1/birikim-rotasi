@@ -91,13 +91,15 @@
     <h2>Strateji karşılaştırması</h2>
     <p class="lead" id="tblLead"></p>
     <div class="scroll" id="table"></div>
+    <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Stratejiler ne yapar?</summary><div class="scroll" id="desc" style="margin-top:8px"></div></details>
   </section>
 
   <section>
     <h2>Gelecek projeksiyonu: bu başarı devam ederse</h2>
-    <p class="lead">Seçili backtest döneminin yıllık reel getirisi (zaman ağırlıklı CAGR) geleceğe sabit olarak taşınır. Mavi bant, ana planın 20 yıllık geçmiş aylık getirilerinden yapılan Monte Carlo'dur (kötü–iyi: %10–%90).</p>
+    <p class="lead">Seçilen dönemin yıllık reel getirisi geleceğe sabit olarak taşınır. <b>Strateji getirisi (CAGR)</b>: stratejinin kendi performansı; katkı zamanlamasının şansını içermez, geleceğe taşımak için daha temkinlidir. <b>Backtest deneyimi (IRR)</b>: aynı katkılarla geçmişte gerçekten yaşanan getiri; aynı dönemi seçerseniz backtest'teki son değeri yaklaşık olarak yeniden üretir. Kesikli mavi bant: ana planın 20+ yıllık aylık getirilerinden Monte Carlo (kötü–iyi: %10–%90). Grafikte çift tıklama tümünü gösterir.</p>
     <div class="controls">
       <label>Getiri varsayımı<select id="pjSource"></select></label>
+      <label>Getiri ölçüsü<span class="seg" id="pjMeasure"><button data-v="cagr" aria-pressed="true">Strateji (CAGR)</button><button data-v="irr" aria-pressed="false">Backtest deneyimi (IRR)</button></span></label>
       <label>Mevcut birikim ($)<input type="number" id="pjStart" value="0" min="0" step="1000" /></label>
       <label>Aylık katkı ($)<input type="number" id="pjMonthly" value="1000" min="0" step="100" /></label>
       <label>Yıllık ek ($)<input type="number" id="pjAnnual" value="3500" min="0" step="500" /></label>
