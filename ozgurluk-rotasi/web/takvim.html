@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Aylık Getiri Takvimi</title>
+<style>
+  :root {
+    --bg:#f7f7f5; --panel:#fff; --ink:#1b1f24; --ink2:#3d444d; --muted:#5d6570; --line:#e3e5e8; --accent:#1f6feb;
+    --neutral:#f0efec; --up:#1a7f37; --down:#cf222e; --up-soft:#e6f4ea; --down-soft:#fbe9ea; --warn:#9a6700;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1115; --panel:#171a21; --ink:#e6e8eb; --ink2:#c3c9d1; --muted:#9aa3ad; --line:#2a2f3a; --accent:#58a6ff;
+      --neutral:#2a2c30; --up:#2ea043; --down:#e5534b; --up-soft:#15291c; --down-soft:#2d1719; --warn:#d29922; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+  header, main { max-width:1240px; margin:auto; padding:0 16px; }
+  header { padding-top:20px; }
+  h1 { margin:0; font-size:22px; } h2 { font-size:16px; margin:0 0 10px; } h3 { font-size:14px; margin:0 0 6px; }
+  .sub { color:var(--muted); }
+  .nav { display:flex; gap:4px; margin-bottom:12px; }
+  .nav a { color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:6px; border:1px solid transparent; }
+  .nav a[aria-current] { color:var(--ink); border-color:var(--line); background:var(--panel); }
+  main { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding-bottom:48px; margin-top:12px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr)); gap:12px; }
+  .cards.wide { grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr)); margin-top:12px; }
+  table.mini { border-collapse:collapse; width:100%; font-size:12.5px; margin-top:6px; font-variant-numeric:tabular-nums; }
+  .mini th, .mini td { padding:4px 6px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  .mini th:first-child, .mini td:first-child { text-align:left; } .mini th { color:var(--muted); font-weight:600; font-size:11.5px; }
+  .mini small { color:var(--muted); font-weight:400; }
+  .card { border:1px solid var(--line); border-radius:8px; padding:12px; }
+  .card ul { margin:6px 0 0; padding-left:18px; } .card li { margin:2px 0; color:var(--ink2); }
+  .pill { display:inline-block; font-size:11px; padding:1px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); margin-left:6px; white-space:nowrap; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { font:inherit; cursor:pointer; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--ink2); }
+  .chip[aria-pressed="true"] { background:var(--ink); color:var(--panel); border-color:var(--ink); }
+  .toolbar { display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .toggles { display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:13px; }
+  .toggles label { display:flex; gap:4px; align-items:center; cursor:pointer; }
+  .scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table.heat { border-collapse:separate; border-spacing:2px; width:100%; min-width:860px; font-variant-numeric:tabular-nums; }
+  .heat th { font-weight:600; color:var(--muted); font-size:12px; padding:4px; text-align:center; }
+  .heat th.cur { color:var(--accent); }
+  .heat td { position:relative; height:40px; text-align:center; border-radius:4px; font-size:12.5px; font-weight:600; padding:0 2px; cursor:default; }
+  .heat td.y { color:var(--muted); font-weight:600; text-align:left; padding-left:6px; background:transparent; }
+  .heat td.empty { background:transparent; }
+  .heat td.partial { outline:2px dashed var(--muted); outline-offset:-2px; }
+  .heat td.total { border-left:2px solid var(--line); }
+  .heat td .dot { position:absolute; top:3px; right:4px; width:7px; height:7px; border-radius:50%; background:var(--ink); box-shadow:0 0 0 2px var(--panel); }
+  .heat td .dot.up { background:var(--warn); }
+  .heat td:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .heat tr.stat td { height:auto; padding:6px 2px; font-weight:500; color:var(--ink2); background:transparent; font-size:12px; }
+  .heat tr.stat td.hi { color:var(--up); font-weight:700; } .heat tr.stat td.lo { color:var(--down); font-weight:700; }
+  .heat tr.sep td { height:6px; }
+  .bar { height:4px; background:var(--down-soft); border-radius:2px; margin:4px auto 0; width:80%; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--up); }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; align-items:center; color:var(--muted); font-size:12px; margin-top:10px; }
+  .scale { display:flex; align-items:center; gap:6px; }
+  .scale span.g { width:140px; height:10px; border-radius:3px; }
+  .sw { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:middle; margin-right:4px; }
+  .insights { display:grid; gap:8px; }
+  .ins { display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border-radius:8px; border:1px solid var(--line); }
+  .ins b.tag { font-size:11px; padding:1px 8px; border-radius:999px; white-space:nowrap; }
+  .tag.strong { background:var(--up-soft); color:var(--up); } .tag.weak { background:var(--down-soft); color:var(--down); } .tag.event { background:var(--neutral); color:var(--ink2); }
+  .ev { font-size:11px; color:var(--muted); white-space:nowrap; margin-left:auto; }
+  table.plain { border-collapse:collapse; width:100%; font-size:13px; font-variant-numeric:tabular-nums; }
+  .plain th, .plain td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; white-space:nowrap; }
+  .plain th:first-child, .plain td:first-child { text-align:left; } .plain th { color:var(--muted); font-weight:600; }
+  .pos { color:var(--up); } .neg { color:var(--down); }
+  details { border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-top:8px; }
+  summary { cursor:pointer; font-weight:600; }
+  #tip { position:fixed; z-index:10; pointer-events:none; max-width:300px; background:var(--ink); color:var(--panel); padding:8px 10px; border-radius:8px; font-size:12.5px; line-height:1.45; opacity:0; transition:opacity .08s; box-shadow:0 6px 20px rgba(0,0,0,.25); }
+  #tip b { font-size:14px; } #tip .n { margin-top:4px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--panel) 30%, transparent); }
+  .note { color:var(--muted); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<header>
+  <nav class="nav"><a href="/">Panel</a><a href="/takvim" aria-current="page">Aylık Takvim</a></nav>
+  <h1>Aylık Getiri Takvimi</h1>
+  <div class="sub" id="meta">Son 10 yıl · ay ay yeşil/kırmızı kapanışlar, seçim ve olay notları</div>
+</header>
+<main>
+  <section><div class="cards" id="focus"></div><div class="cards wide" id="upcoming"></div></section>
+  <section>
+    <div class="toolbar">
+      <div class="chips" id="chips" role="group" aria-label="Varlık seçimi"></div>
+      <div class="toggles" id="toggles">
+        <label><input type="checkbox" data-t="elections" checked /> Seçimler</label>
+        <label><input type="checkbox" data-t="btc_halving" checked /> Halving</label>
+        <label><input type="checkbox" data-t="shock" checked /> Şoklar</label>
+      </div>
+    </div>
+    <div class="scroll"><table class="heat" id="heat"></table></div>
+    <div class="legend" id="legend"></div>
+    <div class="note" id="assetnote"></div>
+  </section>
+  <section>
+    <h2>Uyarılar ve eğilimler</h2>
+    <div class="insights" id="insights"></div>
+    <div class="note">"Kanıt" düzeyi, bu oranın varlığın genel yükselme oranına göre şans eseri çıkma olasılığını (binom testi) gösterir. 10 yıllık örneklemde "güçlü" bile garanti değildir. Mevsimselliği tek başına işlem sinyali olarak değil, trend sinyalleriyle birlikte zamanlama notu olarak kullanın.</div>
+  </section>
+  <section>
+    <h2>Seçim ve olay çalışması</h2>
+    <div id="events"></div>
+    <div class="note">Öncesi = olay gününden 6 ay (182 gün) ve 3 ay (91 gün) önce → olay günü. Sonrası = olay günü → 1 ay / 3 ay sonra. "Herhangi bir dönem" sütunu, aynı uzunluktaki tüm pencerelerin ortalamasıdır; olayın etkisini buna göre değerlendirin.</div>
+  </section>
+</main>
+<div id="tip" role="tooltip"></div>
+<script src="takvim.js"></script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Özgürlük Rotası</title>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root { --bg:#f7f7f5; --panel:#fff; --ink:#1b1f24; --ink2:#3d444d; --muted:#5d6570; --line:#e3e5e8; --accent:#2a78d6; --up:#1a7f37; --down:#cf222e; --soft:#f0efec; --warn:#9a6700;
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --panel:#171a21; --ink:#e6e8eb; --ink2:#c3c9d1; --muted:#9aa3ad; --line:#2a2f3a; --accent:#3987e5; --up:#3fb950; --down:#f85149; --soft:#22262e; --warn:#d29922;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#2ea043; --s7:#9085e9; --s8:#e66767; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+  header, main { max-width:1240px; margin:auto; padding:0 16px; }
+  header { padding-top:20px; }
+  h1 { margin:0; font-size:22px; } h2 { font-size:16px; margin:0 0 4px; } .lead { color:var(--muted); margin:0 0 12px; font-size:13px; }
+  .sub { color:var(--muted); }
+  .nav { display:flex; gap:4px; margin-bottom:12px; }
+  .nav a { color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:6px; border:1px solid transparent; }
+  .nav a[aria-current] { color:var(--ink); border-color:var(--line); background:var(--panel); }
+  main { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding-bottom:48px; margin-top:12px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0; }
+  .sticky { position:sticky; top:0; z-index:5; padding:10px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; box-shadow:0 4px 14px rgba(0,0,0,.04); }
+  .sticky .lbl { color:var(--muted); font-size:13px; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { font:inherit; font-size:13px; cursor:pointer; padding:5px 12px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--ink2); }
+  .chip[aria-pressed="true"] { background:var(--ink); color:var(--panel); border-color:var(--ink); }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .kpi { border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .kpi b { display:block; font-size:20px; font-variant-numeric:tabular-nums; } .kpi span { color:var(--muted); font-size:12px; }
+  .chart { height:380px; width:100%; }
+  .scroll { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:13px; font-variant-numeric:tabular-nums; }
+  th, td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; } th { color:var(--muted); font-weight:600; }
+  td.sel, th.sel { background:var(--soft); }
+  tr.main td { font-weight:600; }
+  .pos { color:var(--up); } .neg { color:var(--down); }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle; }
+  .legend { display:flex; gap:6px 14px; flex-wrap:wrap; font-size:12.5px; margin-top:8px; }
+  .legend button { font:inherit; background:none; border:0; padding:2px 0; color:var(--ink2); cursor:pointer; }
+  .legend button[aria-pressed="false"] { color:var(--muted); text-decoration:line-through; opacity:.6; }
+  .controls { display:flex; gap:12px 18px; flex-wrap:wrap; align-items:flex-end; margin:6px 0 12px; }
+  .controls label { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); }
+  input[type=number], select { font:inherit; font-size:13px; padding:6px 8px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--ink); width:130px; }
+  select { width:auto; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+  .seg button { font:inherit; font-size:13px; padding:6px 10px; border:0; background:var(--panel); color:var(--ink2); cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:var(--ink); color:var(--panel); }
+  .check { flex-direction:row !important; align-items:center; gap:6px !important; font-size:13px !important; color:var(--ink2) !important; }
+  .warn { border-left:3px solid var(--warn); background:var(--soft); padding:8px 12px; border-radius:6px; font-size:13px; color:var(--ink2); margin:8px 0; }
+  .note { color:var(--muted); font-size:12px; margin-top:8px; }
+  .hit { color:var(--up); font-weight:700; }
+  .md h1 { font-size:18px; } .md h2 { font-size:15px; margin-top:18px; } .md blockquote { color:var(--muted); margin:8px 0; } .md table td, .md table th { text-align:left; }
+</style>
+</head>
+<body>
+<header>
+  <nav class="nav"><a href="/" aria-current="page">Panel</a><a href="/takvim">Aylık Takvim</a></nav>
+  <h1>Özgürlük Rotası</h1>
+  <div class="sub" id="meta">Reel (ABD enflasyonundan arındırılmış) USD · $1.000/ay + $3.500/yıl</div>
+</header>
+<main>
+  <section class="sticky">
+    <span class="lbl">Backtest dönemi</span>
+    <div class="chips" id="periods" role="group" aria-label="Dönem"></div>
+  </section>
+
+  <section>
+    <h2 id="kpiTitle">Ana plan</h2>
+    <p class="lead" id="kpiLead"></p>
+    <div class="kpis" id="kpis"></div>
+    <div id="shortWarn"></div>
+  </section>
+
+  <section>
+    <h2>Dönemlere göre reel getiri (IRR)</h2>
+    <p class="lead">Her sütun: o dönemin başında $0 ile başlayıp her ay $1.000 + her Ocak $3.500 yatırsaydınız. Sütuna tıklayarak dönemi seçin.</p>
+    <div class="scroll" id="matrix"></div>
+  </section>
+
+  <section>
+    <h2>Portföy değeri</h2>
+    <p class="lead" id="eqLead"></p>
+    <div class="chart" id="equity"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section>
+    <h2>Strateji karşılaştırması</h2>
+    <p class="lead" id="tblLead"></p>
+    <div class="scroll" id="table"></div>
+  </section>
+
+  <section>
+    <h2>Gelecek projeksiyonu: bu başarı devam ederse</h2>
+    <p class="lead">Seçili backtest döneminin yıllık reel getirisi (zaman ağırlıklı CAGR) geleceğe sabit olarak taşınır. Mavi bant, ana planın 20 yıllık geçmiş aylık getirilerinden yapılan Monte Carlo'dur (kötü–iyi: %10–%90).</p>
+    <div class="controls">
+      <label>Getiri varsayımı<select id="pjSource"></select></label>
+      <label>Mevcut birikim ($)<input type="number" id="pjStart" value="0" min="0" step="1000" /></label>
+      <label>Aylık katkı ($)<input type="number" id="pjMonthly" value="1000" min="0" step="100" /></label>
+      <label>Yıllık ek ($)<input type="number" id="pjAnnual" value="3500" min="0" step="500" /></label>
+      <label>Aylık harcama hedefi ($, bugünün)<input type="number" id="pjSpend" value="5000" min="0" step="500" /></label>
+      <label>Gösterim<span class="seg" id="pjMode"><button data-v="real" aria-pressed="true">Bugünün doları</button><button data-v="nominal" aria-pressed="false">Nominal</button></span></label>
+      <label>Enflasyon (%)<input type="number" id="pjInf" value="3" min="0" step="0.5" /></label>
+      <label>Katkı artışı (%/yıl)<input type="number" id="pjGrowth" value="2.5" min="0" max="50" step="0.5" /></label>
+      <label>Artış türü<select id="pjGrowthMode">
+        <option value="nominal">Nominal: $1.000 → $1.025 → …</option>
+        <option value="real">Enflasyon + artış (reel büyür)</option>
+        <option value="flat">Artış yok (sabit $)</option>
+      </select></label>
+    </div>
+    <div id="pjWarn"></div>
+    <div class="chart" id="projection"></div>
+    <div class="legend" id="pjLegend"></div>
+    <div class="scroll" style="margin-top:14px" id="pjTable"></div>
+    <div id="pjImpact"></div>
+    <div class="note" id="pjNote"></div>
+  </section>
+
+  <section>
+    <h2>Varlık grafiği ve swing işlemleri</h2>
+    <div class="controls"><select id="asset"></select><select id="strategy">
+      <option value="donchian">Donchian 55/20 (trend)</option>
+      <option value="rsi2">RSI(2) geri çekilme</option>
+      <option value="sweep">Range sapma + geri alım</option>
+    </select></div>
+    <div class="chart" id="candles"></div>
+    <div class="legend" id="stats"></div>
+  </section>
+  <section class="md"><div id="signals">Sinyal raporu yükleniyor…</div></section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

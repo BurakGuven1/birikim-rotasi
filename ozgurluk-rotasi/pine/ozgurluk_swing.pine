@@ -1,0 +1,92 @@
+//@version=6
+// Özgürlük Rotası — Swing Sistemi (TradingView strateji)
+// Node motorundaki kurallarla birebir: sinyal bar kapanışında, dolum sonraki bar açılışında.
+//  • Donchian 55/20: 55 günlük kırılımda gir, 20 günlük karşı kırılımda çık, 2·ATR(20) başlangıç stopu
+//  • RSI(2): Fiyat > SMA200 iken RSI2 < 10 → long; kapanış > SMA5 veya 10 bar → çık; 3·ATR felaket stopu
+//  • Sweep: Range (20 bar) dibinin altına iğne + içeri kapanış, SMA200 yönünde → hedef range tepesi
+// Günlük grafikte kullanın. Alarm: "Order fills" ile webhook → web/server.ts /webhook
+strategy("Özgürlük Rotası Swing", overlay = true, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.1, slippage = 2, process_orders_on_close = false, calc_on_every_tick = false)
+
+mode      = input.string("Donchian 55/20", "Sistem", options = ["Donchian 55/20", "RSI(2) geri çekilme", "Sweep (range sapma)"])
+riskPct   = input.float(2.0, "İşlem başı risk % (Donchian/Sweep)", minval = 0.1, maxval = 5)
+allowShort = input.bool(true, "Short'a izin ver (Donchian/Sweep)")
+instId    = input.string("BTC-USDT-SWAP", "OKX enstrüman (webhook)")
+secret    = input.string("", "Webhook gizli anahtarı")
+live      = input.bool(false, "Canlı emir (sunucuda OKX_LIVE=1 de gerekir)")
+
+sma200 = ta.sma(close, 200)
+sma5   = ta.sma(close, 5)
+rsi2   = ta.rsi(close, 2)
+atr20  = ta.atr(20)
+atr14  = ta.atr(14)
+hi55 = ta.highest(high, 55)[1]
+lo55 = ta.lowest(low, 55)[1]
+hi20 = ta.highest(high, 20)[1]
+lo20 = ta.lowest(low, 20)[1]
+
+// Aylık rejim (Faber SMA10 + 12a momentum) — tekrar çizmeyen (non-repainting) tamamlanmış ay verisi
+mClose = request.security(syminfo.tickerid, "M", close[1], lookahead = barmerge.lookahead_on)
+mSma10 = request.security(syminfo.tickerid, "M", ta.sma(close, 10)[1], lookahead = barmerge.lookahead_on)
+mMom12 = request.security(syminfo.tickerid, "M", (close[1] / close[13]) - 1, lookahead = barmerge.lookahead_on)
+regime = (mClose > mSma10 ? 0.5 : 0.0) + (mMom12 > 0 ? 0.5 : 0.0)
+
+qtyForRisk(float stopDist) =>
+    float q = (strategy.equity * riskPct / 100) / stopDist
+    math.min(q, strategy.equity / close)
+
+msg(string side, float usdAmt, float stopPx) =>
+    '{"secret":"' + secret + '","instId":"' + instId + '","side":"' + side + '","usd":' + str.tostring(math.round(usdAmt)) + ',"stop":' + str.tostring(stopPx) + ',"live":' + (live ? "true" : "false") + '}'
+
+flat = strategy.position_size == 0
+var float stopPx = na
+
+if mode == "Donchian 55/20"
+    if flat and close > hi55
+        stopPx := close - 2 * atr20
+        q = qtyForRisk(2 * atr20)
+        strategy.entry("L", strategy.long, qty = q, alert_message = msg("buy", q * close, stopPx))
+    else if flat and allowShort and close < lo55
+        stopPx := close + 2 * atr20
+        q = qtyForRisk(2 * atr20)
+        strategy.entry("S", strategy.short, qty = q, alert_message = msg("sell", q * close, stopPx))
+    if strategy.position_size > 0
+        strategy.exit("L-stop", "L", stop = stopPx, alert_message = msg("sell", strategy.position_size * close, 0))
+        if close < lo20
+            strategy.close("L", comment = "20g dip", alert_message = msg("sell", strategy.position_size * close, 0))
+    if strategy.position_size < 0
+        strategy.exit("S-stop", "S", stop = stopPx, alert_message = msg("buy", -strategy.position_size * close, 0))
+        if close > hi20
+            strategy.close("S", comment = "20g zirve", alert_message = msg("buy", -strategy.position_size * close, 0))
+
+if mode == "RSI(2) geri çekilme"
+    if flat and close > sma200 and rsi2 < 10
+        stopPx := close - 3 * atr14
+        strategy.entry("L", strategy.long, alert_message = msg("buy", strategy.equity, stopPx))
+    if strategy.position_size > 0
+        strategy.exit("L-stop", "L", stop = stopPx)
+        if close > sma5 or bar_index - strategy.opentrades.entry_bar_index(0) + 1 >= 10
+            strategy.close("L", comment = "SMA5/zaman", alert_message = msg("sell", strategy.position_size * close, 0))
+
+var float tgtPx = na
+if mode == "Sweep (range sapma)"
+    if flat and close > sma200 and low < lo20 and close > lo20
+        stopPx := low - 0.25 * atr14
+        tgtPx := hi20
+        q = qtyForRisk(close - stopPx)
+        strategy.entry("L", strategy.long, qty = q, alert_message = msg("buy", q * close, stopPx))
+    else if flat and allowShort and close < sma200 and high > hi20 and close < hi20
+        stopPx := high + 0.25 * atr14
+        tgtPx := lo20
+        q = qtyForRisk(stopPx - close)
+        strategy.entry("S", strategy.short, qty = q, alert_message = msg("sell", q * close, stopPx))
+    if strategy.position_size > 0
+        strategy.exit("L-x", "L", stop = stopPx, limit = tgtPx)
+    if strategy.position_size < 0
+        strategy.exit("S-x", "S", stop = stopPx, limit = tgtPx)
+    if strategy.position_size != 0 and bar_index - strategy.opentrades.entry_bar_index(0) + 1 >= 20
+        strategy.close_all(comment = "zaman")
+
+plot(sma200, "SMA200", color.new(color.blue, 0))
+plot(mode == "Donchian 55/20" ? hi55 : hi20, "Üst kanal", color.new(color.gray, 30), style = plot.style_stepline)
+plot(mode == "Donchian 55/20" ? lo55 : lo20, "Alt kanal", color.new(color.gray, 30), style = plot.style_stepline)
+bgcolor(regime == 1 ? color.new(color.green, 92) : regime == 0 ? color.new(color.red, 92) : color.new(color.yellow, 94), title = "Aylık rejim")

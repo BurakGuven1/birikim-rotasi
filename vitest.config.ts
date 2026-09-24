@@ -2,6 +2,6 @@ import { configDefaults, defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
-  test: { environment: "node", exclude: [...configDefaults.exclude, "tests/e2e/**"], coverage: { reporter: ["text", "json"] } },
+  test: { environment: "node", exclude: [...configDefaults.exclude, "tests/e2e/**", "ozgurluk-rotasi/**"], coverage: { reporter: ["text", "json"] } },
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
 });
