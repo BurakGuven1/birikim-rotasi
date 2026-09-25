@@ -10,7 +10,8 @@ import type { PulsePayload } from "./pulse.ts";
 import type { AllocationPayload } from "./allocation.ts";
 import type { Valuation } from "./portfolio.ts";
 
-export const AI_MODEL = env("CLAUDE_MODEL") ?? "claude-opus-5";
+export const AI_MODEL = env("CLAUDE_MODEL") ?? "claude-opus-5-5"
+const AI_EFFORT = (env("CLAUDE_EFFORT") ?? "low") as "low" | "medium" | "high" | "max";
 
 let client: Anthropic | undefined;
 function getClient(): Anthropic {
@@ -122,6 +123,7 @@ export async function runClaude(
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       thinking: { type: "adaptive" },
+      output_config: { effort: AI_EFFORT },
       system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
       messages,
       ...(tools.length ? { tools } : {}),

@@ -165,8 +165,8 @@ async function streamPost(path, body, onLine) {
   const send = () => fetch(path, { method: "POST", headers: { "content-type": "application/json", "x-ai-code": store.get("ai.code") || "" }, body: JSON.stringify({ ...body, transactions: PfStore.load() }) });
   let r = await send();
   if (r.status === 401) {
-    const code = prompt("Claude analist bu panelde erişim koduyla korunuyor. Kodu girin:");
-    if (!code) throw new Error("Erişim kodu girilmedi.");
+    const code = prompt("Claude analisti kullanmak için erişim anahtarınızı girin:");
+    if (!code) throw new Error("Erişim anahtarı girilmedi.");
     store.set("ai.code", code.trim());
     r = await send();
     if (r.status === 401) store.set("ai.code", "");
