@@ -6,3 +6,4 @@ out/
 !.env.example
 portfoy.json
 data/portfoy.json*
+data/ai-brief.json

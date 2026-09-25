@@ -792,6 +792,15 @@ function md(text) {
   return out.join("");
 }
 
+// ------------------------------------------------------------------ nabız şeridi + öne çıkan haberler
+async function loadPulseStrip() {
+  const [p, n] = await Promise.all([fetchJSON(["/api/pulse"]), fetchJSON(["/api/news"])]);
+  if (p) $("pulseStrip").innerHTML = p.tickers.map((t) => `<a href="/haberler.html" title="${esc(t.label)}"><span>${esc(t.label)}</span><b>${t.unit === "%" ? t.price.toFixed(2) + "%" : t.price >= 1000 ? t.price.toLocaleString("en-US", { maximumFractionDigits: 0 }) : t.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b><span class="${t.change >= 0 ? "pos" : "neg"}">${t.change >= 0 ? "▲" : "▼"}${Math.abs(t.change * 100).toFixed(2)}%</span></a>`).join("") +
+    (p.fearGreed ? `<a href="/haberler.html"><span>Kripto korku/açgözlülük</span><b>${p.fearGreed.value}</b><span>${esc(p.fearGreed.label)}</span></a>` : "");
+  else $("pulseStrip").innerHTML = `<span class="note">Piyasa verisi alınamadı.</span>`;
+  if (n) $("topNews").innerHTML = n.items.filter((x) => x.highImpact.length || x.alsoIn.length).slice(0, 5).map((x) => `<a href="${/^https?:\/\//i.test(x.link) ? esc(x.link) : "#"}" target="_blank" rel="noopener noreferrer"><span class="sw" style="background:${x.highImpact.length ? "var(--down)" : "var(--warn)"}"></span><span>${esc(x.title)}</span><small>${esc(x.source)}</small></a>`).join("");
+}
+
 // ------------------------------------------------------------------ başlatma
 function renderEverything() {
   renderFreshness();
@@ -834,6 +843,7 @@ function renderEverything() {
   $("candles").closest("details").addEventListener("toggle", (e) => {
     if (e.target.open && !candlesDone) { candlesDone = true; renderCandles().catch((err) => ($("stats").textContent = err.message)); }
   });
+  loadPulseStrip();
   const s = await fetch("/out/SINYAL.md").catch(() => null);
   $("signals").innerHTML = s && s.ok ? md(await s.text()) : "Sinyal raporu yok — <code>npm run sinyal</code> çalıştırın.";
 })();

@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { extname, join, normalize } from "node:path";
 import { timingSafeEqual } from "node:crypto";
@@ -15,6 +15,9 @@ import { executeOrder } from "../src/live/orders.ts";
 import { APP_VERSION } from "../src/version.ts";
 import { fetchQuotes, type Quote } from "../src/data/quotes.ts";
 import { history, makeTx, readTxs, valuate, writeTxs, type TxInput } from "../src/portfolio.ts";
+import { getNews } from "../src/news.ts";
+import { getPulse } from "../src/pulse.ts";
+import { AI_MODEL, BRIEF_PROMPT, aiConfigured, aiErrorMessage, runClaude } from "../src/ai.ts";
 
 loadEnv();
 const PORT = Number(process.env.PORT ?? 4173);
@@ -105,6 +108,34 @@ async function portfolioPayload(force = false) {
   return { version: APP_VERSION, transactions: txs.slice().reverse(), valuation, quotes: q, history: hist };
 }
 
+const BRIEF_FILE = join(ROOT, "data", "ai-brief.json");
+
+/** NDJSON akışı: her satır {t:"text"|"status"|"done"|"error", ...} */
+async function streamAi(res: import("node:http").ServerResponse, prompt: string, body: { strategy?: string; webSearch?: boolean; history?: { role: "user" | "assistant"; content: string }[] }, save = false) {
+  res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
+  const send = (o: unknown) => res.write(JSON.stringify(o) + "\n");
+  let text = "";
+  try {
+    send({ t: "status", v: "Bağlam hazırlanıyor (piyasa, haberler, portföy)…" });
+    const [pulse, news, st] = await Promise.all([getPulse().catch(() => undefined), getNews().catch(() => undefined), getState()]);
+    const txs = readTxs();
+    const portfolio = txs.length ? valuate(txs, (await quotes()) as never) : undefined;
+    send({ t: "status", v: `Claude (${AI_MODEL}) düşünüyor…` });
+    const meta = await runClaude(prompt, { pulse, news: news?.items.slice(0, 30), allocation: st.allocation, strategy: body.strategy, portfolio }, {
+      text: (c) => { text += c; send({ t: "text", v: c }); },
+      status: (v) => send({ t: "status", v }),
+    }, { webSearch: !!body.webSearch, history: body.history });
+    if (save) {
+      mkdirSync(join(ROOT, "data"), { recursive: true });
+      writeFileSync(BRIEF_FILE, JSON.stringify({ at: new Date().toISOString(), text, meta, webSearch: !!body.webSearch }));
+    }
+    send({ t: "done", meta });
+  } catch (e) {
+    send({ t: "error", v: aiErrorMessage(e) });
+  }
+  res.end();
+}
+
 const json = (res: import("node:http").ServerResponse, code: number, data: unknown) => {
   res.writeHead(code, { "content-type": "application/json", "cache-control": "no-store" });
   res.end(JSON.stringify(data));
@@ -113,7 +144,22 @@ const json = (res: import("node:http").ServerResponse, code: number, data: unkno
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   try {
-    if (url.pathname === "/api/health") return json(res, 200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio"] });
+    if (url.pathname === "/api/health") return json(res, 200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "news", "ai"] });
+    if (url.pathname === "/api/news") return json(res, 200, await getNews(url.searchParams.get("refresh") === "1"));
+    if (url.pathname === "/api/pulse") return json(res, 200, await getPulse(url.searchParams.get("refresh") === "1"));
+    if (url.pathname === "/api/ai/status") {
+      const last = existsSync(BRIEF_FILE) ? JSON.parse(readFileSync(BRIEF_FILE, "utf8")) : null;
+      return json(res, 200, { configured: aiConfigured(), model: AI_MODEL, lastBrief: last });
+    }
+    if ((url.pathname === "/api/ai/brief" || url.pathname === "/api/ai/ask") && req.method === "POST") {
+      let b: { strategy?: string; webSearch?: boolean; question?: string; history?: { role: "user" | "assistant"; content: string }[] } = {};
+      try { b = JSON.parse((await body(req)) || "{}"); } catch { return json(res, 400, { error: "Geçersiz JSON" }); }
+      if (url.pathname === "/api/ai/brief") return streamAi(res, BRIEF_PROMPT, b, true);
+      const q = (b.question ?? "").trim().slice(0, 2000);
+      if (!q) return json(res, 400, { error: "Soru boş" });
+      const hist = (b.history ?? []).filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string").map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }));
+      return streamAi(res, q, { ...b, history: hist });
+    }
     if (url.pathname === "/api/quotes") return json(res, 200, await quotes(url.searchParams.get("refresh") === "1"));
     if (url.pathname === "/api/price") return json(res, 200, { price: (await priceOn(url.searchParams.get("asset") ?? "", url.searchParams.get("date") ?? undefined)) ?? null });
     if (url.pathname === "/api/portfolio" && req.method === "GET") return json(res, 200, await portfolioPayload(url.searchParams.get("refresh") === "1"));
@@ -198,7 +244,7 @@ createServer(async (req, res) => {
     }
     const isOut = url.pathname.startsWith("/out/");
     const base = isOut ? OUT : WEB;
-    const rel = isOut ? url.pathname.slice(5) : url.pathname === "/" ? "index.html" : url.pathname === "/takvim" ? "takvim.html" : url.pathname === "/portfoy" ? "portfoy.html" : url.pathname.slice(1);
+    const rel = isOut ? url.pathname.slice(5) : url.pathname === "/" ? "index.html" : url.pathname === "/takvim" ? "takvim.html" : url.pathname === "/portfoy" ? "portfoy.html" : url.pathname === "/haberler" ? "haberler.html" : url.pathname.slice(1);
     const file = normalize(join(base, rel));
     if (url.pathname.startsWith("/api/")) return json(res, 404, { error: `Bilinmeyen uç: ${url.pathname}`, version: APP_VERSION });
     if (!file.startsWith(base) || !existsSync(file)) {

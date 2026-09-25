@@ -65,6 +65,20 @@ Böylece portföy satış yapmadan dengelenir.
   Altında ısı renkli dönem tablosu yer alır. `?view=diff&period=y10` gibi bağlantılarla doğrudan bir görünüm açılabilir.
 - **Gelecek projeksiyonu:** Seçili stratejinin getirisiyle Monte Carlo bandı ve katkı artışının etkisi.
 
+## Haberler & AI (http://localhost:4173/haberler.html)
+
+- **Piyasa nabzı:** S&P 500, Nasdaq 100, VIX, ABD 10 yıllık faiz, dolar endeksi, altın, Brent, BTC, ETH, BIST 100 ve USD/TRY. Her biri günlük değişim ve 1 aylık mini grafikle gösterilir. Yanında kripto Korku/Açgözlülük göstergesi (alternative.me) ve yaklaşan önemli tarihler yer alır: 2026 FOMC kararları, ABD ara seçimi, halving, TR seçimi. Aynı şerit Panel'de de görünür.
+- **Haberler:** 16 ücretsiz kaynaktan toplanır: CoinDesk, Cointelegraph, Decrypt, Yahoo Finance, Federal Reserve, Bloomberg HT, Investing TR ve Google News aramaları (Fed, piyasalar, altın, petrol, BTC ETF, BIST, TCMB). Anahtar gerekmez; 10 dakikada bir yenilenir.
+  - **Otomatik işaretleme:** Her haber ilgili varlıklarla etiketlenir (BTC, altın, S&P, BIST…). Yüksek etkili olaylar (Fed/faiz, enflasyon, istihdam, düzenleme, sert hareket, kriz, seçim) ayrıca işaretlenir.
+  - **Önem puanı:** Kaynağa, etkiye, güncelliğe ve aynı haberi veren kaynak sayısına göre hesaplanır. Aynı hikâye tek kayıtta birleştirilir, liste başlıkları geriye düşer.
+  - **Filtreleme:** Kategori, varlık ve arama.
+- **Claude AI analist:** Claude aynı anda piyasa nabzını, en önemli 30 haberi, bu ayın trend sinyallerini, seçtiğiniz stratejinin dağılımını ve portföyünüzü görür.
+  - **Günlük brifing:** Gelişmeler, portföyünüz için anlamı, riskler, bu ayın planında değişiklik gerekip gerekmediği ve takvim. Son brifing saklanır.
+  - **Claude'a sor:** Sohbet. Her haberin yanındaki "Claude'a sor" düğmesi soruyu hazırlar.
+  - **Güncel arama:** "Claude web'de de arasın" açılırsa Claude güncel haberleri kendisi de arar.
+  - **Teknik:** Yanıtlar akış halinde gelir. Resmi Anthropic SDK'sı kullanılır: model `claude-opus-5`, uyarlanabilir düşünme, sunucu tarafı yedek model ve sistem isteminde önbellekleme.
+  - **Kurulum:** https://console.anthropic.com adresinden bir API anahtarı alın, `.env` dosyasına `ANTHROPIC_API_KEY=...` yazın ve sunucuyu yeniden başlatın. Her istek API hesabınızdan ücretlendirilir. Model `CLAUDE_MODEL` ile değiştirilebilir.
+
 ## Portföyüm (http://localhost:4173/portfoy)
 
 - **Kayıt:** Panelde **Bu ayı portföye kaydet** düğmesine basınca o ayın alım listesi anlık fiyatlarla portföye eklenir. Örnek: $400 altın, XAU/USD 4.000 iken **0,1 ons** olarak kaydedilir. Tek tek işlem eklemek için sayfadaki formu kullanın: tarih, varlık, alış/satış, tutar veya miktar, fiyat. Geçmiş bir tarih seçilirse fiyat alanı o günün kapanışıyla dolar.
