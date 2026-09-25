@@ -22,7 +22,7 @@ Windows'ta `ozgurluk-rotasi\baslat-windows.bat` dosyasına çift tıklayın. Ba�
 
 ## Kurulum
 
-Node.js ≥ 22.18 gerekir. TypeScript, derleme adımı olmadan doğrudan çalışır. Çalışma zamanında bağımlılık yok.
+Node.js ≥ 22.6 gerekir (npm betikleri `--experimental-strip-types` bayrağını kendisi ekler). TypeScript, derleme adımı olmadan doğrudan çalışır. Çalışma zamanında bağımlılık yok.
 
 ```sh
 cd ozgurluk-rotasi
@@ -101,7 +101,7 @@ Böylece portföy satış yapmadan dengelenir.
 
   Örnek: altın %10 yükselirse $440 değer ve +$40 kâr görünür.
 - **Kullanım:** Paneldeki "Mevcut portföyüm → Portföyümden doldur" düğmesi değerleri dağılım hesabına aktarır. Böylece yeni katkı hedefin altında kalan kalemlere gider.
-- **Saklama:** Veriler bu bilgisayarda `data/portfoy.json` dosyasında durur (Git'e girmez). JSON olarak yedeklenip geri yüklenebilir.
+- **Saklama:** İşlemler yalnızca kullanılan cihazın tarayıcısında (localStorage) durur, sunucuya kaydedilmez. Paneli paylaştığınız biri sizin portföyünüzü göremez, siz de onunkini. Başka cihaza taşımak ya da yedeklemek için Dışa aktar / İçe aktar kullanılır. Eski sürümün `data/portfoy.json` dosyası, yerelde ilk açılışta tarayıcıya bir kez aktarılır.
 
 ## Aylık Getiri Takvimi (http://localhost:4173/takvim)
 
@@ -113,6 +113,16 @@ Takvim şu varlıkları kapsar: XU100 (TL ve USD), S&P 500, Nasdaq 100, altın, 
 - **Seçim ve olay çalışması:** Her seçim için öncesindeki 6 ve 3 ayın, sonrasındaki 1 ve 3 ayın getirisi hesaplanır. Aynı uzunluktaki "herhangi bir dönem" ortalamasıyla karşılaştırılır. Örneğin TL bazında XU100 seçim öncesi 6 ayda ortalama yükseliyor olsa bile, yüksek enflasyon döneminde bu herhangi bir 6 aydan daha iyi olmayabilir.
 - **Kartlar:** "Bu ay / gelecek ay" ve "yaklaşan olaylar" kartları (ör. ABD ara seçimi 3 Kasım 2026) en üstte yer alır. Aynı notlar `npm run sinyal` raporunun 7. bölümünde de bulunur.
 - **Güncelleme:** Sunucu fiyatları 12 saatte bir, takvimi saatte bir yeniden hesaplar. Bir ay kapandığında yeni ay otomatik eklenir ve istatistiklere katılır. Devam eden ay kesikli çerçeveyle gösterilir ve istatistiklere dahil edilmez.
+
+## Netlify'da yayınlama
+
+Netlify'da bu repodan bir proje açın. Base directory `ozgurluk-rotasi` olsun. Build command, Publish ve Functions alanlarını boş bırakın; bunları `netlify.toml` belirler (`web`, `netlify/functions`). Sayfalar sabit dosya olarak yayınlanır. `/api/*` uçları ise `netlify/functions/api.ts` fonksiyonundan gelir ve yerel sunucuyla aynı kodu (`src/api.ts`) kullanır.
+
+Ortam değişkenleri (Project configuration → Environment variables):
+- `ANTHROPIC_API_KEY`: Claude analist için (isteğe bağlı).
+- `AI_ACCESS_CODE`: Tanımlanırsa Claude analisti yalnızca bu kodu bilenler kullanabilir. API ücreti sizden kesildiği için paneli paylaşıyorsanız önerilir.
+
+Netlify'da TradingView webhook'u ve canlı OKX emirleri kapalıdır.
 
 ## TradingView
 

@@ -161,7 +161,16 @@ async function api(path, opts) {
 
 /** NDJSON akışını okur; her satırda onLine çağrılır. */
 async function streamPost(path, body, onLine) {
-  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  // Portföy sunucuda değil bu tarayıcıda durur; Claude'un görmesi için isteğe eklenir.
+  const send = () => fetch(path, { method: "POST", headers: { "content-type": "application/json", "x-ai-code": store.get("ai.code") || "" }, body: JSON.stringify({ ...body, transactions: PfStore.load() }) });
+  let r = await send();
+  if (r.status === 401) {
+    const code = prompt("Claude analist bu panelde erişim koduyla korunuyor. Kodu girin:");
+    if (!code) throw new Error("Erişim kodu girilmedi.");
+    store.set("ai.code", code.trim());
+    r = await send();
+    if (r.status === 401) store.set("ai.code", "");
+  }
   if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `HTTP ${r.status}`); }
   const reader = r.body.getReader();
   const dec = new TextDecoder();
@@ -195,7 +204,7 @@ async function runBrief() {
       if (m.t === "text") { text += m.v; out.innerHTML = md(text); }
       else if (m.t === "status") st.innerHTML = `<span class="spin"></span><span>${esc(m.v)}</span>`;
       else if (m.t === "error") { out.innerHTML = `<div class="callout warn">${esc(m.v)}</div>`; st.textContent = ""; }
-      else if (m.t === "done") { st.textContent = `Hazır · ${new Date().toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`; $("briefMeta").textContent = metaLine(m.meta); }
+      else if (m.t === "done") { store.set("ai.lastBrief", JSON.stringify({ at: new Date().toISOString(), text, meta: m.meta })); st.textContent = `Hazır · ${new Date().toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`; $("briefMeta").textContent = metaLine(m.meta); }
     });
   } catch (e) {
     out.innerHTML = `<div class="callout warn">${esc(e.message)}</div>`;
@@ -231,12 +240,14 @@ async function ask(q) {
 }
 
 async function loadAiStatus() {
-  const s = await api("/api/ai/status");
+  const s = await api("/api/ai/status", { headers: { "x-ai-code": store.get("ai.code") || "" } });
+  // Son brifing sunucuda değil bu tarayıcıda saklanır (portföy bilgisi içerebilir)
+  try { s.lastBrief = JSON.parse(store.get("ai.lastBrief") || "null"); } catch { s.lastBrief = null; }
   $("aiStatus").innerHTML = `<div class="sig"><small>Model</small><b>${esc(s.model)}</b></div><div class="sig"><small>Durum</small><b class="${s.configured ? "pos" : ""}">${s.configured ? "Hazır" : "Anahtar gerekli"}</b></div>`;
   $("aiSetup").innerHTML = s.configured ? "" : `<div class="callout warn setup"><b>Claude'u etkinleştirmek için bir kez:</b><ol>
     <li><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> adresinden bir API anahtarı oluşturun.</li>
-    <li><code>ozgurluk-rotasi/.env</code> dosyasına <code>ANTHROPIC_API_KEY=sk-ant-...</code> satırını ekleyin (Git'e girmez).</li>
-    <li>Sunucuyu yeniden başlatın (<code>npm run web</code>). Her brifing/soru, API hesabınızdan küçük bir ücretle faturalanır.</li></ol></div>`;
+    <li>Yerelde: <code>ozgurluk-rotasi/.env</code> dosyasına <code>ANTHROPIC_API_KEY=sk-ant-...</code> satırını ekleyip sunucuyu yeniden başlatın (<code>npm run web</code>).</li>
+    <li>Netlify'da: Project configuration → Environment variables'a aynı değişkeni ekleyip yeniden deploy edin. Her brifing/soru, API hesabınızdan küçük bir ücretle faturalanır.</li></ol></div>`;
   if (s.lastBrief) {
     $("briefOut").innerHTML = md(s.lastBrief.text);
     $("briefStatus").textContent = `Son brifing · ${new Date(s.lastBrief.at).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`;
