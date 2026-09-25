@@ -15,7 +15,11 @@ const AI_EFFORT = (env("CLAUDE_EFFORT") ?? "low") as "low" | "medium" | "high" |
 
 let client: Anthropic | undefined;
 function getClient(): Anthropic {
-  client ??= new Anthropic();
+  const workspace = env("ANTHROPIC_WORKSPACE_ID");
+  client ??= new Anthropic({
+    ...(env("ANTHROPIC_API_KEY") ? { apiKey: env("ANTHROPIC_API_KEY") } : {}),
+    ...(workspace ? { defaultHeaders: { "anthropic-workspace-id": workspace } } : {}),
+  });
   return client;
 }
 
