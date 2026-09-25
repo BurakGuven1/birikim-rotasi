@@ -14,6 +14,12 @@ en üst düzeye çıkarmak ve 10–20 yılda finansal özgürlük sermayesine ul
 
 📘 Strateji el kitabı: [docs/STRATEJI.md](docs/STRATEJI.md) · 📊 Backtest sonuçları: [docs/SONUCLAR.md](docs/SONUCLAR.md) · 📚 Kaynaklar: [docs/ARASTIRMA.md](docs/ARASTIRMA.md)
 
+## Hızlı başlangıç
+
+Windows'ta `ozgurluk-rotasi\baslat-windows.bat` dosyasına çift tıklayın. Bağımlılıklar kurulur, sunucu başlar ve tarayıcıda http://localhost:4173 açılır. macOS/Linux: `./baslat.sh`.
+
+> **Kodu güncelledikten sonra** (`git pull`) açık kalan eski bir terminal varsa kapatıp yeniden başlatın. Yeni sürüm bundan sonra kod değişince kendini otomatik yeniden başlatır.
+
 ## Kurulum
 
 Node.js ≥ 22.18 gerekir. TypeScript, derleme adımı olmadan doğrudan çalışır. Çalışma zamanında bağımlılık yok.
@@ -46,10 +52,56 @@ Böylece portföy satış yapmadan dengelenir.
 
 ## Panel (http://localhost:4173)
 
-- **Dönem filtresi:** Son 1 / 2 / 3 / 5 / 7 / 10 / 15 yıl, 20+ yıl (2006'dan beri) ve 2018+ seçilebilir. Her pencere o tarihte $0 ile başlanıp aynı katkıların yapıldığı varsayımıyla hesaplanır. KPI'lar, grafik ve tablo seçili döneme göre güncellenir.
-- **Dönem matrisi:** Tüm stratejilerin tüm dönemlerdeki reel getirisi tek tabloda görünür. Böylece hangi stratejinin tutarlı olduğu, hangisinin yalnız belirli bir dönemde parladığı görülür.
-- **Gelecek projeksiyonu:** "Bu başarı devam ederse" sorusunu yanıtlar. Seçilen dönemin reel getirisi 20 yıl ileri taşınır. Tablo 1, 3, 5, 10, 15 ve 20 yıl sonra hangi yılda ne kadar yatırımla hangi değere ulaşılacağını ve hedefe hangi tarihte ulaşılacağını gösterir. Mevcut birikim, katkılar, **yıllık katkı artışı** (nominal %X ya da enflasyon + %X), harcama hedefi, enflasyon ve reel/nominal gösterim ayarlanabilir. "Katkı artışının etkisi" kutusu hedefe kaç yıl erken ulaşıldığını gösterir. Hedef tarihi 30 yıla kadar aranır. Ana plan için Monte Carlo bandı (kötü %10 – iyi %90) çizilir.
-- **Kalıcılık:** Strateji çizgileri lejanttan açılıp kapatılır. Seçimler tarayıcıda hatırlanır.
+`npm run web` ile açılır. Sunucu **kod değiştiğinde kendini otomatik yeniden başlatır** (`node --watch`); `git pull` sonrası elle yeniden başlatmanız gerekmez. Eski bir sunucu çalışıyorsa panel bunu algılar ve uyarı gösterir. O durumda terminalde Ctrl+C ile durdurup `npm run web` ile yeniden başlatın. Sunucu fiyatları indirir, sinyalleri ve backtest'i **canlı** hesaplar; ayrıca `npm run backtest` çalıştırmanız gerekmez.
+
+- **Verileri yenile (sağ üst):** Fiyatları hemen yeniden indirir, dağılımı ve backtest'i yeniden hesaplar ve değişen oranları bildirim olarak gösterir. Veri sağlayıcılarını yormamak için en fazla 2 dakikada bir çalışır. Sunucu ayrıca verileri 12 saatte bir kendiliğinden tazeler.
+- **Bu ay ne yapmalıyım?** Al-tut çoklu, Hibrit ya da Ana plan'dan birini seçin. Tutarı girin ya da hızlı tutarlardan birini seçin; Ocak'ta yıllık ek otomatik açılır. Bu ayın **alım listesi** çıkar: her kalem için tutar, pay, trend durumu ve nereden alınacağı yazar. Aldıklarınızı işaretleyebilirsiniz; ilerleme çubuğu o ay için tarayıcıda saklanır. Animasyonlu dağılım halkası ve "Listeyi kopyala" da bu bölümde. "Mevcut portföyüm" alanı satış yapmadan dengeleme sağlar. Sinyal ay içinde değişmez; bir sonraki güncelleme tarihi ve kaç gün kaldığı gösterilir.
+- **Üç strateji:** Her kartta 20 yıllık büyüme eğrisi, karşılaştırmalı metrik çubukları, nasıl çalıştığı, kimin için uygun olduğu ve riski yer alır.
+- **Geçmiş performans:** Dönem filtresi (1 / 2 / 3 / 5 / 7 / 10 / 15 yıl, 20+ yıl, 2018+) ve strateji başına özet kartlar. Üç grafik görünümü var:
+  - **Portföy değeri:** Hangi stratejinin ayların yüzde kaçında önde olduğunu da yazar.
+  - **Fark ($):** İki strateji arasındaki dolar farkı. Yeşil alan, ilk stratejinin önde olduğu ayları gösterir; en çok geride kalınan an ve dönem sonu farkı da yazılır.
+  - **Zirveden düşüş (%):** Katkılardan bağımsız strateji getirisi üzerinden hesaplanır.
+
+  Altında ısı renkli dönem tablosu yer alır. `?view=diff&period=y10` gibi bağlantılarla doğrudan bir görünüm açılabilir.
+- **Gelecek projeksiyonu:** Seçili stratejinin getirisiyle Monte Carlo bandı ve katkı artışının etkisi.
+
+## Haberler & AI (http://localhost:4173/haberler.html)
+
+- **Piyasa nabzı:** S&P 500, Nasdaq 100, VIX, ABD 10 yıllık faiz, dolar endeksi, altın, Brent, BTC, ETH, BIST 100 ve USD/TRY. Her biri günlük değişim ve 1 aylık mini grafikle gösterilir. Yanında kripto Korku/Açgözlülük göstergesi (alternative.me) ve yaklaşan önemli tarihler yer alır: 2026 FOMC kararları, ABD ara seçimi, halving, TR seçimi. Aynı şerit Panel'de de görünür.
+- **Haberler:** 16 ücretsiz kaynaktan toplanır: CoinDesk, Cointelegraph, Decrypt, Yahoo Finance, Federal Reserve, Bloomberg HT, Investing TR ve Google News aramaları (Fed, piyasalar, altın, petrol, BTC ETF, BIST, TCMB). Anahtar gerekmez; 10 dakikada bir yenilenir.
+  - **Otomatik işaretleme:** Her haber ilgili varlıklarla etiketlenir (BTC, altın, S&P, BIST…). Yüksek etkili olaylar (Fed/faiz, enflasyon, istihdam, düzenleme, sert hareket, kriz, seçim) ayrıca işaretlenir.
+  - **Önem puanı:** Kaynağa, etkiye, güncelliğe ve aynı haberi veren kaynak sayısına göre hesaplanır. Aynı hikâye tek kayıtta birleştirilir, liste başlıkları geriye düşer.
+  - **Filtreleme:** Kategori, varlık ve arama.
+- **Claude AI analist:** Claude aynı anda piyasa nabzını, en önemli 30 haberi, bu ayın trend sinyallerini, seçtiğiniz stratejinin dağılımını ve portföyünüzü görür.
+  - **Günlük brifing:** Gelişmeler, portföyünüz için anlamı, riskler, bu ayın planında değişiklik gerekip gerekmediği ve takvim. Son brifing saklanır.
+  - **Claude'a sor:** Sohbet. Her haberin yanındaki "Claude'a sor" düğmesi soruyu hazırlar.
+  - **Güncel arama:** "Claude web'de de arasın" açılırsa Claude güncel haberleri kendisi de arar.
+  - **Teknik:** Yanıtlar akış halinde gelir. Resmi Anthropic SDK'sı kullanılır: model `claude-opus-5`, uyarlanabilir düşünme, sunucu tarafı yedek model ve sistem isteminde önbellekleme.
+  - **Kurulum:** https://console.anthropic.com adresinden bir API anahtarı alın, `.env` dosyasına `ANTHROPIC_API_KEY=...` yazın ve sunucuyu yeniden başlatın. Her istek API hesabınızdan ücretlendirilir. Model `CLAUDE_MODEL` ile değiştirilebilir.
+
+## Portföyüm (http://localhost:4173/portfoy)
+
+- **Kayıt:** Panelde **Bu ayı portföye kaydet** düğmesine basınca o ayın alım listesi anlık fiyatlarla portföye eklenir. Örnek: $400 altın, XAU/USD 4.000 iken **0,1 ons** olarak kaydedilir. Tek tek işlem eklemek için sayfadaki formu kullanın: tarih, varlık, alış/satış, tutar veya miktar, fiyat. Geçmiş bir tarih seçilirse fiyat alanı o günün kapanışıyla dolar.
+- **Fiyatlar:**
+
+  | Varlık | Kaynak |
+  | --- | --- |
+  | Altın | XAU/USD ons (OKX XAUT) |
+  | BTC, ETH | OKX |
+  | SPY, QQQ, DBC | Yahoo |
+  | BIST 100 | USD'ye çevrilmiş endeks |
+
+  "Fiyatları yenile" düğmesi bunları anlık olarak yeniden alır.
+- **Gösterilenler:**
+  - Toplam değer, maliyet, kâr/zarar ($ ve %) ve gerçekleşen kâr.
+  - Aylık değer grafiği.
+  - Pozisyon tablosu: miktar, ortalama maliyet, güncel fiyat, değer, kâr/zarar, pay.
+  - Seçilen stratejinin hedefine göre sapma ve mevcut ↔ hedef dağılım çubukları.
+  - Silinebilir işlem geçmişi.
+
+  Örnek: altın %10 yükselirse $440 değer ve +$40 kâr görünür.
+- **Kullanım:** Paneldeki "Mevcut portföyüm → Portföyümden doldur" düğmesi değerleri dağılım hesabına aktarır. Böylece yeni katkı hedefin altında kalan kalemlere gider.
+- **Saklama:** Veriler bu bilgisayarda `data/portfoy.json` dosyasında durur (Git'e girmez). JSON olarak yedeklenip geri yüklenebilir.
 
 ## Aylık Getiri Takvimi (http://localhost:4173/takvim)
 

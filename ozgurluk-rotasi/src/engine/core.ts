@@ -32,6 +32,12 @@ export interface CoreOptions {
   volTarget?: number;
   maxGross?: number;
   borrowSpread?: number;
+  /**
+   * Takvim (mevsimsellik) katmanı: bir sonraki ayın geçmiş "yeşil kapanış" oranına göre
+   * varlık o ay satılır (≤ sellAt) ya da ağırlığı artırılır (≥ buyAt).
+   * walkforward: yalnız o tarihe kadar bilinen yıllar · insample: tüm veri (ileriye bakar, yalnız kıyas için)
+   */
+  seasonal?: { lookback: number; sellAt: number; buyAt: number; overweight: number; mode: "walkforward" | "insample" };
   /** Uydu kolu: aylık getirileri ve sabit portföy payı */
   sleeve?: { returns: Map<string, number>; weight: number };
   contributions: Contributions;
@@ -109,6 +115,27 @@ export function trendScore(
   if (rule === "sma10") return smaOn;
   if (rule === "tsmom12") return momOn;
   return 0.5 * smaOn + 0.5 * momOn;
+}
+
+/**
+ * Takvim ayı `calMonth` (1..12) için yeşil kapanış oranı.
+ * walkforward: `uptoIdx` dahil o ana kadar kapanmış ayların son `lookback` gözlemi.
+ */
+export function seasonalUpRatio(
+  months: string[],
+  closes: (number | undefined)[],
+  calMonth: number,
+  uptoIdx: number,
+  lookback: number,
+): { up: number; n: number } {
+  const xs: number[] = [];
+  for (let t = uptoIdx; t >= 1 && xs.length < lookback; t--) {
+    if (Number(months[t].slice(5, 7)) !== calMonth) continue;
+    const a = closes[t - 1];
+    const b = closes[t];
+    if (a !== undefined && b !== undefined) xs.push(b / a - 1);
+  }
+  return { up: xs.filter((x) => x > 0).length, n: xs.length };
 }
 
 /** Varlık yeterli geçmişe sahipse (momentum penceresi kadar) kullanılabilir. */
@@ -209,6 +236,20 @@ export function runCore(data: CoreData, opt: CoreOptions): CoreResult {
       const score = trendScore(closes[id], i, opt.rule, tb, opt.smaMonths, opt.momentumMonths);
       const floor = opt.trendFloor ?? 0;
       w[id] = strategic * (floor + (1 - floor) * score);
+    }
+    if (opt.seasonal && i + 1 < allMonths.length) {
+      const sz = opt.seasonal;
+      const nextCal = Number(allMonths[i + 1].slice(5, 7));
+      const upto = sz.mode === "insample" ? allMonths.length - 1 : i;
+      for (const id of avail) {
+        const { up, n } = seasonalUpRatio(allMonths, closes[id], nextCal, upto, sz.lookback);
+        if (n < 6) continue;
+        const r = up / n;
+        if (r <= sz.sellAt) w[id] = 0;
+        else if (r >= sz.buyAt) w[id] *= sz.overweight;
+      }
+      const tot = Object.values(w).reduce((a, b) => a + b, 0);
+      if (tot > 1 - sleeveW) for (const id of Object.keys(w)) w[id] *= (1 - sleeveW) / tot;
     }
     if (opt.volTarget && avail.length) {
       const active = avail.filter((id) => w[id] > 0);

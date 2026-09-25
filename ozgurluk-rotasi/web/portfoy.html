@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portföyüm</title>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
+<link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><div><b>Özgürlük Rotası</b><small id="meta">Portföyüm</small></div></div>
+    <nav class="nav"><a href="/">Panel</a><a href="/portfoy.html" aria-current="page">Portföyüm</a><a href="/haberler.html">Haberler &amp; AI</a><a href="/takvim.html">Aylık Takvim</a></nav>
+    <div class="top-actions">
+      <span class="pill" id="freshness"><i class="dot"></i><span>Yükleniyor…</span></span>
+      <button class="btn" id="refreshPrices" title="Anlık fiyatları yeniden al"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg><span>Fiyatları yenile</span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="staleBanner"></div>
+
+  <section class="card hero reveal">
+    <div class="hero-head">
+      <div><h1>Portföyüm</h1><p class="lead">Aldıklarınız, bugünkü değeri ve kâr/zararı. Fiyatlar anlık: altın XAU/USD ons, kripto OKX, ETF'ler Yahoo.</p></div>
+    </div>
+    <div class="pf-kpis" id="kpis"></div>
+  </section>
+
+  <section class="card reveal">
+    <div class="sec-head"><div><h2>Portföy değeri</h2><p class="lead">Aylık, yaklaşık: her alım, varlığın fiyat serisindeki değişimle büyütülür. Kesikli çizgi: yatırılan net tutar.</p></div></div>
+    <div class="chart" id="pfChart"></div>
+    <div class="legend" id="pfLegend"></div>
+  </section>
+
+  <section class="card reveal">
+    <div class="sec-head">
+      <div><h2>Pozisyonlar</h2><p class="lead">Ortalama maliyet yöntemi. Hedef pay, seçtiğiniz stratejinin bu ayki dağılımıdır; sapma, gelecek katkıların nereye gideceğini belirler.</p></div>
+      <label class="field"><span>Hedefle karşılaştır</span><select id="target"></select></label>
+    </div>
+    <div class="scroll" id="positions"></div>
+    <div class="pf-bars" id="bars"></div>
+  </section>
+
+  <section class="card reveal" id="addSec">
+    <h2>İşlem ekle</h2>
+    <p class="lead">Tutar ya da miktar girin; fiyat alanı güncel fiyatla dolar, değiştirebilirsiniz. Toplu kayıt için Panel'deki "Bu ayı portföye kaydet" düğmesini kullanın.</p>
+    <form class="controls" id="txForm" autocomplete="off">
+      <label class="field"><span>Tarih</span><input type="date" id="fDate" required /></label>
+      <label class="field"><span>Varlık</span><select id="fAsset"></select></label>
+      <label class="field"><span>İşlem</span><span class="seg" id="fSide"><button type="button" data-v="buy" aria-pressed="true">Alış</button><button type="button" data-v="sell" aria-pressed="false">Satış</button></span></label>
+      <label class="field"><span>Tutar ($)</span><input type="number" id="fUsd" min="0" step="any" placeholder="400" /></label>
+      <label class="field"><span>veya miktar</span><input type="number" id="fQty" min="0" step="any" placeholder="0.1" /></label>
+      <label class="field"><span>Birim fiyat ($) <small id="fUnit"></small></span><input type="number" id="fPrice" min="0" step="any" /></label>
+      <label class="field"><span>Not</span><input type="text" id="fNote" maxlength="200" placeholder="isteğe bağlı" style="width:180px;font:inherit;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--ink)" /></label>
+      <button class="btn primary" type="submit">Kaydet</button>
+    </form>
+    <p class="note" id="fPreview"></p>
+  </section>
+
+  <section class="card reveal">
+    <div class="sec-head">
+      <div><h2>İşlem geçmişi</h2><p class="lead" id="txLead"></p></div>
+      <div class="actions" style="margin:0">
+        <button class="btn" id="exportBtn">Yedeği indir (JSON)</button>
+        <label class="btn" style="cursor:pointer">Yedekten ekle<input type="file" id="importFile" accept="application/json" hidden /></label>
+      </div>
+    </div>
+    <div class="scroll" id="txs"></div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="portfoy.js"></script>
+</body>
+</html>

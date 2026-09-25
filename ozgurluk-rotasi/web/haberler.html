@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Haberler ve AI Analist</title>
+<link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><div><b>Özgürlük Rotası</b><small id="meta">Haberler ve AI analist</small></div></div>
+    <nav class="nav"><a href="/">Panel</a><a href="/portfoy.html">Portföyüm</a><a href="/haberler.html" aria-current="page">Haberler &amp; AI</a><a href="/takvim.html">Aylık Takvim</a></nav>
+    <div class="top-actions">
+      <span class="pill" id="freshness"><i class="dot"></i><span>Yükleniyor…</span></span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="staleBanner"></div>
+
+  <!-- ============================================================ PİYASA NABZI -->
+  <section class="card reveal" aria-labelledby="pulseTitle">
+    <div class="sec-head"><div><h2 id="pulseTitle">Piyasa nabzı</h2><p class="lead">Günlük değişim ve son 1 ayın seyri. 5 dakikada bir yenilenir.</p></div></div>
+    <div class="pulse-wrap">
+      <div class="tickers" id="tickers"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+      <div class="pulse-side">
+        <div class="gauge-card" id="fearGreed"></div>
+        <div class="dates-card"><h3>Yaklaşan önemli tarihler</h3><ul id="upcoming"></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ AI ANALİST -->
+  <section class="card hero reveal" aria-labelledby="aiTitle">
+    <div class="hero-head">
+      <div>
+        <h1 id="aiTitle"><span class="ai-mark" aria-hidden="true">✦</span> Claude AI analist</h1>
+        <p class="lead">Claude; piyasa nabzını, en önemli haberleri, bu ayın trend sinyallerini ve portföyünüzü birlikte okur, planınız açısından ne anlama geldiğini özetler. Kişisel yatırım tavsiyesi değildir.</p>
+      </div>
+      <div class="signal-box" id="aiStatus"></div>
+    </div>
+    <div id="aiSetup"></div>
+
+    <div class="ai-grid">
+      <div class="ai-panel">
+        <div class="ai-toolbar">
+          <button class="btn primary" id="briefBtn"><span class="ai-mark" aria-hidden="true">✦</span> Günlük brifing oluştur</button>
+          <label class="switch"><input type="checkbox" id="webSearch" /><span class="track"><i></i></span><span>Claude web'de de arasın</span></label>
+          <label class="field inline"><span>Strateji</span><select id="aiStrategy"><option value="static">Al-tut çoklu</option><option value="hybrid">Hibrit</option><option value="main">Ana plan</option></select></label>
+        </div>
+        <div class="ai-status" id="briefStatus"></div>
+        <article class="ai-output md" id="briefOut"><p class="note">Brifing oluşturmak için düğmeye basın. Son brifing burada saklanır.</p></article>
+        <div class="note" id="briefMeta"></div>
+      </div>
+
+      <div class="ai-panel chat">
+        <h3 style="margin-top:0">Claude'a sor</h3>
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+        <div class="suggest" id="suggest"></div>
+        <form class="chat-form" id="chatForm" autocomplete="off">
+          <textarea id="chatInput" rows="2" placeholder="Örn. Bu hafta Fed kararı portföyümü nasıl etkiler?" maxlength="2000"></textarea>
+          <button class="btn primary" type="submit" id="chatSend" aria-label="Gönder">Gönder</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ HABERLER -->
+  <section class="card reveal" aria-labelledby="newsTitle">
+    <div class="sec-head">
+      <div><h2 id="newsTitle">Önemli haberler</h2><p class="lead" id="newsLead">Kripto, ABD piyasaları, makro, emtia ve Türkiye. Önem puanı: kaynak, etki (Fed, enflasyon, düzenleme, sert hareket…), güncellik ve kaç kaynağın aynı haberi verdiği.</p></div>
+      <button class="btn" id="newsRefresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg><span>Yenile</span></button>
+    </div>
+    <div class="news-toolbar">
+      <div class="chips" id="cats" role="tablist"></div>
+      <div class="chips" id="tagFilter" aria-label="Varlık filtresi"></div>
+      <input type="search" id="newsSearch" placeholder="Haberlerde ara…" />
+    </div>
+    <div class="news-list" id="newsList"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+    <div class="actions"><button class="btn" id="moreNews">Daha fazla göster</button></div>
+    <details class="fold"><summary>Kaynaklar</summary><div class="note" id="sources"></div></details>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="haberler.js"></script>
+</body>
+</html>

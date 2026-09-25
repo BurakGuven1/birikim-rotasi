@@ -5,132 +5,152 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Özgürlük Rotası</title>
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
-<style>
-  :root { --bg:#f7f7f5; --panel:#fff; --ink:#1b1f24; --ink2:#3d444d; --muted:#5d6570; --line:#e3e5e8; --accent:#2a78d6; --up:#1a7f37; --down:#cf222e; --soft:#f0efec; --warn:#9a6700;
-    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --panel:#171a21; --ink:#e6e8eb; --ink2:#c3c9d1; --muted:#9aa3ad; --line:#2a2f3a; --accent:#3987e5; --up:#3fb950; --down:#f85149; --soft:#22262e; --warn:#d29922;
-    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#2ea043; --s7:#9085e9; --s8:#e66767; } }
-  * { box-sizing:border-box; }
-  body { margin:0; font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
-  header, main { max-width:1240px; margin:auto; padding:0 16px; }
-  header { padding-top:20px; }
-  h1 { margin:0; font-size:22px; } h2 { font-size:16px; margin:0 0 4px; } .lead { color:var(--muted); margin:0 0 12px; font-size:13px; }
-  .sub { color:var(--muted); }
-  .nav { display:flex; gap:4px; margin-bottom:12px; }
-  .nav a { color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:6px; border:1px solid transparent; }
-  .nav a[aria-current] { color:var(--ink); border-color:var(--line); background:var(--panel); }
-  main { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding-bottom:48px; margin-top:12px; }
-  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0; }
-  .sticky { position:sticky; top:0; z-index:5; padding:10px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; box-shadow:0 4px 14px rgba(0,0,0,.04); }
-  .sticky .lbl { color:var(--muted); font-size:13px; }
-  .chips { display:flex; gap:6px; flex-wrap:wrap; }
-  .chip { font:inherit; font-size:13px; cursor:pointer; padding:5px 12px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--ink2); }
-  .chip[aria-pressed="true"] { background:var(--ink); color:var(--panel); border-color:var(--ink); }
-  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
-  .kpi { border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
-  .kpi b { display:block; font-size:20px; font-variant-numeric:tabular-nums; } .kpi span { color:var(--muted); font-size:12px; }
-  .chart { height:380px; width:100%; }
-  .scroll { overflow-x:auto; }
-  table { border-collapse:collapse; width:100%; font-size:13px; font-variant-numeric:tabular-nums; }
-  th, td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; white-space:nowrap; }
-  th:first-child, td:first-child { text-align:left; } th { color:var(--muted); font-weight:600; }
-  td.sel, th.sel { background:var(--soft); }
-  tr.main td { font-weight:600; }
-  .pos { color:var(--up); } .neg { color:var(--down); }
-  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle; }
-  .legend { display:flex; gap:6px 14px; flex-wrap:wrap; font-size:12.5px; margin-top:8px; }
-  .legend button { font:inherit; background:none; border:0; padding:2px 0; color:var(--ink2); cursor:pointer; }
-  .legend button[aria-pressed="false"] { color:var(--muted); text-decoration:line-through; opacity:.6; }
-  .controls { display:flex; gap:12px 18px; flex-wrap:wrap; align-items:flex-end; margin:6px 0 12px; }
-  .controls label { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); }
-  input[type=number], select { font:inherit; font-size:13px; padding:6px 8px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--ink); width:130px; }
-  select { width:auto; }
-  .seg { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
-  .seg button { font:inherit; font-size:13px; padding:6px 10px; border:0; background:var(--panel); color:var(--ink2); cursor:pointer; }
-  .seg button[aria-pressed="true"] { background:var(--ink); color:var(--panel); }
-  .check { flex-direction:row !important; align-items:center; gap:6px !important; font-size:13px !important; color:var(--ink2) !important; }
-  .warn { border-left:3px solid var(--warn); background:var(--soft); padding:8px 12px; border-radius:6px; font-size:13px; color:var(--ink2); margin:8px 0; }
-  .note { color:var(--muted); font-size:12px; margin-top:8px; }
-  .hit { color:var(--up); font-weight:700; }
-  .md h1 { font-size:18px; } .md h2 { font-size:15px; margin-top:18px; } .md blockquote { color:var(--muted); margin:8px 0; } .md table td, .md table th { text-align:left; }
-</style>
+<link rel="stylesheet" href="panel.css" />
 </head>
 <body>
-<header>
-  <nav class="nav"><a href="/" aria-current="page">Panel</a><a href="/takvim">Aylık Takvim</a></nav>
-  <h1>Özgürlük Rotası</h1>
-  <div class="sub" id="meta">Reel (ABD enflasyonundan arındırılmış) USD · $1.000/ay + $3.500/yıl</div>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><div><b>Özgürlük Rotası</b><small id="meta">Reel (enflasyondan arındırılmış) USD</small></div></div>
+    <nav class="nav"><a href="/" aria-current="page">Panel</a><a href="/portfoy.html">Portföyüm</a><a href="/haberler.html">Haberler &amp; AI</a><a href="/takvim.html">Aylık Takvim</a></nav>
+    <div class="top-actions">
+      <span class="pill" id="freshness"><i class="dot"></i><span>Yükleniyor…</span></span>
+      <button class="btn" id="refreshAll" title="Fiyatları yeniden indir, sinyalleri ve backtest'i yeniden hesapla"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg><span>Verileri yenile</span></button>
+    </div>
+  </div>
 </header>
+
 <main>
-  <section class="sticky">
-    <span class="lbl">Backtest dönemi</span>
-    <div class="chips" id="periods" role="group" aria-label="Dönem"></div>
+  <div id="staleBanner"></div>
+
+  <!-- ============================================================ BU AY -->
+  <section class="card hero reveal" id="allocSec" aria-labelledby="allocTitle">
+    <div class="hero-head">
+      <div>
+        <h1 id="allocTitle">Bu ay ne yapmalıyım?</h1>
+        <p class="lead" id="allocLead">Stratejinizi seçin, tutarı girin; liste son ay kapanışının sinyallerine göre hazırlanır.</p>
+      </div>
+      <div class="signal-box" id="signalBox"></div>
+    </div>
+
+    <div class="seg-strat" id="stratTabs" role="tablist" aria-label="Strateji"></div>
+
+    <div class="hero-grid">
+      <div>
+        <div class="amount-row">
+          <label class="field"><span>Bu ay yatırılacak</span>
+            <div class="money"><span>$</span><input type="number" id="alAmount" value="1000" min="0" step="50" inputmode="decimal" /></div>
+          </label>
+          <div class="quick" id="quickAmounts"></div>
+          <label class="switch"><input type="checkbox" id="alAnnual" /><span class="track"><i></i></span><span id="alAnnualLbl">Yıllık ek</span></label>
+        </div>
+
+        <div class="checklist" id="alList"></div>
+        <div class="progress-row"><div class="progress"><i id="alProgress"></i></div><span id="alProgressLbl"></span></div>
+        <div id="alHedge"></div>
+
+        <div class="actions">
+          <button class="btn primary" id="alCopy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Listeyi kopyala</button>
+          <button class="btn" id="alSave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Bu ayı portföye kaydet</button>
+          <button class="btn ghost" id="alReset">İşaretleri temizle</button>
+        </div>
+      </div>
+
+      <div class="donut-wrap">
+        <svg class="donut" id="donut" viewBox="0 0 200 200" role="img" aria-label="Dağılım grafiği"></svg>
+        <div class="donut-center"><small>Toplam</small><b id="alTotal">$0</b><span id="alStratName"></span></div>
+        <ul class="donut-legend" id="donutLegend"></ul>
+      </div>
+    </div>
+
+    <details class="fold"><summary>Mevcut portföyüm <small>— satış yapmadan dengelemek için (isteğe bağlı)</small></summary>
+      <p class="note">Güncel USD değerlerini girin; katkı önce hedefin en çok altında kalan kalemlere yönlendirilir. Yalnız bu tarayıcıda saklanır.</p>
+      <div class="actions" style="margin-top:4px"><button class="btn" id="alFill">Portföyümden doldur</button><button class="btn ghost" id="alClear">Temizle</button></div>
+      <div class="holdings" id="alHoldings"></div>
+    </details>
+    <details class="fold"><summary>Üç stratejiyi yan yana gör</summary><div class="scroll" id="alCompare"></div></details>
   </section>
 
-  <section>
-    <h2 id="kpiTitle">Ana plan</h2>
-    <p class="lead" id="kpiLead"></p>
-    <div class="kpis" id="kpis"></div>
-    <div id="shortWarn"></div>
+  <!-- ============================================================ NABIZ + HABERLER -->
+  <section class="card reveal" aria-labelledby="pulseTitle">
+    <div class="sec-head"><div><h2 id="pulseTitle">Piyasa nabzı ve öne çıkanlar</h2><p class="lead">Ayrıntılar, Claude brifingi ve tüm haberler için <a href="/haberler.html">Haberler &amp; AI</a>.</p></div></div>
+    <div class="pulse-strip" id="pulseStrip"></div>
+    <div class="top-news" id="topNews"></div>
   </section>
 
-  <section>
-    <h2>Dönemlere göre reel getiri (IRR)</h2>
+  <!-- ============================================================ STRATEJİLER -->
+  <section class="card reveal" aria-labelledby="stratTitle">
+    <h2 id="stratTitle">Üç strateji</h2>
+    <p class="lead">Üçü de aynı yedi varlığı aynı ana ağırlıklarla kullanır: S&amp;P %30 · Nasdaq %20 · Altın %15 · BIST %10 · BTC %15 · ETH %5 · Emtia %5. Farkları, düşüşte ne kadar nakde geçildiği ve swing kolu.</p>
+    <div class="cards3" id="stratCards"></div>
+  </section>
+
+  <!-- ============================================================ PERFORMANS -->
+  <section class="card reveal" aria-labelledby="perfTitle">
+    <div class="sec-head">
+      <div><h2 id="perfTitle">Geçmiş performans</h2><p class="lead" id="perfLead"></p></div>
+      <div class="chips" id="periods" role="tablist" aria-label="Dönem"></div>
+    </div>
+    <div class="kpi3" id="kpis"></div>
+
+    <div class="tabs-line" role="tablist" id="chartTabs">
+      <button role="tab" data-v="value" aria-selected="true">Portföy değeri</button>
+      <button role="tab" data-v="diff" aria-selected="false">Fark ($)</button>
+      <button role="tab" data-v="dd" aria-selected="false">Zirveden düşüş (%)</button>
+    </div>
+    <div class="chart-toolbar" id="chartToolbar"></div>
+    <div class="chart" id="perfChart"></div>
+    <div class="legend" id="perfLegend"></div>
+    <p class="insight" id="perfInsight"></p>
+
+    <h3>Dönemlere göre reel getiri</h3>
     <p class="lead">Her sütun: o dönemin başında $0 ile başlayıp her ay $1.000 + her Ocak $3.500 yatırsaydınız. Sütuna tıklayarak dönemi seçin.</p>
     <div class="scroll" id="matrix"></div>
+    <details class="fold"><summary>Ayrıntılı tablo</summary><div class="scroll" id="table"></div></details>
   </section>
 
-  <section>
-    <h2>Portföy değeri</h2>
-    <p class="lead" id="eqLead"></p>
-    <div class="chart" id="equity"></div>
-    <div class="legend" id="legend"></div>
-  </section>
-
-  <section>
-    <h2>Strateji karşılaştırması</h2>
-    <p class="lead" id="tblLead"></p>
-    <div class="scroll" id="table"></div>
-  </section>
-
-  <section>
-    <h2>Gelecek projeksiyonu: bu başarı devam ederse</h2>
-    <p class="lead">Seçili backtest döneminin yıllık reel getirisi (zaman ağırlıklı CAGR) geleceğe sabit olarak taşınır. Mavi bant, ana planın 20 yıllık geçmiş aylık getirilerinden yapılan Monte Carlo'dur (kötü–iyi: %10–%90).</p>
+  <!-- ============================================================ PROJEKSİYON -->
+  <section class="card reveal" aria-labelledby="pjTitle">
+    <h2 id="pjTitle">Gelecek projeksiyonu: bu başarı devam ederse</h2>
+    <p class="lead">Seçilen dönemin yıllık reel getirisi geleceğe sabit olarak taşınır. <b>Strateji (CAGR)</b> daha temkinlidir; <b>Backtest deneyimi (IRR)</b> aynı dönemde backtest'in son değerini yaklaşık yeniden üretir. Kesikli mavi bant: Monte Carlo (kötü %10 – iyi %90, 20+ yıllık veri).</p>
     <div class="controls">
-      <label>Getiri varsayımı<select id="pjSource"></select></label>
-      <label>Mevcut birikim ($)<input type="number" id="pjStart" value="0" min="0" step="1000" /></label>
-      <label>Aylık katkı ($)<input type="number" id="pjMonthly" value="1000" min="0" step="100" /></label>
-      <label>Yıllık ek ($)<input type="number" id="pjAnnual" value="3500" min="0" step="500" /></label>
-      <label>Aylık harcama hedefi ($, bugünün)<input type="number" id="pjSpend" value="5000" min="0" step="500" /></label>
-      <label>Gösterim<span class="seg" id="pjMode"><button data-v="real" aria-pressed="true">Bugünün doları</button><button data-v="nominal" aria-pressed="false">Nominal</button></span></label>
-      <label>Enflasyon (%)<input type="number" id="pjInf" value="3" min="0" step="0.5" /></label>
-      <label>Katkı artışı (%/yıl)<input type="number" id="pjGrowth" value="2.5" min="0" max="50" step="0.5" /></label>
-      <label>Artış türü<select id="pjGrowthMode">
+      <label class="field"><span>Getiri varsayımı</span><select id="pjSource"></select></label>
+      <label class="field"><span>Getiri ölçüsü</span><span class="seg" id="pjMeasure"><button data-v="cagr" aria-pressed="true">Strateji (CAGR)</button><button data-v="irr" aria-pressed="false">Backtest (IRR)</button></span></label>
+      <label class="field"><span>Mevcut birikim ($)</span><input type="number" id="pjStart" value="0" min="0" step="1000" /></label>
+      <label class="field"><span>Aylık katkı ($)</span><input type="number" id="pjMonthly" value="1000" min="0" step="100" /></label>
+      <label class="field"><span>Yıllık ek ($)</span><input type="number" id="pjAnnual" value="3500" min="0" step="500" /></label>
+      <label class="field"><span>Katkı artışı (%/yıl)</span><input type="number" id="pjGrowth" value="2.5" min="0" max="50" step="0.5" /></label>
+      <label class="field"><span>Artış türü</span><select id="pjGrowthMode">
         <option value="nominal">Nominal: $1.000 → $1.025 → …</option>
         <option value="real">Enflasyon + artış (reel büyür)</option>
         <option value="flat">Artış yok (sabit $)</option>
       </select></label>
+      <label class="field"><span>Aylık harcama hedefi ($)</span><input type="number" id="pjSpend" value="5000" min="0" step="500" /></label>
+      <label class="field"><span>Enflasyon (%)</span><input type="number" id="pjInf" value="3" min="0" step="0.5" /></label>
+      <label class="field"><span>Gösterim</span><span class="seg" id="pjMode"><button data-v="real" aria-pressed="true">Bugünün doları</button><button data-v="nominal" aria-pressed="false">Nominal</button></span></label>
     </div>
     <div id="pjWarn"></div>
     <div class="chart" id="projection"></div>
     <div class="legend" id="pjLegend"></div>
-    <div class="scroll" style="margin-top:14px" id="pjTable"></div>
+    <div class="scroll" id="pjTable"></div>
     <div id="pjImpact"></div>
-    <div class="note" id="pjNote"></div>
+    <p class="note" id="pjNote"></p>
   </section>
 
-  <section>
-    <h2>Varlık grafiği ve swing işlemleri</h2>
-    <div class="controls"><select id="asset"></select><select id="strategy">
-      <option value="donchian">Donchian 55/20 (trend)</option>
-      <option value="rsi2">RSI(2) geri çekilme</option>
-      <option value="sweep">Range sapma + geri alım</option>
-    </select></div>
-    <div class="chart" id="candles"></div>
-    <div class="legend" id="stats"></div>
+  <!-- ============================================================ GELİŞMİŞ -->
+  <section class="card reveal">
+    <details class="fold big"><summary>Varlık grafikleri ve swing işlemleri</summary>
+      <div class="controls"><select id="asset"></select><select id="strategy">
+        <option value="donchian">Donchian 55/20 (trend)</option>
+        <option value="rsi2">RSI(2) geri çekilme</option>
+        <option value="sweep">Range sapma + geri alım</option>
+      </select></div>
+      <div class="chart" id="candles"></div>
+      <div class="legend" id="stats"></div>
+    </details>
+    <details class="fold big"><summary>Detaylı sinyal raporu</summary><div class="md" id="signals">Yükleniyor…</div></details>
   </section>
-  <section class="md"><div id="signals">Sinyal raporu yükleniyor…</div></section>
 </main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
 </body>
 </html>
