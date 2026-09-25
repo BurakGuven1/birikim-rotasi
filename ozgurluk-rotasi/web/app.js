@@ -310,8 +310,9 @@ function initAllocationControls() {
   $("alReset").onclick = () => { store.set(doneKey(), "[]"); renderAllocation(); };
   $("alSave").onclick = saveMonthToPortfolio;
   $("alFill").onclick = async () => {
-    const pf = await fetchJSON(["/api/portfolio"]);
-    if (!pf) { toast("Portföy okunamadı — sunucuyu yeniden başlatın (npm run web)."); return; }
+    await PfStore.migrate();
+    const pf = await PfStore.sync().catch(() => null);
+    if (!pf) { toast("Portföy değerlenemedi — panel sunucusuna ulaşılamıyor."); return; }
     const vals = Object.fromEntries(pf.valuation.positions.map((p) => [p.asset, Math.round(p.value)]));
     document.querySelectorAll("#alHoldings input").forEach((i) => (i.value = vals[i.dataset.k] || ""));
     store.set("panel.holdings", JSON.stringify(vals));
@@ -333,19 +334,14 @@ async function saveMonthToPortfolio() {
   const btn = $("alSave");
   btn.disabled = true;
   try {
-    const r = await fetch("/api/portfolio/tx", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ transactions: keys.map((k) => ({ asset: k, side: "buy", usd: parts[k], strategy: `${st.name} · ${monthLabel(AL.signalMonth)} sinyali` })) }),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    await PfStore.migrate();
+    const j = await PfStore.sync({ add: keys.map((k) => ({ asset: k, side: "buy", usd: parts[k], strategy: `${st.name} · ${monthLabel(AL.signalMonth)} sinyali` })) });
     store.set(key, new Date().toLocaleDateString("tr-TR"));
     store.set(doneKey(), JSON.stringify(keys));
     renderAllocation();
     toast(`<b>${keys.length} alım portföye kaydedildi.</b> Toplam portföy: ${usd(j.valuation.totals.value)}. <a href="/portfoy.html" style="color:inherit">Portföyüme git →</a>`, 7000);
   } catch (e) {
-    toast(`Kaydedilemedi: ${esc(e.message)}. Sunucuyu yeniden başlatmanız gerekebilir (npm run web).`, 7000);
+    toast(`Kaydedilemedi: ${esc(e.message)}.`, 7000);
   } finally {
     btn.disabled = false;
   }
