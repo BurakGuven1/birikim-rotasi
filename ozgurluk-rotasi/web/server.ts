@@ -15,20 +15,24 @@ const OUT = join(ROOT, "out");
 const TYPES: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".md": "text/markdown; charset=utf-8" };
 
 /** Node isteğini Web standardı Request'e çevirir (Netlify fonksiyonuyla aynı işleyici kullanılsın diye). */
-function toRequest(req: IncomingMessage, url: URL): Request {
+function toRequest(req: IncomingMessage, url: URL, signal: AbortSignal): Request {
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
   return new Request(url, {
     method: req.method,
     headers: req.headers as Record<string, string>,
     body: hasBody ? (Readable.toWeb(req) as ReadableStream) : undefined,
     duplex: "half",
+    signal,
   } as RequestInit);
 }
 
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   try {
-    const r = await handleApi(toRequest(req, url));
+    // Tarayıcı bağlantıyı kapatırsa (Durdur / sayfa kapandı) istek sinyali iptal edilir; Claude isteği de durur
+    const ac = new AbortController();
+    res.on("close", () => { if (!res.writableEnded) ac.abort(); });
+    const r = await handleApi(toRequest(req, url, ac.signal));
     if (r) {
       res.writeHead(r.status, Object.fromEntries(r.headers));
       if (r.body) for await (const chunk of r.body as unknown as AsyncIterable<Uint8Array>) res.write(chunk);

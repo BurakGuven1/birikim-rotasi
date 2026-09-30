@@ -23,6 +23,7 @@ import { fetchQuotes, type Quote } from "./data/quotes.ts";
 import { PORTFOLIO_FILE, history, makeTx, readTxs, sanitizeTxs, valuate, type Tx, type TxInput } from "./portfolio.ts";
 import { getNews } from "./news.ts";
 import { getPulse } from "./pulse.ts";
+import { getEcon } from "./econ.ts";
 import { AI_MODEL, BRIEF_PROMPT, aiConfigured, aiErrorMessage, runClaude } from "./ai.ts";
 
 const OUT = join(ROOT, "out");
@@ -118,27 +119,54 @@ function aiAllowed(req: Request): boolean {
 
 interface AiBody { strategy?: string; webSearch?: boolean; question?: string; transactions?: unknown; history?: { role: "user" | "assistant"; content: string }[] }
 
-/** NDJSON akışı: her satır {t:"text"|"status"|"done"|"error", ...} */
-function streamAi(prompt: string, body: AiBody): Response {
+/**
+ * NDJSON akışı: her satır {t:"text"|"thinking"|"status"|"tick"|"done"|"error", ...}.
+ * 3 sn'de bir "tick" gönderilir (uzun düşünmede bağlantının canlı olduğunu gösterir). İstek
+ * iptal edilirse (Durdur / sayfa kapandı) Claude isteği de iptal edilir. Sunucusuz ortamda
+ * (Netlify) fonksiyon süresi sınırlı olduğundan daha düşük "effort" kullanılır.
+ */
+function streamAi(req: Request, prompt: string, body: AiBody, mode: "brief" | "chat"): Response {
   const enc = new TextEncoder();
+  const ac = new AbortController();
+  req.signal?.addEventListener("abort", () => ac.abort());
+  let hb: ReturnType<typeof setInterval> | undefined;
   const stream = new ReadableStream<Uint8Array>({
     async start(ctrl) {
-      const send = (o: unknown) => ctrl.enqueue(enc.encode(JSON.stringify(o) + "\n"));
+      let open = true;
+      const send = (o: unknown) => { if (open) { try { ctrl.enqueue(enc.encode(JSON.stringify(o) + "\n")); } catch { open = false; } } };
+      const t0 = Date.now();
+      hb = setInterval(() => send({ t: "tick", s: Math.round((Date.now() - t0) / 1000) }), 3000);
+      let lastThink = 0;
       try {
-        send({ t: "status", v: "Bağlam hazırlanıyor (piyasa, haberler, portföy)…" });
-        const [pulse, news, st] = await Promise.all([getPulse().catch(() => undefined), getNews().catch(() => undefined), getState()]);
+        send({ t: "status", v: "Bağlam hazırlanıyor (piyasa, haberler, takvim, portföy)…" });
+        const [pulse, news, econ, st] = await Promise.all([getPulse().catch(() => undefined), getNews().catch(() => undefined), getEcon().catch(() => undefined), getState()]);
         const txs = sanitizeTxs(body.transactions);
         const portfolio = txs.length ? valuate(txs, (await quotes()) as never) : undefined;
         send({ t: "status", v: `Claude (${AI_MODEL}) düşünüyor…` });
-        const meta = await runClaude(prompt, { pulse, news: news?.items.slice(0, 30), allocation: st.allocation, strategy: body.strategy, portfolio }, {
+        const effort = SERVERLESS ? (mode === "chat" ? "low" : "medium") : mode === "chat" ? "medium" : undefined;
+        const meta = await runClaude(prompt, { pulse, news: news?.items.slice(0, 30), econ: econ?.events, allocation: st.allocation, strategy: body.strategy, portfolio }, {
           text: (c) => send({ t: "text", v: c }),
           status: (v) => send({ t: "status", v }),
-        }, { webSearch: !!body.webSearch, history: body.history });
-        send({ t: "done", meta });
+          thinking: (snap) => {
+            if (Date.now() - lastThink < 400) return;
+            lastThink = Date.now();
+            send({ t: "thinking", v: snap.slice(-220) });
+          },
+        }, { webSearch: !!body.webSearch, history: body.history, effort, signal: ac.signal });
+        send({ t: "done", meta, serverless: SERVERLESS });
       } catch (e) {
-        send({ t: "error", v: aiErrorMessage(e) });
+        if (!ac.signal.aborted) {
+          console.error("! Claude isteği başarısız:", (e as Error).message);
+          send({ t: "error", v: aiErrorMessage(e) });
+        }
+      } finally {
+        clearInterval(hb);
       }
-      ctrl.close();
+      if (open) ctrl.close();
+    },
+    cancel() {
+      clearInterval(hb);
+      ac.abort();
     },
   });
   return new Response(stream, { headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" } });
@@ -147,19 +175,20 @@ function streamAi(prompt: string, body: AiBody): Response {
 async function route(req: Request, url: URL): Promise<Response | undefined> {
   const p = url.pathname;
   const refresh = url.searchParams.get("refresh") === "1";
-  if (p === "/api/health") return json(200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "portfolio-local", "news", "ai"] });
+  if (p === "/api/health") return json(200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "portfolio-local", "news", "ai", "econ", "briefs"] });
   if (p === "/api/news") return json(200, await getNews(refresh));
   if (p === "/api/pulse") return json(200, await getPulse(refresh));
-  if (p === "/api/ai/status") return json(200, { configured: aiConfigured(), model: AI_MODEL, needsCode: !!env("AI_ACCESS_CODE"), codeOk: aiAllowed(req) });
+  if (p === "/api/econ") return json(200, await getEcon(refresh));
+  if (p === "/api/ai/status") return json(200, { configured: aiConfigured(), model: AI_MODEL, needsCode: !!env("AI_ACCESS_CODE"), codeOk: aiAllowed(req), serverless: SERVERLESS });
   if ((p === "/api/ai/brief" || p === "/api/ai/ask") && req.method === "POST") {
     if (!aiAllowed(req)) return json(401, { error: "Claude analist için geçerli bir erişim anahtarı gerekli.", needsCode: true });
     let b: AiBody;
     try { b = await readJson<AiBody>(req); } catch { return json(400, { error: "Geçersiz JSON" }); }
-    if (p === "/api/ai/brief") return streamAi(BRIEF_PROMPT, b);
+    if (p === "/api/ai/brief") return streamAi(req, BRIEF_PROMPT, b, "brief");
     const q = (b.question ?? "").trim().slice(0, 2000);
     if (!q) return json(400, { error: "Soru boş" });
     const hist = (b.history ?? []).filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string").map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }));
-    return streamAi(q, { ...b, history: hist });
+    return streamAi(req, q, { ...b, history: hist }, "chat");
   }
   if (p === "/api/quotes") return json(200, await quotes(refresh));
   if (p === "/api/price") return json(200, { price: (await priceOn(url.searchParams.get("asset") ?? "", url.searchParams.get("date") ?? undefined)) ?? null });

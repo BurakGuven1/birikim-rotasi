@@ -48,9 +48,15 @@
         <div class="ai-toolbar">
           <button class="btn primary" id="briefBtn"><span class="ai-mark" aria-hidden="true">✦</span> Günlük brifing oluştur</button>
           <label class="switch"><input type="checkbox" id="webSearch" /><span class="track"><i></i></span><span>Claude web'de de arasın</span></label>
+          <button class="btn ghost" id="briefStop" hidden>Durdur</button>
           <label class="field inline"><span>Strateji</span><select id="aiStrategy"><option value="static">Al-tut çoklu</option><option value="hybrid">Hibrit</option><option value="main">Ana plan</option></select></label>
         </div>
+        <div class="brief-bar">
+          <label class="field inline"><span>Geçmiş</span><select id="briefHistory"></select></label>
+          <label class="switch"><input type="checkbox" id="autoBrief" /><span class="track"><i></i></span><span>Her gün ilk açılışta otomatik oluştur</span></label>
+        </div>
         <div class="ai-status" id="briefStatus"></div>
+        <div class="think" id="briefThink" hidden></div>
         <article class="ai-output md" id="briefOut"><p class="note">Brifing oluşturmak için düğmeye basın. Son brifing burada saklanır.</p></article>
         <div class="note" id="briefMeta"></div>
       </div>
@@ -62,9 +68,21 @@
         <form class="chat-form" id="chatForm" autocomplete="off">
           <textarea id="chatInput" rows="2" placeholder="Örn. Bu hafta Fed kararı portföyümü nasıl etkiler?" maxlength="2000"></textarea>
           <button class="btn primary" type="submit" id="chatSend" aria-label="Gönder">Gönder</button>
+          <button class="btn ghost" type="button" id="chatStop" hidden>Durdur</button>
         </form>
+        <div class="note" style="margin-top:6px"><button class="icon-btn" id="chatClear" type="button">Sohbeti temizle</button> Enter gönderir, Shift+Enter yeni satır.</div>
       </div>
     </div>
+  </section>
+
+  <!-- ============================================================ EKONOMİK TAKVİM -->
+  <section class="card reveal" aria-labelledby="econTitle">
+    <div class="sec-head">
+      <div><h2 id="econTitle">Bu haftanın 3 yıldızlı verileri</h2><p class="lead" id="econLead">Piyasalarda en yüksek volatiliteyi yaratması beklenen ekonomik veri açıklamaları ve merkez bankası kararları. Saatler Türkiye saatiyle.</p></div>
+      <div class="next-event" id="nextEvent"></div>
+    </div>
+    <div class="chips" id="econCur" aria-label="Para birimi filtresi"></div>
+    <div class="econ" id="econList"><div class="skeleton"></div><div class="skeleton"></div></div>
   </section>
 
   <!-- ============================================================ HABERLER -->

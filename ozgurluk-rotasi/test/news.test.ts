@@ -35,3 +35,22 @@ test("aynı hikâye farklı kaynaklardan tek kümede birleşir", () => {
   assert.equal(out.length, 1);
   assert.equal(out[0].alsoIn.length, 1);
 });
+
+test("Investing takvim satırı ayrıştırma", async () => {
+  const { parseInvesting } = await import("../src/econ.ts");
+  const html = `<tr id="eventRowId_512345" class="js-event-item" data-event-datetime="2026/09/30 12:30:00">
+    <td class="first left time js-time">12:30</td>
+    <td class="left flagCur noWrap"><span title="United States" class="ceFlags United_States">&nbsp;</span> USD</td>
+    <td class="left textNum sentiment noWrap" title="High Volatility Expected" data-img_key="bull3"></td>
+    <td class="left event" title=""><a href="/economic-calendar/core-pce-price-index-905">Core PCE Price Index (MoM)  (Aug)</a></td>
+    <td class="bold act blackFont event-512345-actual" id="eventActual_512345">0.4%</td>
+    <td class="fore event-512345-forecast" id="eventForecast_512345">0.3%</td>
+    <td class="prev blackFont event-512345-previous" id="eventPrevious_512345"><span title="">0.2%</span></td></tr>`;
+  const [e] = parseInvesting(html);
+  assert.equal(e.currency, "USD");
+  assert.equal(e.title, "Core PCE Price Index (MoM) (Aug)");
+  assert.equal(e.time, "2026-09-30T12:30:00.000Z");
+  assert.equal(e.actual, "0.4%");
+  assert.equal(e.forecast, "0.3%");
+  assert.equal(e.previous, "0.2%");
+});

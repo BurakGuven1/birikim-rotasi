@@ -790,7 +790,9 @@ function md(text) {
 
 // ------------------------------------------------------------------ nabız şeridi + öne çıkan haberler
 async function loadPulseStrip() {
-  const [p, n] = await Promise.all([fetchJSON(["/api/pulse"]), fetchJSON(["/api/news"])]);
+  const [p, n, ec] = await Promise.all([fetchJSON(["/api/pulse"]), fetchJSON(["/api/news"]), fetchJSON(["/api/econ"])]);
+  const nx = ec?.events?.find((e) => Date.parse(e.time) > Date.now());
+  if (nx) $("pulseTitle").insertAdjacentHTML("afterend", `<p class="lead" style="margin:2px 0 8px"><b style="color:var(--down)">★★★</b> Sıradaki kritik veri: <b>${esc(nx.currency)} ${esc(nx.title)}</b> · ${new Date(nx.time).toLocaleString("tr-TR", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" })}${nx.forecast ? ` · beklenti ${esc(nx.forecast)}` : ""}</p>`);
   if (p) $("pulseStrip").innerHTML = p.tickers.map((t) => `<a href="/haberler.html" title="${esc(t.label)}"><span>${esc(t.label)}</span><b>${t.unit === "%" ? t.price.toFixed(2) + "%" : t.price >= 1000 ? t.price.toLocaleString("en-US", { maximumFractionDigits: 0 }) : t.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b><span class="${t.change >= 0 ? "pos" : "neg"}">${t.change >= 0 ? "▲" : "▼"}${Math.abs(t.change * 100).toFixed(2)}%</span></a>`).join("") +
     (p.fearGreed ? `<a href="/haberler.html"><span>Kripto korku/açgözlülük</span><b>${p.fearGreed.value}</b><span>${esc(p.fearGreed.label)}</span></a>` : "");
   else $("pulseStrip").innerHTML = `<span class="note">Piyasa verisi alınamadı.</span>`;
