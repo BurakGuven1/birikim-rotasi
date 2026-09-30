@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { Readable } from "node:stream";
 import { extname, join, normalize } from "node:path";
+import { networkInterfaces } from "node:os";
 import { ROOT, loadEnv } from "../src/env.ts";
 
 loadEnv();
@@ -55,6 +56,10 @@ createServer(async (req, res) => {
   }
 }).listen(PORT, () => {
   console.log(`Özgürlük Rotası paneli (sürüm ${APP_VERSION}): http://localhost:${PORT}`);
+  // localhost yalnız bu bilgisayarda açılır; aynı Wi-Fi'deki cihazlar yerel IP adresini kullanmalı
+  const lan = Object.values(networkInterfaces()).flat().filter((a) => a && a.family === "IPv4" && !a.internal).map((a) => `http://${a!.address}:${PORT}`);
+  if (lan.length) console.log(`Aynı ağdaki diğer cihazlar için: ${lan.join("  ")}  (Windows güvenlik duvarı izin isterse "Özel ağlar"a izin verin)`);
+  console.log("Not: Bu adresler internetten erişilemez. Başka bir yerdeki biriyle paylaşmak için Netlify adresinizi kullanın.");
   // Veriyi arka planda hazırla: ilk sayfa açılışı hızlı olsun
   getState().catch((e) => console.warn("! Başlangıç verisi hazırlanamadı:", (e as Error).message));
 });
