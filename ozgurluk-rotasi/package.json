@@ -5,17 +5,17 @@
   "description": "10-20 yıllık reel getiri hedefli, trend filtreli çekirdek + swing uydu portföy araştırma ve sinyal motoru",
   "type": "module",
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22.6"
   },
   "scripts": {
-    "veri": "node src/cli/fetch.ts",
-    "backtest": "node src/cli/backtest.ts",
-    "sinyal": "node src/cli/signals.ts",
-    "plan": "node src/cli/plan.ts",
-    "takvim": "node src/cli/calendar.ts",
-    "okx": "node src/cli/okx.ts",
-    "web": "node --watch web/server.ts",
-    "test": "node --test \"test/*.test.ts\"",
+    "veri": "node --experimental-strip-types src/cli/fetch.ts",
+    "backtest": "node --experimental-strip-types src/cli/backtest.ts",
+    "sinyal": "node --experimental-strip-types src/cli/signals.ts",
+    "plan": "node --experimental-strip-types src/cli/plan.ts",
+    "takvim": "node --experimental-strip-types src/cli/calendar.ts",
+    "okx": "node --experimental-strip-types src/cli/okx.ts",
+    "web": "node --experimental-strip-types --watch web/server.ts",
+    "test": "node --experimental-strip-types --test \"test/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

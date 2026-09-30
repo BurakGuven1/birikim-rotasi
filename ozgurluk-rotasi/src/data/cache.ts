@@ -1,8 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ROOT } from "../env.ts";
 
-export const CACHE_DIR = join(ROOT, "data", "cache");
+// Netlify/Lambda'da yalnızca /tmp yazılabilir; önbellek orada, sıcak örnek yaşadıkça durur.
+export const CACHE_DIR = process.env.CACHE_DIR || (process.env.LAMBDA_TASK_ROOT ? join(tmpdir(), "ozgurluk-cache") : join(ROOT, "data", "cache"));
 
 function fileFor(key: string): string {
   return join(CACHE_DIR, key.replace(/[^A-Za-z0-9._-]/g, "_") + ".json");

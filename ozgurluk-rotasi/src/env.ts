@@ -2,7 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+// Paketlenmiş (Netlify) fonksiyonda import.meta.url olmayabilir; o durumda çalışma dizini kullanılır.
+export const ROOT = import.meta.url?.startsWith("file:") ? join(dirname(fileURLToPath(import.meta.url)), "..") : process.cwd();
 
 /** .env dosyasını (varsa) process.env'e yükler; mevcut ortam değişkenlerini ezmez. */
 export function loadEnv(): void {

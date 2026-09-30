@@ -47,6 +47,31 @@ export function writeTxs(txs: Tx[], file = PORTFOLIO_FILE): void {
   renameSync(tmp, file); // yarım yazılmış dosya bırakmamak için atomik değişim
 }
 
+/** Tarayıcıdan gelen (kullanıcının cihazında saklanan) işlem listesini doğrular ve sıralar. */
+export function sanitizeTxs(raw: unknown): Tx[] {
+  if (!Array.isArray(raw)) return [];
+  const pos = (x: unknown) => typeof x === "number" && Number.isFinite(x) && x > 0;
+  const str = (x: unknown, n: number) => (typeof x === "string" && x ? x.slice(0, n) : undefined);
+  const out: Tx[] = [];
+  for (const t of raw.slice(0, 5000) as Partial<Tx>[]) {
+    if (!t || !HOLDINGS.includes(t.asset as Holding) || !pos(t.price) || !pos(t.quantity)) continue;
+    if (typeof t.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) continue;
+    out.push({
+      id: str(t.id, 64) ?? randomUUID(),
+      date: t.date,
+      asset: t.asset as Holding,
+      side: t.side === "sell" ? "sell" : "buy",
+      price: t.price!,
+      quantity: t.quantity!,
+      usd: t.price! * t.quantity!,
+      note: str(t.note, 200),
+      strategy: str(t.strategy, 40),
+      createdAt: str(t.createdAt, 40) ?? new Date().toISOString(),
+    });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+}
+
 export interface TxInput { date?: string; asset: string; side?: string; usd?: number; quantity?: number; price?: number; note?: string; strategy?: string }
 
 /** Girdiyi doğrular; tutar veya miktardan diğerini fiyatla hesaplar. */

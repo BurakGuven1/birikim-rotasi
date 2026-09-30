@@ -1,0 +1,27 @@
+# Netlify: Base directory = ozgurluk-rotasi (bu dosya oradan okunur).
+# Sayfalar web/ klasöründen sabit dosya olarak, /api uçları netlify/functions/api.ts'den sunulur.
+[build]
+  publish = "web"
+  functions = "netlify/functions"
+  command = "echo 'Derleme adımı yok'"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/portfoy"
+  to = "/portfoy.html"
+  status = 200
+
+[[redirects]]
+  from = "/haberler"
+  to = "/haberler.html"
+  status = 200
+
+[[redirects]]
+  from = "/takvim"
+  to = "/takvim.html"
+  status = 200

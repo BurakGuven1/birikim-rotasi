@@ -22,7 +22,7 @@ Windows'ta `ozgurluk-rotasi\baslat-windows.bat` dosyasına çift tıklayın. Ba�
 
 ## Kurulum
 
-Node.js ≥ 22.18 gerekir. TypeScript, derleme adımı olmadan doğrudan çalışır. Çalışma zamanında bağımlılık yok.
+Node.js ≥ 22.6 gerekir (npm betikleri `--experimental-strip-types` bayrağını kendisi ekler). TypeScript, derleme adımı olmadan doğrudan çalışır. Çalışma zamanında bağımlılık yok.
 
 ```sh
 cd ozgurluk-rotasi
@@ -74,7 +74,7 @@ Böylece portföy satış yapmadan dengelenir.
   - **Filtreleme:** Kategori, varlık ve arama.
 - **Bu haftanın 3 yıldızlı verileri:** Investing.com'un 3 yıldızlı (yüksek volatilite beklenen) veri açıklamaları ve merkez bankası kararları. Kapsanan ülkeler: ABD, Euro Bölgesi, İngiltere, Japonya, Çin, Türkiye, Almanya. Investing erişilemezse ForexFactory'nin yüksek etkili takvimi kullanılır. Saatler Türkiye saatiyle; gerçekleşen, beklenti ve önceki değerler gösterilir. Sıradaki veri geri sayımla, 2 saatten yakın veriler vurguyla belirtilir. Bu veriler Claude'un bağlamına da eklenir.
 - **Claude AI analist:** Claude aynı anda piyasa nabzını, en önemli 30 haberi, bu ayın trend sinyallerini, seçtiğiniz stratejinin dağılımını ve portföyünüzü görür.
-  - **Günlük brifing:** Gelişmeler, portföyünüz için anlamı, riskler, bu ayın planında değişiklik gerekip gerekmediği ve takvim. Brifingler tarihleriyle bir geçmişte saklanır (son 30). Bugüne ait değilse "eski" olarak işaretlenir. İsteğe bağlı olarak her gün ilk açılışta otomatik oluşturulur.
+  - **Günlük brifing:** Gelişmeler, portföyünüz için anlamı, riskler, bu ayın planında değişiklik gerekip gerekmediği ve takvim. Brifingler tarihleriyle bu tarayıcıda bir geçmişte saklanır (son 30; metin geldikçe kaydedilir, bağlantı sonda kesilse bile kaybolmaz). Bugüne ait değilse "eski" olarak işaretlenir. İsteğe bağlı olarak her gün ilk açılışta otomatik oluşturulur.
   - **Claude'a sor:** Sohbet. Claude düşünürken özeti ve geçen süre canlı görünür; "Durdur" isteği iptal eder; sohbet tarayıcıda saklanır. Her haberin yanındaki "Claude'a sor" düğmesi soruyu hazırlar.
   - **Güncel arama:** "Claude web'de de arasın" açılırsa Claude güncel haberleri kendisi de arar.
   - **Teknik:** Yanıtlar akış halinde gelir. Resmi Anthropic SDK'sı kullanılır: model `claude-opus-5`, uyarlanabilir düşünme, sunucu tarafı yedek model ve sistem isteminde önbellekleme.
@@ -102,7 +102,7 @@ Böylece portföy satış yapmadan dengelenir.
 
   Örnek: altın %10 yükselirse $440 değer ve +$40 kâr görünür.
 - **Kullanım:** Paneldeki "Mevcut portföyüm → Portföyümden doldur" düğmesi değerleri dağılım hesabına aktarır. Böylece yeni katkı hedefin altında kalan kalemlere gider.
-- **Saklama:** Veriler bu bilgisayarda `data/portfoy.json` dosyasında durur (Git'e girmez). JSON olarak yedeklenip geri yüklenebilir.
+- **Saklama:** İşlemler yalnızca kullanılan cihazın tarayıcısında (localStorage) durur, sunucuya kaydedilmez. Paneli paylaştığınız biri sizin portföyünüzü göremez, siz de onunkini. Başka cihaza taşımak ya da yedeklemek için Dışa aktar / İçe aktar kullanılır. Eski sürümün `data/portfoy.json` dosyası, yerelde ilk açılışta tarayıcıya bir kez aktarılır.
 
 ## Aylık Getiri Takvimi (http://localhost:4173/takvim)
 
@@ -114,6 +114,18 @@ Takvim şu varlıkları kapsar: XU100 (TL ve USD), S&P 500, Nasdaq 100, altın, 
 - **Seçim ve olay çalışması:** Her seçim için öncesindeki 6 ve 3 ayın, sonrasındaki 1 ve 3 ayın getirisi hesaplanır. Aynı uzunluktaki "herhangi bir dönem" ortalamasıyla karşılaştırılır. Örneğin TL bazında XU100 seçim öncesi 6 ayda ortalama yükseliyor olsa bile, yüksek enflasyon döneminde bu herhangi bir 6 aydan daha iyi olmayabilir.
 - **Kartlar:** "Bu ay / gelecek ay" ve "yaklaşan olaylar" kartları (ör. ABD ara seçimi 3 Kasım 2026) en üstte yer alır. Aynı notlar `npm run sinyal` raporunun 7. bölümünde de bulunur.
 - **Güncelleme:** Sunucu fiyatları 12 saatte bir, takvimi saatte bir yeniden hesaplar. Bir ay kapandığında yeni ay otomatik eklenir ve istatistiklere katılır. Devam eden ay kesikli çerçeveyle gösterilir ve istatistiklere dahil edilmez.
+
+## Netlify'da yayınlama
+
+Netlify'da bu repodan bir proje açın. Base directory `ozgurluk-rotasi` olsun. Build command, Publish ve Functions alanlarını boş bırakın; bunları `netlify.toml` belirler (`web`, `netlify/functions`). Sayfalar sabit dosya olarak yayınlanır. `/api/*` uçları ise `netlify/functions/api.ts` fonksiyonundan gelir ve yerel sunucuyla aynı kodu (`src/api.ts`) kullanır.
+
+Ortam değişkenleri (Project configuration → Environment variables):
+- `ANTHROPIC_API_KEY`: Claude analist için (isteğe bağlı).
+- `AI_ACCESS_CODE`: Tanımlanırsa Claude analisti yalnızca bu kodu bilenler kullanabilir. API ücreti sizden kesildiği için paneli paylaşıyorsanız önerilir.
+
+Netlify'da TradingView webhook'u ve canlı OKX emirleri kapalıdır.
+
+**Claude ve Netlify süre sınırı:** Netlify fonksiyonları istek başına 10 saniye (ücretli planlarda 26 saniyeye kadar) çalışabilir. Claude'un uzun düşünmesi bu süreyi aşarsa yanıt yarıda kesilir. Bunu azaltmak için Netlify'da Claude daha kısa düşünür: sohbette `low`, brifingde `medium` effort. Yanıt kesilirse panel bunu açıkça yazar ve gelen kısmı saklar. Uzun brifing ya da "web'de ara" için paneli yerelde çalıştırın (`npm run web`); yerelde süre sınırı yoktur.
 
 ## TradingView
 

@@ -170,8 +170,17 @@ async function streamPost(path, body, onLine, signal) {
   const arm = () => { clearTimeout(watchdog); watchdog = setTimeout(() => ac.abort(new Error("Sunucudan 90 sn yanıt gelmedi; bağlantı kopmuş olabilir. Tekrar deneyin.")), 90_000); };
   arm();
   try {
-    const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: ac.signal });
-    if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `HTTP ${r.status} — sunucuyu yeniden başlatmanız gerekebilir (npm run web)`); }
+    // Portföy sunucuda değil bu tarayıcıda durur; Claude'un görmesi için isteğe eklenir.
+    const send = () => fetch(path, { method: "POST", headers: { "content-type": "application/json", "x-ai-code": store.get("ai.code") || "" }, body: JSON.stringify({ ...body, transactions: window.PfStore ? PfStore.load() : [] }), signal: ac.signal });
+    let r = await send();
+    if (r.status === 401) {
+      const code = prompt("Claude analist bu panelde erişim koduyla korunuyor. Kodu girin:");
+      if (!code) throw new Error("Erişim kodu girilmedi.");
+      store.set("ai.code", code.trim());
+      r = await send();
+      if (r.status === 401) store.set("ai.code", "");
+    }
+    if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `HTTP ${r.status}`); }
     const reader = r.body.getReader();
     const dec = new TextDecoder();
     let buf = "";
@@ -196,6 +205,23 @@ async function streamPost(path, body, onLine, signal) {
 
 const metaLine = (m) => m ? `${m.model} · ${m.usage.input.toLocaleString("tr-TR")} girdi / ${m.usage.output.toLocaleString("tr-TR")} çıktı token${m.usage.cacheRead ? ` · ${m.usage.cacheRead.toLocaleString("tr-TR")} önbellekten` : ""}${m.webSearches ? ` · ${m.webSearches} web araması` : ""}` : "";
 
+// Brifing geçmişi bu tarayıcıda saklanır (portföy bilgisi içerebilir; sunucuda tutulmaz)
+const BRIEFS_KEY = "ai.briefs.v1";
+function loadBriefs() {
+  let list = [];
+  try { list = JSON.parse(store.get(BRIEFS_KEY) || "[]"); } catch { list = []; }
+  // Önceki sürümün tek brifingini bir kez taşı
+  try {
+    const old = JSON.parse(store.get("ai.lastBrief") || "null");
+    if (old?.text && !list.some((b) => b.at === old.at)) { list.push({ id: old.at, complete: true, ...old }); store.set("ai.lastBrief", ""); }
+  } catch { /* */ }
+  return list.sort((x, y) => y.at.localeCompare(x.at));
+}
+function saveBrief(b) {
+  const list = [b, ...loadBriefs().filter((x) => x.id !== b.id)].slice(0, 30);
+  store.set(BRIEFS_KEY, JSON.stringify(list));
+}
+
 let briefAbort;
 async function runBrief() {
   if (busy) return;
@@ -204,22 +230,36 @@ async function runBrief() {
   btn.disabled = true;
   $("briefStop").hidden = false;
   briefAbort = new AbortController();
-  let text = "", phase = "Başlıyor…", secs = 0;
+  const id = new Date().toISOString();
+  let text = "", phase = "Başlıyor…", secs = 0, done = false, lastSave = 0;
+  // Metin geldikçe kaydet: bağlantı sonda kesilse bile brifing kaybolmasın
+  const persist = (complete, meta) => saveBrief({ id, at: id, text, meta, complete, webSearch: $("webSearch").checked, strategy: $("aiStrategy").value });
   const showStatus = () => (st.innerHTML = `<span class="spin"></span><span>${esc(phase)}${secs ? ` · ${secs} sn` : ""}</span>`);
   out.innerHTML = "";
   out.classList.add("cursor");
   showStatus();
   try {
     await streamPost("/api/ai/brief", { strategy: $("aiStrategy").value, webSearch: $("webSearch").checked }, (m) => {
-      if (m.t === "text") { text += m.v; out.innerHTML = md(text); think.hidden = true; phase = "Yazıyor…"; showStatus(); }
+      if (m.t === "text") {
+        text += m.v; out.innerHTML = md(text); think.hidden = true; phase = "Yazıyor…"; showStatus();
+        if (Date.now() - lastSave > 1500) { lastSave = Date.now(); persist(false); }
+      }
       else if (m.t === "thinking") { think.hidden = false; think.textContent = "…" + m.v; }
       else if (m.t === "tick") { secs = m.s; showStatus(); }
       else if (m.t === "status") { phase = m.v; showStatus(); }
       else if (m.t === "error") { out.innerHTML = `<div class="callout warn">${esc(m.v)}</div>`; st.textContent = ""; }
-      else if (m.t === "done") { st.textContent = `Hazır · ${new Date().toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`; $("briefMeta").textContent = metaLine(m.meta); }
+      else if (m.t === "done") { done = true; persist(true, m.meta); st.textContent = `Hazır · ${new Date().toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`; $("briefMeta").textContent = metaLine(m.meta); }
     }, briefAbort.signal);
-    await loadAiStatus(true);
+    if (!done && text) {
+      persist(false);
+      st.innerHTML = `<span class="stale">Yarıda kesildi</span> ${AI?.serverless ? "Sunucu fonksiyonunun süre sınırına takıldı (Netlify). Web aramasını kapatıp tekrar deneyin ya da paneli yerelde çalıştırın." : "Bağlantı kapandı."} Gelen kısım kaydedildi.`;
+    } else if (!done && !text) {
+      out.innerHTML = `<div class="callout warn">Claude yanıt veremeden bağlantı kapandı.${AI?.serverless ? " Netlify fonksiyon süresi (10–26 sn) aşıldı; web aramasını kapatıp tekrar deneyin ya da paneli yerelde çalıştırın (npm run web)." : ""}</div>`;
+      st.textContent = "";
+    }
+    renderBriefHistory(id);
   } catch (e) {
+    if (text) persist(false);
     if (!text) out.innerHTML = `<div class="callout warn">${esc(e.message)}</div>`;
     st.textContent = e.message;
   } finally { out.classList.remove("cursor"); think.hidden = true; btn.disabled = false; $("briefStop").hidden = true; busy = false; }
@@ -260,7 +300,12 @@ async function ask(q) {
       else if (m.t === "error") { bot.content = `**Hata:** ${m.v}`; bot.error = true; }
       renderChat();
     }, chatAbort.signal);
-    if (!bot.content) { bot.content = "_Claude boş yanıt döndürdü; soruyu yeniden deneyin._"; bot.error = true; }
+    if (!bot.content) {
+      bot.content = AI?.serverless
+        ? "**Yanıt gelmeden bağlantı kesildi.** Netlify fonksiyonunun süre sınırı (10–26 sn) Claude'un düşünme süresinden kısa kaldı. Web aramasını kapatıp daha kısa bir soru deneyin ya da paneli yerelde çalıştırın (`npm run web`)."
+        : "**Claude yanıt veremeden bağlantı kapandı.** Soruyu yeniden deneyin.";
+      bot.error = true;
+    }
   } catch (e) { bot.content = (bot.content ? bot.content + "\n\n" : "") + `**${e.message === "Durduruldu." ? "Durduruldu." : "Hata: " + e.message}**`; bot.error = true; }
   finally { bot.pending = false; renderChat(); $("chatSend").disabled = false; $("chatStop").hidden = true; busy = false; saveChat(); }
 }
@@ -271,29 +316,31 @@ function showBrief(b) {
   const today = new Date().toDateString() === new Date(b.at).toDateString();
   $("briefOut").innerHTML = md(b.text);
   const hrs = Math.round((Date.now() - Date.parse(b.at)) / 3_600_000);
-  $("briefStatus").innerHTML = `Brifing · ${esc(new Date(b.at).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }))} (${hrs < 1 ? "az önce" : hrs < 24 ? hrs + " saat önce" : Math.round(hrs / 24) + " gün önce"})${today ? "" : `<span class="stale">Bugüne ait değil — yenisini oluşturun</span>`}`;
+  $("briefStatus").innerHTML = `Brifing · ${esc(new Date(b.at).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }))} (${hrs < 1 ? "az önce" : hrs < 24 ? hrs + " saat önce" : Math.round(hrs / 24) + " gün önce"})${b.complete === false ? `<span class="stale">Yarıda kesilmiş</span>` : ""}${today ? "" : `<span class="stale">Bugüne ait değil — yenisini oluşturun</span>`}`;
   $("briefMeta").textContent = metaLine(b.meta);
 }
 
 let AI;
-async function loadAiStatus(afterRun = false) {
-  AI = await api("/api/ai/status");
-  $("aiStatus").innerHTML = `<div class="sig"><small>Model</small><b>${esc(AI.model)}</b></div><div class="sig"><small>Durum</small><b class="${AI.configured ? "pos" : ""}">${AI.configured ? "Hazır" : "Anahtar gerekli"}</b></div>`;
-  $("aiSetup").innerHTML = AI.configured ? "" : `<div class="callout warn setup"><b>Claude'u etkinleştirmek için bir kez:</b><ol>
-    <li><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> adresinden bir API anahtarı oluşturun.</li>
-    <li><code>ozgurluk-rotasi/.env</code> dosyasına <code>ANTHROPIC_API_KEY=sk-ant-...</code> satırını ekleyin (Git'e girmez).</li>
-    <li>Sunucuyu yeniden başlatın (<code>npm run web</code>). Her brifing/soru, API hesabınızdan küçük bir ücretle faturalanır.</li></ol></div>`;
-  const briefs = AI.briefs || [];
+function renderBriefHistory(selectId) {
+  const briefs = loadBriefs();
   $("briefHistory").innerHTML = briefs.length
-    ? briefs.map((b, i) => `<option value="${esc(b.id)}">${i === 0 ? "En yeni · " : ""}${esc(new Date(b.at).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }))}${b.webSearch ? " · web" : ""}</option>`).join("")
+    ? briefs.map((b, i) => `<option value="${esc(b.id)}">${i === 0 ? "En yeni · " : ""}${esc(new Date(b.at).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }))}${b.complete === false ? " · yarım" : ""}${b.webSearch ? " · web" : ""}</option>`).join("")
     : `<option value="">Henüz brifing yok</option>`;
-  $("briefHistory").onchange = async () => {
-    const id = $("briefHistory").value;
-    if (!id) return;
-    try { showBrief(await api(`/api/ai/briefs?id=${encodeURIComponent(id)}`)); } catch (e) { toast(esc(e.message)); }
-  };
-  if (!afterRun && AI.lastBrief) showBrief(AI.lastBrief);
-  if (afterRun) $("briefHistory").value = briefs[0]?.id ?? "";
+  if (selectId) $("briefHistory").value = selectId;
+  $("briefHistory").onchange = () => { const b = loadBriefs().find((x) => x.id === $("briefHistory").value); if (b) showBrief(b); };
+  return briefs;
+}
+
+async function loadAiStatus() {
+  AI = await api("/api/ai/status", { headers: { "x-ai-code": store.get("ai.code") || "" } });
+  $("aiStatus").innerHTML = `<div class="sig"><small>Model</small><b>${esc(AI.model)}</b></div><div class="sig"><small>Durum</small><b class="${AI.configured ? "pos" : ""}">${AI.configured ? "Hazır" : "Anahtar gerekli"}</b></div>${AI.serverless ? `<div class="sig"><small>Ortam</small><b>Netlify</b></div>` : ""}`;
+  $("aiSetup").innerHTML = !AI.configured ? `<div class="callout warn setup"><b>Claude'u etkinleştirmek için bir kez:</b><ol>
+    <li><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> adresinden bir API anahtarı oluşturun.</li>
+    <li>Yerelde: <code>ozgurluk-rotasi/.env</code> dosyasına <code>ANTHROPIC_API_KEY=sk-ant-...</code> satırını ekleyip sunucuyu yeniden başlatın (<code>npm run web</code>).</li>
+    <li>Netlify'da: Project configuration → Environment variables'a aynı değişkeni ekleyip yeniden deploy edin. Her brifing/soru, API hesabınızdan küçük bir ücretle faturalanır.</li></ol></div>`
+    : AI.serverless ? `<div class="callout">Netlify'da her istek en fazla 10–26 sn sürebilir. Hızlı yanıt için Claude burada daha kısa düşünür; uzun brifing ya da "web'de ara" gerekirse paneli yerelde çalıştırın (<code>npm run web</code>).</div>` : "";
+  const briefs = renderBriefHistory();
+  if (briefs[0]) showBrief(briefs[0]);
 }
 
 // ------------------------------------------------------------------ ekonomik takvim
@@ -365,7 +412,8 @@ async function loadEcon(force = false) {
   renderChat();
   await Promise.allSettled([loadPulse(), loadNews(), loadEcon(), loadAiStatus()]);
   // Günlük otomatik brifing: bugün henüz oluşturulmadıysa ve Claude yapılandırılmışsa
-  if ($("autoBrief").checked && AI?.configured && (!AI.lastBrief || new Date(AI.lastBrief.at).toDateString() !== new Date().toDateString())) runBrief();
+  const latest = loadBriefs()[0];
+  if ($("autoBrief").checked && AI?.configured && (!latest || new Date(latest.at).toDateString() !== new Date().toDateString())) runBrief();
   setInterval(renderEcon, 60_000);
   setInterval(() => loadEcon().catch(() => {}), 30 * 60_000);
   setInterval(() => loadPulse().catch(() => {}), 5 * 60_000);

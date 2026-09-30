@@ -134,7 +134,7 @@ function renderPositions() {
 // ------------------------------------------------------------------ işlemler
 function renderTxs() {
   const txs = PF.transactions;
-  $("txLead").textContent = txs.length ? `${txs.length} işlem · veriler bu bilgisayarda data/portfoy.json dosyasında saklanır.` : "Henüz işlem yok.";
+  $("txLead").textContent = txs.length ? `${txs.length} işlem · yalnızca bu cihazın tarayıcısında saklanır; başka cihazlar ve panelin diğer kullanıcıları göremez. Yedek için Dışa aktar.` : "Henüz işlem yok.";
   if (!txs.length) { $("txs").innerHTML = ""; return; }
   const q = PF.quotes;
   const rows = txs.map((t) => {
@@ -151,7 +151,7 @@ function renderTxs() {
   $("txs").innerHTML = `<table><tr><th>Tarih</th><th>Varlık</th><th>İşlem</th><th>Tutar</th><th>Fiyat</th><th>Miktar</th><th>Bugünkü değer</th><th>Kâr / zarar</th><th style="text-align:left">Not</th><th></th></tr>${rows}</table>`;
   document.querySelectorAll("#txs .icon-btn").forEach((b) => (b.onclick = async () => {
     if (!confirm("Bu işlem silinsin mi?")) return;
-    try { PF = await api(`/api/portfolio/tx?id=${encodeURIComponent(b.dataset.id)}`, { method: "DELETE" }); renderAll(); toast("İşlem silindi."); }
+    try { PF = await PfStore.sync({ transactions: PfStore.load().filter((t) => t.id !== b.dataset.id) }); renderAll(); toast("İşlem silindi."); }
     catch (e) { toast(`Silinemedi: ${esc(e.message)}`); }
   }));
   lastAdded = new Set();
@@ -208,7 +208,7 @@ function initForm() {
     const body = { date: $("fDate").value, asset: $("fAsset").value, side, usd: Number($("fUsd").value) || undefined, quantity: Number($("fQty").value) || undefined, price: Number($("fPrice").value) || undefined, note: $("fNote").value || undefined };
     try {
       const before = new Set(PF.transactions.map((t) => t.id));
-      PF = await api("/api/portfolio/tx", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      PF = await PfStore.sync({ add: [body] });
       lastAdded = new Set(PF.transactions.filter((t) => !before.has(t.id)).map((t) => t.id));
       $("fUsd").value = ""; $("fQty").value = ""; $("fNote").value = "";
       renderAll(); fillPrice();
@@ -231,7 +231,7 @@ function initForm() {
       const list = (j.transactions || []).map((t) => ({ date: t.date, asset: t.asset, side: t.side, quantity: t.quantity, price: t.price, note: t.note, strategy: t.strategy }));
       if (!list.length) throw new Error("Dosyada işlem yok");
       if (!confirm(`${list.length} işlem mevcut portföye eklensin mi?`)) return;
-      PF = await api("/api/portfolio/tx", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactions: list }) });
+      PF = await PfStore.sync({ add: list });
       renderAll();
       toast(`${list.length} işlem eklendi.`);
     } catch (err) { toast(`İçe aktarılamadı: ${esc(err.message)}`); }
@@ -243,12 +243,13 @@ function initForm() {
   reveal();
   try {
     const h = await api("/api/health");
-    if (!h.features?.includes("portfolio")) throw new Error("eski");
+    if (!h.features?.includes("portfolio-local")) throw new Error("eski");
   } catch {
-    $("staleBanner").innerHTML = `<div class="banner"><b>Panel sunucusu çalışmıyor ya da eski sürüm.</b> Terminalde çalışan <code>npm run web</code>'i <b>Ctrl+C</b> ile durdurup yeniden başlatın. Yeni sürüm, kod değişince kendini otomatik yeniden başlatır.</div>`;
+    $("staleBanner").innerHTML = `<div class="banner"><b>Panel sunucusuna ulaşılamadı ya da eski sürüm çalışıyor.</b> Terminalde çalışan <code>npm run web</code>'i <b>Ctrl+C</b> ile durdurup yeniden başlatın. Yeni sürüm, kod değişince kendini otomatik yeniden başlatır.</div>`;
     return;
   }
-  [PF, AL] = await Promise.all([api("/api/portfolio"), api("/api/allocation").catch(() => null)]);
+  await PfStore.migrate();
+  [PF, AL] = await Promise.all([PfStore.sync(), api("/api/allocation").catch(() => null)]);
   const sel = $("target");
   sel.innerHTML = `<option value="">Hedef yok</option>` + (AL ? ["static", "hybrid", "main"].map((k) => `<option value="${k}">${AL.strategies[k].name}</option>`).join("") : "");
   sel.value = store.get("panel.alStrategy") || "static";
@@ -259,7 +260,7 @@ function initForm() {
   $("refreshPrices").onclick = async () => {
     const b = $("refreshPrices");
     b.disabled = true; b.classList.add("loading");
-    try { PF = await api("/api/portfolio?refresh=1"); renderAll(); fillPrice(); toast("Fiyatlar güncellendi."); }
+    try { PF = await PfStore.sync({ refresh: true }); renderAll(); fillPrice(); toast("Fiyatlar güncellendi."); }
     catch (e) { toast(`Güncellenemedi: ${esc(e.message)}`); }
     finally { b.disabled = false; b.classList.remove("loading"); }
   };
