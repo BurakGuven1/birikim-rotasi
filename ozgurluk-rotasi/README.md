@@ -72,9 +72,10 @@ Böylece portföy satış yapmadan dengelenir.
   - **Otomatik işaretleme:** Her haber ilgili varlıklarla etiketlenir (BTC, altın, S&P, BIST…). Yüksek etkili olaylar (Fed/faiz, enflasyon, istihdam, düzenleme, sert hareket, kriz, seçim) ayrıca işaretlenir.
   - **Önem puanı:** Kaynağa, etkiye, güncelliğe ve aynı haberi veren kaynak sayısına göre hesaplanır. Aynı hikâye tek kayıtta birleştirilir, liste başlıkları geriye düşer.
   - **Filtreleme:** Kategori, varlık ve arama.
+- **Bu haftanın 3 yıldızlı verileri:** Investing.com'un 3 yıldızlı (yüksek volatilite beklenen) veri açıklamaları ve merkez bankası kararları. Kapsanan ülkeler: ABD, Euro Bölgesi, İngiltere, Japonya, Çin, Türkiye, Almanya. Investing erişilemezse ForexFactory'nin yüksek etkili takvimi kullanılır. Saatler Türkiye saatiyle; gerçekleşen, beklenti ve önceki değerler gösterilir. Sıradaki veri geri sayımla, 2 saatten yakın veriler vurguyla belirtilir. Bu veriler Claude'un bağlamına da eklenir.
 - **Claude AI analist:** Claude aynı anda piyasa nabzını, en önemli 30 haberi, bu ayın trend sinyallerini, seçtiğiniz stratejinin dağılımını ve portföyünüzü görür.
-  - **Günlük brifing:** Gelişmeler, portföyünüz için anlamı, riskler, bu ayın planında değişiklik gerekip gerekmediği ve takvim. Son brifing saklanır.
-  - **Claude'a sor:** Sohbet. Her haberin yanındaki "Claude'a sor" düğmesi soruyu hazırlar.
+  - **Günlük brifing:** Gelişmeler, portföyünüz için anlamı, riskler, bu ayın planında değişiklik gerekip gerekmediği ve takvim. Brifingler tarihleriyle bir geçmişte saklanır (son 30). Bugüne ait değilse "eski" olarak işaretlenir. İsteğe bağlı olarak her gün ilk açılışta otomatik oluşturulur.
+  - **Claude'a sor:** Sohbet. Claude düşünürken özeti ve geçen süre canlı görünür; "Durdur" isteği iptal eder; sohbet tarayıcıda saklanır. Her haberin yanındaki "Claude'a sor" düğmesi soruyu hazırlar.
   - **Güncel arama:** "Claude web'de de arasın" açılırsa Claude güncel haberleri kendisi de arar.
   - **Teknik:** Yanıtlar akış halinde gelir. Resmi Anthropic SDK'sı kullanılır: model `claude-opus-5`, uyarlanabilir düşünme, sunucu tarafı yedek model ve sistem isteminde önbellekleme.
   - **Kurulum:** https://console.anthropic.com adresinden bir API anahtarı alın, `.env` dosyasına `ANTHROPIC_API_KEY=...` yazın ve sunucuyu yeniden başlatın. Her istek API hesabınızdan ücretlendirilir. Model `CLAUDE_MODEL` ile değiştirilebilir.

@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { extname, join, normalize } from "node:path";
 import { timingSafeEqual } from "node:crypto";
@@ -17,6 +17,7 @@ import { fetchQuotes, type Quote } from "../src/data/quotes.ts";
 import { history, makeTx, readTxs, valuate, writeTxs, type TxInput } from "../src/portfolio.ts";
 import { getNews } from "../src/news.ts";
 import { getPulse } from "../src/pulse.ts";
+import { getEcon } from "../src/econ.ts";
 import { AI_MODEL, BRIEF_PROMPT, aiConfigured, aiErrorMessage, runClaude } from "../src/ai.ts";
 
 loadEnv();
@@ -109,31 +110,67 @@ async function portfolioPayload(force = false) {
 }
 
 const BRIEF_FILE = join(ROOT, "data", "ai-brief.json");
+const BRIEFS_FILE = join(ROOT, "data", "ai-briefs.json");
 
-/** NDJSON akışı: her satır {t:"text"|"status"|"done"|"error", ...} */
-async function streamAi(res: import("node:http").ServerResponse, prompt: string, body: { strategy?: string; webSearch?: boolean; history?: { role: "user" | "assistant"; content: string }[] }, save = false) {
+interface SavedBrief { id: string; at: string; text: string; meta: unknown; webSearch: boolean; strategy?: string }
+
+/** Brifing geçmişi (en yeni önce, son 30). Eski tek dosyalı sürümden de okur. */
+function readBriefs(): SavedBrief[] {
+  let list: SavedBrief[] = [];
+  if (existsSync(BRIEFS_FILE)) list = JSON.parse(readFileSync(BRIEFS_FILE, "utf8"));
+  else if (existsSync(BRIEF_FILE)) {
+    const b = JSON.parse(readFileSync(BRIEF_FILE, "utf8"));
+    list = [{ id: b.at, ...b }];
+  }
+  return list.sort((x, y) => y.at.localeCompare(x.at));
+}
+
+function saveBrief(b: SavedBrief): void {
+  mkdirSync(join(ROOT, "data"), { recursive: true });
+  const list = [b, ...readBriefs().filter((x) => x.id !== b.id)].slice(0, 30);
+  writeFileSync(BRIEFS_FILE + ".tmp", JSON.stringify(list));
+  renameSync(BRIEFS_FILE + ".tmp", BRIEFS_FILE);
+}
+
+/** NDJSON akışı: her satır {t:"text"|"thinking"|"status"|"tick"|"done"|"error", ...} */
+async function streamAi(req: IncomingMessage, res: import("node:http").ServerResponse, prompt: string, body: { strategy?: string; webSearch?: boolean; history?: { role: "user" | "assistant"; content: string }[] }, mode: "brief" | "chat") {
   res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
-  const send = (o: unknown) => res.write(JSON.stringify(o) + "\n");
+  const t0 = Date.now();
+  let closed = false;
+  const send = (o: unknown) => { if (!closed) res.write(JSON.stringify(o) + "\n"); };
+  // Tarayıcı bağlantıyı kapatırsa (Durdur / sayfa kapandı) Claude isteğini de iptal et
+  const ac = new AbortController();
+  res.on("close", () => { closed = true; ac.abort(); });
+  // Uzun düşünme sırasında bağlantının canlı olduğunu göstermek için kalp atışı
+  const hb = setInterval(() => send({ t: "tick", s: Math.round((Date.now() - t0) / 1000) }), 3000);
   let text = "";
+  let lastThink = 0;
   try {
-    send({ t: "status", v: "Bağlam hazırlanıyor (piyasa, haberler, portföy)…" });
-    const [pulse, news, st] = await Promise.all([getPulse().catch(() => undefined), getNews().catch(() => undefined), getState()]);
+    send({ t: "status", v: "Bağlam hazırlanıyor (piyasa, haberler, takvim, portföy)…" });
+    const [pulse, news, econ, st] = await Promise.all([getPulse().catch(() => undefined), getNews().catch(() => undefined), getEcon().catch(() => undefined), getState()]);
     const txs = readTxs();
     const portfolio = txs.length ? valuate(txs, (await quotes()) as never) : undefined;
     send({ t: "status", v: `Claude (${AI_MODEL}) düşünüyor…` });
-    const meta = await runClaude(prompt, { pulse, news: news?.items.slice(0, 30), allocation: st.allocation, strategy: body.strategy, portfolio }, {
+    const meta = await runClaude(prompt, { pulse, news: news?.items.slice(0, 30), econ: econ?.events, allocation: st.allocation, strategy: body.strategy, portfolio }, {
       text: (c) => { text += c; send({ t: "text", v: c }); },
       status: (v) => send({ t: "status", v }),
-    }, { webSearch: !!body.webSearch, history: body.history });
-    if (save) {
-      mkdirSync(join(ROOT, "data"), { recursive: true });
-      writeFileSync(BRIEF_FILE, JSON.stringify({ at: new Date().toISOString(), text, meta, webSearch: !!body.webSearch }));
-    }
+      thinking: (snap) => {
+        if (Date.now() - lastThink < 400) return; // akışı boğmamak için seyrelt
+        lastThink = Date.now();
+        send({ t: "thinking", v: snap.slice(-220) });
+      },
+    }, { webSearch: !!body.webSearch, history: body.history, effort: mode === "chat" ? "medium" : undefined, signal: ac.signal });
+    if (mode === "brief" && text.trim()) saveBrief({ id: new Date().toISOString(), at: new Date().toISOString(), text, meta, webSearch: !!body.webSearch, strategy: body.strategy });
     send({ t: "done", meta });
   } catch (e) {
-    send({ t: "error", v: aiErrorMessage(e) });
+    if (!closed) {
+      console.error("! Claude isteği başarısız:", (e as Error).message);
+      send({ t: "error", v: aiErrorMessage(e) });
+    }
+  } finally {
+    clearInterval(hb);
   }
-  res.end();
+  if (!closed) res.end();
 }
 
 const json = (res: import("node:http").ServerResponse, code: number, data: unknown) => {
@@ -144,21 +181,26 @@ const json = (res: import("node:http").ServerResponse, code: number, data: unkno
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   try {
-    if (url.pathname === "/api/health") return json(res, 200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "news", "ai"] });
+    if (url.pathname === "/api/health") return json(res, 200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "news", "ai", "econ", "briefs"] });
     if (url.pathname === "/api/news") return json(res, 200, await getNews(url.searchParams.get("refresh") === "1"));
     if (url.pathname === "/api/pulse") return json(res, 200, await getPulse(url.searchParams.get("refresh") === "1"));
+    if (url.pathname === "/api/econ") return json(res, 200, await getEcon(url.searchParams.get("refresh") === "1"));
     if (url.pathname === "/api/ai/status") {
-      const last = existsSync(BRIEF_FILE) ? JSON.parse(readFileSync(BRIEF_FILE, "utf8")) : null;
-      return json(res, 200, { configured: aiConfigured(), model: AI_MODEL, lastBrief: last });
+      const list = readBriefs();
+      return json(res, 200, { configured: aiConfigured(), model: AI_MODEL, lastBrief: list[0] ?? null, briefs: list.map((b) => ({ id: b.id, at: b.at, webSearch: b.webSearch, strategy: b.strategy })) });
+    }
+    if (url.pathname === "/api/ai/briefs") {
+      const b = readBriefs().find((x) => x.id === url.searchParams.get("id"));
+      return b ? json(res, 200, b) : json(res, 404, { error: "Brifing bulunamadı" });
     }
     if ((url.pathname === "/api/ai/brief" || url.pathname === "/api/ai/ask") && req.method === "POST") {
       let b: { strategy?: string; webSearch?: boolean; question?: string; history?: { role: "user" | "assistant"; content: string }[] } = {};
       try { b = JSON.parse((await body(req)) || "{}"); } catch { return json(res, 400, { error: "Geçersiz JSON" }); }
-      if (url.pathname === "/api/ai/brief") return streamAi(res, BRIEF_PROMPT, b, true);
+      if (url.pathname === "/api/ai/brief") return streamAi(req, res, BRIEF_PROMPT, b, "brief");
       const q = (b.question ?? "").trim().slice(0, 2000);
       if (!q) return json(res, 400, { error: "Soru boş" });
       const hist = (b.history ?? []).filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string").map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }));
-      return streamAi(res, q, { ...b, history: hist });
+      return streamAi(req, res, q, { ...b, history: hist }, "chat");
     }
     if (url.pathname === "/api/quotes") return json(res, 200, await quotes(url.searchParams.get("refresh") === "1"));
     if (url.pathname === "/api/price") return json(res, 200, { price: (await priceOn(url.searchParams.get("asset") ?? "", url.searchParams.get("date") ?? undefined)) ?? null });

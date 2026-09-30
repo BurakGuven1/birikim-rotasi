@@ -7,6 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { env } from "./env.ts";
 import type { NewsItem } from "./news.ts";
 import type { PulsePayload } from "./pulse.ts";
+import type { EconEvent } from "./econ.ts";
 import type { AllocationPayload } from "./allocation.ts";
 import type { Valuation } from "./portfolio.ts";
 
@@ -42,6 +43,7 @@ export interface AiContext {
   allocation?: AllocationPayload;
   strategy?: string;
   portfolio?: Valuation;
+  econ?: EconEvent[];
 }
 
 const pct = (x: number) => `${x >= 0 ? "+" : ""}${(x * 100).toFixed(2)}%`;
@@ -54,6 +56,14 @@ export function contextText(ctx: AiContext): string {
     for (const t of ctx.pulse.tickers) L.push(`- ${t.label}: ${t.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}${t.unit ?? ""} (${pct(t.change)})`);
     if (ctx.pulse.fearGreed) L.push(`- Kripto Korku/Açgözlülük: ${ctx.pulse.fearGreed.value} (${ctx.pulse.fearGreed.label}; dün ${ctx.pulse.fearGreed.previous}, 1 hafta önce ${ctx.pulse.fearGreed.weekAgo})`);
     if (ctx.pulse.upcoming.length) L.push(`- Yaklaşan: ${ctx.pulse.upcoming.map((u) => `${u.title} ${u.date} (${u.daysLeft} gün)`).join("; ")}`);
+  }
+  if (ctx.econ?.length) {
+    const now = Date.now();
+    L.push("", "## Bu haftanın 3 yıldızlı (yüksek etkili) ekonomik verileri (saatler UTC)");
+    for (const e of ctx.econ.slice(0, 25)) {
+      const past = Date.parse(e.time) < now;
+      L.push(`- ${e.time.slice(0, 16).replace("T", " ")} ${e.currency} ${e.title}${e.actual ? ` · gerçekleşen ${e.actual}` : ""}${e.forecast ? ` · beklenti ${e.forecast}` : ""}${e.previous ? ` · önceki ${e.previous}` : ""}${past && !e.actual ? " · (açıklandı)" : ""}`);
+    }
   }
   if (ctx.allocation) {
     const a = ctx.allocation;
@@ -87,11 +97,13 @@ export const BRIEF_PROMPT = `Yukarıdaki bağlama göre bugünün yatırımcı b
 ### Bu ayın planında değişiklik gerekir mi?
 (çoğu zaman "hayır" doğru cevaptır; gerekçeyle)
 ### Takvim
-(önümüzdeki 2 haftada izlenecek tarih ve veriler)`;
+(bu haftanın 3 yıldızlı verileri ve önümüzdeki 2 haftada izlenecek tarihler; beklenti-önceki farkının ne anlama gelebileceğiyle)`;
 
 export interface StreamSink {
   text(chunk: string): void;
   status(s: string): void;
+  /** Düşünme özeti (display: "summarized") — ilerleme göstermek için */
+  thinking?(snapshot: string): void;
 }
 
 /**
@@ -102,7 +114,7 @@ export async function runClaude(
   userPrompt: string,
   ctx: AiContext,
   sink: StreamSink,
-  opts: { webSearch?: boolean; history?: { role: "user" | "assistant"; content: string }[] } = {},
+  opts: { webSearch?: boolean; history?: { role: "user" | "assistant"; content: string }[]; effort?: "low" | "medium" | "high"; signal?: AbortSignal } = {},
 ): Promise<{ usage: { input: number; output: number; cacheRead: number }; model: string; stopReason: string | null; webSearches: number }> {
   const client = getClient();
   const messages: Anthropic.Beta.BetaMessageParam[] = [
@@ -121,12 +133,14 @@ export async function runClaude(
       max_tokens: 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      thinking: { type: "adaptive" },
+      thinking: { type: "adaptive", display: "summarized" },
+      ...(opts.effort ? { output_config: { effort: opts.effort } } : {}),
       system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
       messages,
       ...(tools.length ? { tools } : {}),
-    });
+    }, { signal: opts.signal });
     stream.on("text", (t) => sink.text(t));
+    stream.on("thinking", (_d, snap) => sink.thinking?.(snap));
     stream.on("streamEvent", (e) => {
       if (e.type === "content_block_start" && e.content_block.type === "server_tool_use") {
         webSearches++;

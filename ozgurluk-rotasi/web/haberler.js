@@ -159,96 +159,186 @@ async function api(path, opts) {
   return j;
 }
 
-/** NDJSON akışını okur; her satırda onLine çağrılır. */
-async function streamPost(path, body, onLine) {
-  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `HTTP ${r.status}`); }
-  const reader = r.body.getReader();
-  const dec = new TextDecoder();
-  let buf = "";
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let i;
-    while ((i = buf.indexOf("\n")) >= 0) {
-      const line = buf.slice(0, i).trim();
-      buf = buf.slice(i + 1);
-      if (line) onLine(JSON.parse(line));
+/**
+ * NDJSON akışını okur; her satırda onLine çağrılır. `signal` ile durdurulabilir.
+ * Sunucu 3 sn'de bir kalp atışı gönderir; 90 sn hiç veri gelmezse bağlantı kopmuş sayılır.
+ */
+async function streamPost(path, body, onLine, signal) {
+  const ac = new AbortController();
+  signal?.addEventListener("abort", () => ac.abort());
+  let watchdog;
+  const arm = () => { clearTimeout(watchdog); watchdog = setTimeout(() => ac.abort(new Error("Sunucudan 90 sn yanıt gelmedi; bağlantı kopmuş olabilir. Tekrar deneyin.")), 90_000); };
+  arm();
+  try {
+    const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: ac.signal });
+    if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `HTTP ${r.status} — sunucuyu yeniden başlatmanız gerekebilir (npm run web)`); }
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      arm();
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim();
+        buf = buf.slice(i + 1);
+        if (line) onLine(JSON.parse(line));
+      }
     }
-  }
+  } catch (e) {
+    if (signal?.aborted) throw new Error("Durduruldu.");
+    if (ac.signal.aborted && ac.signal.reason instanceof Error) throw ac.signal.reason;
+    throw e;
+  } finally { clearTimeout(watchdog); }
 }
 
 const metaLine = (m) => m ? `${m.model} · ${m.usage.input.toLocaleString("tr-TR")} girdi / ${m.usage.output.toLocaleString("tr-TR")} çıktı token${m.usage.cacheRead ? ` · ${m.usage.cacheRead.toLocaleString("tr-TR")} önbellekten` : ""}${m.webSearches ? ` · ${m.webSearches} web araması` : ""}` : "";
 
+let briefAbort;
 async function runBrief() {
   if (busy) return;
   busy = true;
-  const out = $("briefOut"), st = $("briefStatus"), btn = $("briefBtn");
+  const out = $("briefOut"), st = $("briefStatus"), btn = $("briefBtn"), think = $("briefThink");
   btn.disabled = true;
-  let text = "";
+  $("briefStop").hidden = false;
+  briefAbort = new AbortController();
+  let text = "", phase = "Başlıyor…", secs = 0;
+  const showStatus = () => (st.innerHTML = `<span class="spin"></span><span>${esc(phase)}${secs ? ` · ${secs} sn` : ""}</span>`);
   out.innerHTML = "";
   out.classList.add("cursor");
-  st.innerHTML = `<span class="spin"></span><span>Başlıyor…</span>`;
+  showStatus();
   try {
     await streamPost("/api/ai/brief", { strategy: $("aiStrategy").value, webSearch: $("webSearch").checked }, (m) => {
-      if (m.t === "text") { text += m.v; out.innerHTML = md(text); }
-      else if (m.t === "status") st.innerHTML = `<span class="spin"></span><span>${esc(m.v)}</span>`;
+      if (m.t === "text") { text += m.v; out.innerHTML = md(text); think.hidden = true; phase = "Yazıyor…"; showStatus(); }
+      else if (m.t === "thinking") { think.hidden = false; think.textContent = "…" + m.v; }
+      else if (m.t === "tick") { secs = m.s; showStatus(); }
+      else if (m.t === "status") { phase = m.v; showStatus(); }
       else if (m.t === "error") { out.innerHTML = `<div class="callout warn">${esc(m.v)}</div>`; st.textContent = ""; }
       else if (m.t === "done") { st.textContent = `Hazır · ${new Date().toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`; $("briefMeta").textContent = metaLine(m.meta); }
-    });
+    }, briefAbort.signal);
+    await loadAiStatus(true);
   } catch (e) {
-    out.innerHTML = `<div class="callout warn">${esc(e.message)}</div>`;
-    st.textContent = "";
-  } finally { out.classList.remove("cursor"); btn.disabled = false; busy = false; }
+    if (!text) out.innerHTML = `<div class="callout warn">${esc(e.message)}</div>`;
+    st.textContent = e.message;
+  } finally { out.classList.remove("cursor"); think.hidden = true; btn.disabled = false; $("briefStop").hidden = true; busy = false; }
 }
 
 function renderChat() {
   $("chatLog").innerHTML = chat.length
-    ? chat.map((m, i) => `<div class="msg ${m.role === "user" ? "user" : "bot"} ${m.pending && i === chat.length - 1 ? "cursor" : ""}">${m.role === "user" ? esc(m.content).replace(/\n/g, "<br>") : md(m.content) || `<span class="note">${esc(m.status || "…")}</span>`}</div>`).join("")
-    : `<p class="note">Portföyünüz, planınız ya da haberler hakkında soru sorun. Claude güncel sinyalleri, piyasa nabzını ve önemli haberleri bağlam olarak görür.</p>`;
+    ? chat.map((m, i) => {
+      if (m.role === "user") return `<div class="msg user">${esc(m.content).replace(/\n/g, "<br>")}</div>`;
+      const live = m.pending && i === chat.length - 1;
+      const body = md(m.content) || `<span class="ai-status" style="margin:0"><span class="spin"></span>${esc(m.status || "Düşünüyor…")}${m.secs ? ` · ${m.secs} sn` : ""}</span>`;
+      return `<div class="msg bot ${live && m.content ? "cursor" : ""}">${body}${live && m.think && !m.content ? `<div class="think">…${esc(m.think)}</div>` : ""}</div>`;
+    }).join("")
+    : `<p class="note">Portföyünüz, planınız, haberler ya da bu haftanın verileri hakkında soru sorun. Claude güncel sinyalleri, piyasa nabzını, ekonomik takvimi ve önemli haberleri bağlam olarak görür.</p>`;
   $("chatLog").scrollTop = $("chatLog").scrollHeight;
 }
 
+let chatAbort;
 async function ask(q) {
-  if (busy || !q.trim()) return;
+  q = q.trim();
+  if (!q) return;
+  if (busy) { toast("Claude şu an başka bir yanıt üzerinde çalışıyor; bitmesini bekleyin ya da Durdur'a basın."); return; }
   busy = true;
   $("chatSend").disabled = true;
-  const history = chat.filter((m) => !m.error).map(({ role, content }) => ({ role, content }));
+  $("chatStop").hidden = false;
+  chatAbort = new AbortController();
+  const history = chat.filter((m) => !m.error && m.content).map(({ role, content }) => ({ role, content }));
   chat.push({ role: "user", content: q });
-  const bot = { role: "assistant", content: "", pending: true, status: "Düşünüyor…" };
+  const bot = { role: "assistant", content: "", pending: true, status: "Gönderiliyor…" };
   chat.push(bot);
   renderChat();
   try {
     await streamPost("/api/ai/ask", { question: q, history, strategy: $("aiStrategy").value, webSearch: $("webSearch").checked }, (m) => {
       if (m.t === "text") bot.content += m.v;
+      else if (m.t === "thinking") bot.think = m.v;
+      else if (m.t === "tick") bot.secs = m.s;
       else if (m.t === "status") bot.status = m.v;
       else if (m.t === "error") { bot.content = `**Hata:** ${m.v}`; bot.error = true; }
       renderChat();
-    });
-  } catch (e) { bot.content = `**Hata:** ${e.message}`; bot.error = true; }
-  finally { bot.pending = false; renderChat(); $("chatSend").disabled = false; busy = false; }
+    }, chatAbort.signal);
+    if (!bot.content) { bot.content = "_Claude boş yanıt döndürdü; soruyu yeniden deneyin._"; bot.error = true; }
+  } catch (e) { bot.content = (bot.content ? bot.content + "\n\n" : "") + `**${e.message === "Durduruldu." ? "Durduruldu." : "Hata: " + e.message}**`; bot.error = true; }
+  finally { bot.pending = false; renderChat(); $("chatSend").disabled = false; $("chatStop").hidden = true; busy = false; saveChat(); }
 }
 
-async function loadAiStatus() {
-  const s = await api("/api/ai/status");
-  $("aiStatus").innerHTML = `<div class="sig"><small>Model</small><b>${esc(s.model)}</b></div><div class="sig"><small>Durum</small><b class="${s.configured ? "pos" : ""}">${s.configured ? "Hazır" : "Anahtar gerekli"}</b></div>`;
-  $("aiSetup").innerHTML = s.configured ? "" : `<div class="callout warn setup"><b>Claude'u etkinleştirmek için bir kez:</b><ol>
+function saveChat() { store.set("ai.chat", JSON.stringify(chat.filter((m) => !m.pending).slice(-20))); }
+
+function showBrief(b) {
+  const today = new Date().toDateString() === new Date(b.at).toDateString();
+  $("briefOut").innerHTML = md(b.text);
+  const hrs = Math.round((Date.now() - Date.parse(b.at)) / 3_600_000);
+  $("briefStatus").innerHTML = `Brifing · ${esc(new Date(b.at).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }))} (${hrs < 1 ? "az önce" : hrs < 24 ? hrs + " saat önce" : Math.round(hrs / 24) + " gün önce"})${today ? "" : `<span class="stale">Bugüne ait değil — yenisini oluşturun</span>`}`;
+  $("briefMeta").textContent = metaLine(b.meta);
+}
+
+let AI;
+async function loadAiStatus(afterRun = false) {
+  AI = await api("/api/ai/status");
+  $("aiStatus").innerHTML = `<div class="sig"><small>Model</small><b>${esc(AI.model)}</b></div><div class="sig"><small>Durum</small><b class="${AI.configured ? "pos" : ""}">${AI.configured ? "Hazır" : "Anahtar gerekli"}</b></div>`;
+  $("aiSetup").innerHTML = AI.configured ? "" : `<div class="callout warn setup"><b>Claude'u etkinleştirmek için bir kez:</b><ol>
     <li><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> adresinden bir API anahtarı oluşturun.</li>
     <li><code>ozgurluk-rotasi/.env</code> dosyasına <code>ANTHROPIC_API_KEY=sk-ant-...</code> satırını ekleyin (Git'e girmez).</li>
     <li>Sunucuyu yeniden başlatın (<code>npm run web</code>). Her brifing/soru, API hesabınızdan küçük bir ücretle faturalanır.</li></ol></div>`;
-  if (s.lastBrief) {
-    $("briefOut").innerHTML = md(s.lastBrief.text);
-    $("briefStatus").textContent = `Son brifing · ${new Date(s.lastBrief.at).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" })}`;
-    $("briefMeta").textContent = metaLine(s.lastBrief.meta);
-  }
+  const briefs = AI.briefs || [];
+  $("briefHistory").innerHTML = briefs.length
+    ? briefs.map((b, i) => `<option value="${esc(b.id)}">${i === 0 ? "En yeni · " : ""}${esc(new Date(b.at).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }))}${b.webSearch ? " · web" : ""}</option>`).join("")
+    : `<option value="">Henüz brifing yok</option>`;
+  $("briefHistory").onchange = async () => {
+    const id = $("briefHistory").value;
+    if (!id) return;
+    try { showBrief(await api(`/api/ai/briefs?id=${encodeURIComponent(id)}`)); } catch (e) { toast(esc(e.message)); }
+  };
+  if (!afterRun && AI.lastBrief) showBrief(AI.lastBrief);
+  if (afterRun) $("briefHistory").value = briefs[0]?.id ?? "";
+}
+
+// ------------------------------------------------------------------ ekonomik takvim
+let ECON;
+let econCur = store.get("econ.cur") || "";
+const TR_TIME = (iso) => new Date(iso).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" });
+const TR_DAY = (iso) => new Date(iso).toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Istanbul" });
+const dayKey = (iso) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
+
+function renderEcon() {
+  if (!ECON) return;
+  $("econLead").innerHTML = `Piyasalarda en yüksek volatiliteyi yaratması beklenen veri açıklamaları ve merkez bankası kararları. Saatler Türkiye saatiyle. <span class="note">Kaynak: ${esc(ECON.sourceNote)}</span>`;
+  const curs = [...new Set(ECON.events.map((e) => e.currency))];
+  $("econCur").innerHTML = [["", "Tümü"], ...curs.map((c) => [c, c])].map(([k, v]) => `<button data-k="${k}" aria-selected="${k === econCur}">${esc(v)}</button>`).join("");
+  document.querySelectorAll("#econCur button").forEach((b) => (b.onclick = () => { econCur = b.dataset.k; store.set("econ.cur", econCur); renderEcon(); }));
+  const now = Date.now();
+  const evs = ECON.events.filter((e) => !econCur || e.currency === econCur);
+  const next = ECON.events.find((e) => Date.parse(e.time) > now);
+  if (next) {
+    const mins = Math.round((Date.parse(next.time) - now) / 60000);
+    $("nextEvent").innerHTML = `<small class="note">Sıradaki veri</small><b>${esc(next.currency)} · ${esc(next.title)}</b><span>${TR_DAY(next.time)} ${TR_TIME(next.time)} · ${mins < 60 ? mins + " dk" : mins < 1440 ? Math.floor(mins / 60) + " sa " + (mins % 60) + " dk" : Math.round(mins / 1440) + " gün"} sonra</span>`;
+  } else $("nextEvent").innerHTML = `<small class="note">Bu hafta başka 3 yıldızlı veri yok.</small>`;
+  if (!evs.length) { $("econList").innerHTML = `<p class="note">${ECON.source === "none" ? esc(ECON.sourceNote) : "Bu filtrede veri yok."}</p>`; return; }
+  const today = dayKey(new Date().toISOString());
+  const byDay = new Map();
+  for (const e of evs) { const k = dayKey(e.time); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
+  $("econList").innerHTML = [...byDay.entries()].map(([k, list]) => `<div class="econ-day ${k === today ? "today" : ""}"><h3>${TR_DAY(list[0].time)}</h3>${list.map((e, i) => {
+    const t = Date.parse(e.time);
+    const cls2 = t < now ? "past" : t - now < 2 * 3_600_000 ? "soon" : "";
+    const surprise = e.actual && e.forecast ? (parseFloat(e.actual) > parseFloat(e.forecast) ? "pos" : parseFloat(e.actual) < parseFloat(e.forecast) ? "neg" : "") : "";
+    return `<div class="ev ${cls2}" style="animation-delay:${i * 25}ms"><span class="tm">${TR_TIME(e.time)}</span><span class="cur">${esc(e.currency)}<small>${esc(e.country)}</small></span><span class="ti">${esc(e.title)}<span class="stars" title="Yüksek önem">★★★</span></span>
+      <span class="num"><small>Gerçekleşen</small><b class="${surprise}">${esc(e.actual || "—")}</b></span><span class="num"><small>Beklenti</small>${esc(e.forecast || "—")}</span><span class="num"><small>Önceki</small>${esc(e.previous || "—")}</span></div>`;
+  }).join("")}</div>`).join("");
+}
+
+async function loadEcon(force = false) {
+  try { ECON = await api(`/api/econ${force ? "?refresh=1" : ""}`); renderEcon(); }
+  catch (e) { $("econList").innerHTML = `<div class="callout warn">Ekonomik takvim alınamadı: ${esc(e.message)}</div>`; }
 }
 
 // ------------------------------------------------------------------ başlatma
 (async () => {
   reveal();
   const h = await api("/api/health").catch(() => null);
-  if (!h?.features?.includes("news")) {
+  if (!h?.features?.includes("briefs")) {
     $("staleBanner").innerHTML = `<div class="banner"><b>Panel sunucusu eski sürüm çalışıyor ya da kapalı.</b> Terminalde <code>npm run web</code>'i <b>Ctrl+C</b> ile durdurup yeniden başlatın (ya da <code>baslat-windows.bat</code>'a çift tıklayın).</div>`;
     return;
   }
@@ -265,9 +355,19 @@ async function loadAiStatus() {
   $("newsSearch").oninput = () => { shown = 30; renderNews(); };
   $("moreNews").onclick = () => { shown += 30; renderNews(); };
   $("newsRefresh").onclick = () => loadNews(true).then(() => toast("Haberler yenilendi."));
+  $("briefStop").onclick = () => briefAbort?.abort();
+  $("chatStop").onclick = () => chatAbort?.abort();
+  $("chatClear").onclick = () => { if (busy) return; chat = []; saveChat(); renderChat(); };
+  $("autoBrief").checked = store.get("ai.autoBrief") === "1";
+  $("autoBrief").onchange = () => store.set("ai.autoBrief", $("autoBrief").checked ? "1" : "0");
+  try { chat = JSON.parse(store.get("ai.chat") || "[]"); } catch { chat = []; }
   renderFilters();
   renderChat();
-  await Promise.allSettled([loadPulse(), loadNews(), loadAiStatus()]);
+  await Promise.allSettled([loadPulse(), loadNews(), loadEcon(), loadAiStatus()]);
+  // Günlük otomatik brifing: bugün henüz oluşturulmadıysa ve Claude yapılandırılmışsa
+  if ($("autoBrief").checked && AI?.configured && (!AI.lastBrief || new Date(AI.lastBrief.at).toDateString() !== new Date().toDateString())) runBrief();
+  setInterval(renderEcon, 60_000);
+  setInterval(() => loadEcon().catch(() => {}), 30 * 60_000);
   setInterval(() => loadPulse().catch(() => {}), 5 * 60_000);
   setInterval(() => loadNews().catch(() => {}), 10 * 60_000);
   setInterval(renderNews, 60_000); // "x dk önce" etiketleri

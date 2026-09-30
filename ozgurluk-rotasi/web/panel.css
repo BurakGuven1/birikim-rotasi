@@ -324,3 +324,26 @@ tr.flash td { animation: flash 1.2s ease; }
 .top-news a { color: var(--ink); text-decoration: none; font-size: 13.5px; display: flex; gap: 8px; align-items: baseline; }
 .top-news a:hover { text-decoration: underline; }
 .top-news small { white-space: nowrap; }
+.brief-bar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 10px; }
+.think { font-size: 12px; color: var(--muted); font-style: italic; border-left: 2px solid var(--s2); padding: 4px 10px; margin: 4px 0 8px; max-height: 60px; overflow: hidden; animation: fadeUp .2s ease both; }
+.stale { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); margin-left: 6px; }
+.msg .think { margin: 6px 0 0; }
+.next-event { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; background: var(--panel2); font-size: 13px; min-width: 220px; }
+.next-event b { display: block; font-size: 14px; }
+.econ { display: grid; gap: 14px; margin-top: 12px; }
+.econ-day h3 { margin: 0 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; display: flex; gap: 8px; align-items: center; }
+.econ-day.today h3 { color: var(--ink); }
+.econ-day.today h3::after { content: "BUGÜN"; font-size: 10px; background: var(--ink); color: var(--panel); padding: 1px 7px; border-radius: 999px; letter-spacing: .06em; }
+.ev { display: grid; grid-template-columns: 58px 64px minmax(0, 1fr) repeat(3, minmax(64px, auto)); gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font-size: 13px; margin-bottom: 6px; animation: fadeUp .3s ease both; }
+.ev.past { opacity: .6; }
+.ev.soon { border-color: var(--down); box-shadow: 0 0 0 3px var(--down-soft); }
+.ev .tm { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ev .cur { font-weight: 700; font-size: 12px; }
+.ev .cur small { display: block; font-weight: 400; }
+.ev .ti { font-weight: 600; }
+.ev .ti .stars { color: var(--down); letter-spacing: 1px; font-size: 11px; margin-left: 6px; }
+.ev .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ev .num small { display: block; color: var(--muted); font-size: 10.5px; }
+@media (max-width: 720px) { .ev { grid-template-columns: 48px 44px minmax(0, 1fr); } .ev .num { grid-column: auto; text-align: left; } }
+
+[hidden] { display: none !important; }
