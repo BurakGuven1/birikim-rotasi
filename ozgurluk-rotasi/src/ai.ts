@@ -11,11 +11,16 @@ import type { EconEvent } from "./econ.ts";
 import type { AllocationPayload } from "./allocation.ts";
 import type { Valuation } from "./portfolio.ts";
 
-export const AI_MODEL = env("CLAUDE_MODEL") ?? "claude-opus-5";
+export const AI_MODEL = env("CLAUDE_MODEL") ?? "claude-opus-5-5"
+const AI_EFFORT = (env("CLAUDE_EFFORT") ?? "low") as "low" | "medium" | "high" | "max";
 
 let client: Anthropic | undefined;
 function getClient(): Anthropic {
-  client ??= new Anthropic();
+  const workspace = env("ANTHROPIC_WORKSPACE_ID");
+  client ??= new Anthropic({
+    ...(env("ANTHROPIC_API_KEY") ? { apiKey: env("ANTHROPIC_API_KEY") } : {}),
+    ...(workspace ? { defaultHeaders: { "anthropic-workspace-id": workspace } } : {}),
+  });
   return client;
 }
 
