@@ -181,7 +181,7 @@ async function route(req: Request, url: URL): Promise<Response | undefined> {
   if (p === "/api/econ") return json(200, await getEcon(refresh));
   if (p === "/api/ai/status") return json(200, { configured: aiConfigured(), model: AI_MODEL, needsCode: !!env("AI_ACCESS_CODE"), codeOk: aiAllowed(req), serverless: SERVERLESS });
   if ((p === "/api/ai/brief" || p === "/api/ai/ask") && req.method === "POST") {
-    if (!aiAllowed(req)) return json(401, { error: "Claude analist için erişim kodu gerekli.", needsCode: true });
+    if (!aiAllowed(req)) return json(401, { error: "Claude analist için geçerli bir erişim anahtarı gerekli.", needsCode: true });
     let b: AiBody;
     try { b = await readJson<AiBody>(req); } catch { return json(400, { error: "Geçersiz JSON" }); }
     if (p === "/api/ai/brief") return streamAi(req, BRIEF_PROMPT, b, "brief");
