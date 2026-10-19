@@ -25,3 +25,8 @@
   from = "/takvim"
   to = "/takvim.html"
   status = 200
+
+[[redirects]]
+  from = "/likidasyon"
+  to = "/likidasyon.html"
+  status = 200

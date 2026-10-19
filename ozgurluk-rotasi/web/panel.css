@@ -226,6 +226,7 @@ td.heat { font-weight: 600; }
 @media (max-width: 640px) {
   .card { padding: 16px; } .hero { padding: 16px; }
   .top-actions { margin-left: 0; width: 100%; justify-content: space-between; }
+  .nav { overflow-x: auto; max-width: 100%; scrollbar-width: none; } .nav a { white-space: nowrap; padding: 5px 9px; }
   .kpi .kg div b { font-size: 15px; }
   .chart { height: 320px; }
   .field input, .field select { width: 140px; }
@@ -347,3 +348,44 @@ tr.flash td { animation: flash 1.2s ease; }
 @media (max-width: 720px) { .ev { grid-template-columns: 48px 44px minmax(0, 1fr); } .ev .num { grid-column: auto; text-align: left; } }
 
 [hidden] { display: none !important; }
+
+/* ============================================================ likidasyon & OI */
+.lq-verdict { display: grid; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); gap: 16px; align-items: center; margin: 16px 0 14px; }
+.lq-verdict .skeleton { grid-column: 1 / -1; min-height: 90px; }
+.lq-badge { border-radius: 14px; padding: 14px 16px; border: 1px solid var(--line); background: var(--panel); animation: fadeUp .35s ease both; }
+.lq-badge small { display: block; font-size: 11.5px; color: var(--muted); }
+.lq-badge b { display: block; font-size: 28px; line-height: 1.15; margin: 2px 0; }
+.lq-badge span { font-size: 13px; color: var(--ink2); }
+.lq-badge.pos { background: var(--up-soft); border-color: transparent; } .lq-badge.pos b { color: var(--up); }
+.lq-badge.neg { background: var(--down-soft); border-color: transparent; } .lq-badge.neg b { color: var(--down); }
+.lq-vtext p { margin: 0 0 6px; font-size: 14px; }
+.lq-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 10px; }
+.lq-kpi { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--panel); animation: fadeUp .35s ease both; }
+.lq-kpi small { display: block; font-size: 11.5px; color: var(--muted); }
+.lq-kpi b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.lq-kpi span { display: block; font-size: 11.5px; color: var(--muted); }
+.lq-canvas { position: relative; height: 520px; margin-top: 8px; border-radius: 12px; overflow: hidden; }
+.lq-canvas.short { height: 340px; overflow: visible; }
+#heatWrap { background: #0a0716; }
+.lq-canvas canvas { display: block; }
+.lq-tip { position: absolute; z-index: 5; pointer-events: none; background: color-mix(in srgb, var(--panel) 94%, transparent); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 12px; line-height: 1.45; box-shadow: var(--shadow); white-space: nowrap; }
+.lq-scale { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.lq-scale i { display: inline-block; width: 180px; height: 10px; border-radius: 5px; }
+.lq-clusters { display: grid; gap: 6px; }
+.lq-cl { display: grid; grid-template-columns: 90px 64px minmax(0, 1fr) 80px 120px; gap: 10px; align-items: center; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; animation: fadeUp .35s ease both; }
+.lq-cl .p { font-weight: 600; font-variant-numeric: tabular-nums; }
+.lq-cl .bar { height: 8px; border-radius: 4px; background: var(--line2); overflow: hidden; }
+.lq-cl .bar i { display: block; height: 100%; border-radius: 4px; background: var(--up); transition: width .5s ease; }
+.lq-cl.long .bar i { background: var(--down); }
+.lq-cl small { color: var(--muted); }
+.lq-reg { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--panel2); color: var(--ink2); border: 1px solid var(--line); margin-right: 4px; }
+.lq-reg.pos { background: var(--up-soft); color: var(--up); border-color: transparent; }
+.lq-reg.neg { background: var(--down-soft); color: var(--down); border-color: transparent; }
+.lq-table { width: 100%; margin-bottom: 12px; }
+.lq-table td, .lq-table th { text-align: left; }
+@media (max-width: 760px) {
+  .lq-verdict { grid-template-columns: 1fr; }
+  .lq-canvas { height: 400px; }
+  .lq-cl { grid-template-columns: 80px 56px minmax(0, 1fr) 70px; }
+  .lq-cl small { display: none; }
+}
