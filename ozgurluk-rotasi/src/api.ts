@@ -24,6 +24,7 @@ import { PORTFOLIO_FILE, history, makeTx, readTxs, sanitizeTxs, valuate, type Tx
 import { getNews } from "./news.ts";
 import { getPulse } from "./pulse.ts";
 import { getEcon } from "./econ.ts";
+import { getLiq, type LiqAsset, type LiqRange } from "./liq.ts";
 import { AI_MODEL, BRIEF_PROMPT, aiConfigured, aiErrorMessage, runClaude } from "./ai.ts";
 
 const OUT = join(ROOT, "out");
@@ -175,7 +176,7 @@ function streamAi(req: Request, prompt: string, body: AiBody, mode: "brief" | "c
 async function route(req: Request, url: URL): Promise<Response | undefined> {
   const p = url.pathname;
   const refresh = url.searchParams.get("refresh") === "1";
-  if (p === "/api/health") return json(200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "portfolio-local", "news", "ai", "econ", "briefs"] });
+  if (p === "/api/health") return json(200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "portfolio-local", "news", "ai", "econ", "briefs", "liq"] });
   if (p === "/api/news") return json(200, await getNews(refresh));
   if (p === "/api/pulse") return json(200, await getPulse(refresh));
   if (p === "/api/econ") return json(200, await getEcon(refresh));
@@ -220,6 +221,13 @@ async function route(req: Request, url: URL): Promise<Response | undefined> {
     const st = await getState({ refresh: force });
     calCache = undefined;
     return json(200, { refreshed: force, at: new Date(st.at).toISOString(), previousSignalMonth: before?.signalMonth, allocation: st.allocation });
+  }
+  if (p === "/api/liq") {
+    const asset = (url.searchParams.get("asset") ?? "BTC").toUpperCase() as LiqAsset;
+    const range = (url.searchParams.get("range") ?? "7d") as LiqRange;
+    if (asset !== "BTC" && asset !== "ETH") return json(400, { error: "asset BTC ya da ETH olmalı" });
+    if (!["3d", "7d", "14d", "30d"].includes(range)) return json(400, { error: "range 3d, 7d, 14d ya da 30d olmalı" });
+    return json(200, await getLiq(asset, range, refresh));
   }
   if (p === "/api/takvim") return json(200, await calendar());
   if (p === "/api/bars") {

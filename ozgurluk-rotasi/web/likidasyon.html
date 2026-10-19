@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Likidasyon ve OI</title>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
+<link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><div><b>Özgürlük Rotası</b><small id="meta">Likidasyon haritası ve OI uyumsuzluğu</small></div></div>
+    <nav class="nav"><a href="/">Panel</a><a href="/portfoy.html">Portföyüm</a><a href="/haberler.html">Haberler &amp; AI</a><a href="/likidasyon.html" aria-current="page">Likidasyon &amp; OI</a><a href="/takvim.html">Aylık Takvim</a></nav>
+    <div class="top-actions">
+      <span class="pill" id="freshness"><i class="dot"></i><span>Yükleniyor…</span></span>
+      <button class="btn" id="refresh" title="OKX'ten yeniden al"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg><span>Yenile</span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="staleBanner"></div>
+
+  <!-- ============================================================ ÖZET -->
+  <section class="card hero reveal" aria-labelledby="lqTitle">
+    <div class="hero-head">
+      <div>
+        <h1 id="lqTitle">Likidasyon haritası ve OI uyumsuzluğu</h1>
+        <p class="lead">Kaldıraçlı pozisyonların nerede tasfiye olacağının tahmini ve open interest'in fiyatla uyumlu mu, uyumsuz mu hareket ettiği. Veri OKX'in herkese açık API'sinden, ücretsiz; 5 dakikada bir yenilenir.</p>
+      </div>
+      <div class="controls" style="margin:0">
+        <label class="field"><span>Varlık</span><span class="seg" id="assetSeg"><button data-v="BTC" aria-pressed="true">BTC</button><button data-v="ETH" aria-pressed="false">ETH</button></span></label>
+        <label class="field"><span>Dönem</span><span class="seg" id="rangeSeg"><button data-v="3d" aria-pressed="false">3 gün</button><button data-v="7d" aria-pressed="true">7 gün</button><button data-v="14d" aria-pressed="false">14 gün</button><button data-v="30d" aria-pressed="false">30 gün</button></span></label>
+      </div>
+    </div>
+    <div class="lq-verdict" id="verdict"><div class="skeleton"></div></div>
+    <div class="lq-kpis" id="kpis"></div>
+  </section>
+
+  <!-- ============================================================ ISI HARİTASI -->
+  <section class="card reveal" aria-labelledby="heatTitle">
+    <div class="sec-head">
+      <div><h2 id="heatTitle">Likidasyon ısı haritası</h2><p class="lead">Her an, hangi fiyatta ne kadar açık likidasyon beklediği. Parlak bantlar büyük likidasyon kümeleridir; fiyat çoğu zaman bu "mıknatıs" seviyelere çekilir ve değdiğinde bant söner. Daireler OKX'te gerçekleşmiş likidasyonlar (kırmızı long, yeşil short).</p></div>
+      <div class="controls" style="margin:0">
+        <label class="field"><span>Parlaklık</span><input type="range" id="gain" min="0.3" max="3" step="0.1" value="1" style="width:130px" /></label>
+        <label class="switch"><input type="checkbox" id="showRealized" checked /><span class="track"><i></i></span><span>Gerçekleşenler</span></label>
+      </div>
+    </div>
+    <div class="lq-canvas" id="heatWrap"><canvas id="heat"></canvas><div class="lq-tip" id="heatTip" hidden></div></div>
+    <div class="lq-scale"><span>az</span><i id="heatScale"></i><span>çok</span><small id="heatMax"></small></div>
+  </section>
+
+  <!-- ============================================================ LIQMAP -->
+  <section class="card reveal" aria-labelledby="mapTitle">
+    <div class="sec-head">
+      <div><h2 id="mapTitle">Likidasyon haritası (LiqMap)</h2><p class="lead">Şu an açık duran tahmini likidasyonlar, kaldıraç kademesine göre. Fiyatın solu long likidasyonları (fiyat düşerse), sağı short likidasyonları (fiyat yükselirse). Çizgiler: fiyattan uzaklaştıkça biriken toplam.</p></div>
+      <label class="field"><span>Görünüm</span><span class="seg" id="zoomSeg"><button data-v="0.05" aria-pressed="false">±%5</button><button data-v="0.1" aria-pressed="true">±%10</button><button data-v="0.2" aria-pressed="false">±%20</button></span></label>
+    </div>
+    <div class="lq-canvas short" id="mapWrap"><canvas id="map"></canvas><div class="lq-tip" id="mapTip" hidden></div></div>
+    <div class="legend" id="mapLegend"></div>
+    <h3>Mıknatıs seviyeler</h3>
+    <p class="lead">Fiyata en yakın büyük likidasyon kümeleri (%0,25'lik kutular).</p>
+    <div class="lq-clusters" id="clusters"></div>
+  </section>
+
+  <!-- ============================================================ OI UYUMSUZLUK -->
+  <section class="card reveal" aria-labelledby="oiTitle">
+    <div class="sec-head">
+      <div><h2 id="oiTitle">Open interest – fiyat uyumsuzluğu</h2><p class="lead">Fiyat ile açık pozisyon miktarının (OI) aynı yönde mi, ters yönde mi gittiği. Alttaki şerit her saat için son 24 saatin rejimini gösterir.</p></div>
+    </div>
+    <div class="scroll" id="windows"></div>
+    <div class="chart" id="oiChart" style="height:520px"></div>
+    <div class="legend" id="oiLegend"></div>
+    <details class="fold"><summary>Nasıl okunur?</summary>
+      <div class="lq-howto" id="howto"></div>
+    </details>
+  </section>
+
+  <section class="card reveal">
+    <h2>Notlar</h2>
+    <ul class="note" id="notes"></ul>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="likidasyon.js"></script>
+</body>
+</html>

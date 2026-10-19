@@ -104,6 +104,16 @@ Böylece portföy satış yapmadan dengelenir.
 - **Kullanım:** Paneldeki "Mevcut portföyüm → Portföyümden doldur" düğmesi değerleri dağılım hesabına aktarır. Böylece yeni katkı hedefin altında kalan kalemlere gider.
 - **Saklama:** İşlemler yalnızca kullanılan cihazın tarayıcısında (localStorage) durur, sunucuya kaydedilmez. Paneli paylaştığınız biri sizin portföyünüzü göremez, siz de onunkini. Başka cihaza taşımak ya da yedeklemek için Dışa aktar / İçe aktar kullanılır. Eski sürümün `data/portfoy.json` dosyası, yerelde ilk açılışta tarayıcıya bir kez aktarılır.
 
+## Likidasyon & OI (http://localhost:4173/likidasyon)
+
+BTC ve ETH için ücretsiz, Kingfisher / Coinglass benzeri üç görünüm. Veri OKX'in herkese açık API'sinden (anahtar gerekmez), 5 dakikada bir yenilenir. Binance ve Bybit API'leri Netlify'ın çalıştığı ABD'den engelli olduğu için yalnız OKX kullanılır.
+
+- **Likidasyon ısı haritası:** her saatte hangi fiyatta ne kadar açık likidasyon beklediği; parlak bantlar "mıknatıs" seviyelerdir. Daireler OKX'te gerçekleşmiş likidasyonlardır.
+- **LiqMap:** şu an açık tahmini likidasyonlar, kaldıraç kademesine (10x/25x/50x/100x) göre yığılı; kümülatif long/short çizgileri ve en büyük kümeler listesi.
+- **OI – fiyat uyumsuzluğu:** 4 saat / 24 saat / 3 gün / 7 gün pencerelerinde fiyat ve open interest değişimi, fonlama ile birlikte okunur: *pozitif uyumsuzluk* (fiyat ↓ OI ↑ ve fonlama negatif = short birikimi; ya da fiyat ↓ OI ↓ = kaldıraç temizliği), *negatif uyumsuzluk* (fiyat ↑ OI ↓ = short kapanışıyla yükseliş; ya da fiyat ↑ OI ↑ + yüksek fonlama = aşırı long). Grafik: fiyat, OI, taker alış payı ve her saat için 24 saatlik rejim şeridi.
+
+Model (`src/liq.ts`): her mumda OI artışı yeni pozisyon sayılır, taker alış/satış payına göre long/short'a bölünür, kaldıraç kademelerine dağıtılır ve likidasyon fiyatları hesaplanır; fiyatın değdiği seviyeler silinir, OI düşüşü orantılı kapanış sayılır. Gerçek pozisyon defteri değil, kamuya açık veriden tahmindir; dönem başından önce açılmış pozisyonlar görünmez.
+
 ## Aylık Getiri Takvimi (http://localhost:4173/takvim)
 
 Takvim şu varlıkları kapsar: XU100 (TL ve USD), S&P 500, Nasdaq 100, altın, BTC, ETH ve emtia.

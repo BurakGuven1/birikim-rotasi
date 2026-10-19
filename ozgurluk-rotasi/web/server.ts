@@ -42,7 +42,7 @@ createServer(async (req, res) => {
     }
     const isOut = url.pathname.startsWith("/out/");
     const base = isOut ? OUT : WEB;
-    const rel = isOut ? url.pathname.slice(5) : url.pathname === "/" ? "index.html" : url.pathname === "/takvim" ? "takvim.html" : url.pathname === "/portfoy" ? "portfoy.html" : url.pathname === "/haberler" ? "haberler.html" : url.pathname.slice(1);
+    const rel = isOut ? url.pathname.slice(5) : url.pathname === "/" ? "index.html" : url.pathname === "/takvim" ? "takvim.html" : url.pathname === "/portfoy" ? "portfoy.html" : url.pathname === "/haberler" ? "haberler.html" : url.pathname === "/likidasyon" ? "likidasyon.html" : url.pathname.slice(1);
     const file = normalize(join(base, rel));
     if (!file.startsWith(base) || !existsSync(file) || extname(file) === ".ts") {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }).end("bulunamadı");
