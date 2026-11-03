@@ -24,6 +24,7 @@ import { PORTFOLIO_FILE, history, makeTx, readTxs, sanitizeTxs, valuate, type Tx
 import { getNews } from "./news.ts";
 import { getPulse } from "./pulse.ts";
 import { getEcon } from "./econ.ts";
+import { getSetups, getTimeMachine } from "./setups.ts";
 import { getLiq, type LiqAsset, type LiqRange } from "./liq.ts";
 import { AI_MODEL, BRIEF_PROMPT, aiConfigured, aiErrorMessage, runClaude } from "./ai.ts";
 
@@ -176,7 +177,7 @@ function streamAi(req: Request, prompt: string, body: AiBody, mode: "brief" | "c
 async function route(req: Request, url: URL): Promise<Response | undefined> {
   const p = url.pathname;
   const refresh = url.searchParams.get("refresh") === "1";
-  if (p === "/api/health") return json(200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "portfolio-local", "news", "ai", "econ", "briefs", "liq"] });
+  if (p === "/api/health") return json(200, { version: APP_VERSION, features: ["refresh", "backtest", "portfolio", "portfolio-local", "news", "ai", "econ", "briefs", "liq", "setups"] });
   if (p === "/api/news") return json(200, await getNews(refresh));
   if (p === "/api/pulse") return json(200, await getPulse(refresh));
   if (p === "/api/econ") return json(200, await getEcon(refresh));
@@ -221,6 +222,12 @@ async function route(req: Request, url: URL): Promise<Response | undefined> {
     const st = await getState({ refresh: force });
     calCache = undefined;
     return json(200, { refreshed: force, at: new Date(st.at).toISOString(), previousSignalMonth: before?.signalMonth, allocation: st.allocation });
+  }
+  if (p === "/api/setups") return json(200, await getSetups(refresh));
+  if (p === "/api/setups/odds") {
+    const side = url.searchParams.get("side") === "short" ? "short" : "long";
+    const R = url.searchParams.get("r") === "2" ? 2 : 1;
+    return json(200, await getTimeMachine(url.searchParams.get("symbol") ?? "", side, R, refresh));
   }
   if (p === "/api/liq") {
     const asset = (url.searchParams.get("asset") ?? "BTC").toUpperCase() as LiqAsset;

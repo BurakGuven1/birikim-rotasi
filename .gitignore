@@ -10,3 +10,6 @@ artifacts/
 .env.*
 !.env.example
 docs/superpowers/.env
+
+# Day Trader skill çıktıları (kişisel ayarlar, emirler)
+trader/

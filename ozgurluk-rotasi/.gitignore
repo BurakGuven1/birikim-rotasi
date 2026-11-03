@@ -8,3 +8,6 @@ portfoy.json
 data/portfoy.json*
 data/ai-brief.json
 data/ai-briefs.json*
+
+# Day Trader skill çıktıları (kişisel ayarlar, emirler)
+trader/
