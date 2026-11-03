@@ -104,6 +104,16 @@ Böylece portföy satış yapmadan dengelenir.
 - **Kullanım:** Paneldeki "Mevcut portföyüm → Portföyümden doldur" düğmesi değerleri dağılım hesabına aktarır. Böylece yeni katkı hedefin altında kalan kalemlere gider.
 - **Saklama:** İşlemler yalnızca kullanılan cihazın tarayıcısında (localStorage) durur, sunucuya kaydedilmez. Paneli paylaştığınız biri sizin portföyünüzü göremez, siz de onunkini. Başka cihaza taşımak ya da yedeklemek için Dışa aktar / İçe aktar kullanılır. Eski sürümün `data/portfoy.json` dosyası, yerelde ilk açılışta tarayıcıya bir kez aktarılır.
 
+## Setuplar (http://localhost:4173/setuplar)
+
+[Day Trader skill](https://github.com/Jakeschincariol/day-trader-skill) paketinin (Jake Schincariol, MIT) kuralları `src/setups.ts`'e taşındı; 65 sembol (planımızdaki varlıklar, 40 büyük ABD hissesi, 10 kripto, 8 BIST hissesi) Yahoo'nun ücretsiz verisiyle taranır.
+
+- **Şimdi girilebilir:** taze açılış aralığı kırılımları (ilk 15 dk'nın tepesinin üstünde / dibinin altında KAPANAN ilk 5 dakikalık bar; fitil sayılmaz) ve son kapanışta tetiklenen günlük kurulumlar (20 günlük kırılım, boğa bayrağı, 20 günlük ortalamayı geri alma, aşırı satım dönüşü ve short aynaları). Her biri için stop, hedef (1R/2R), hesabınıza ve işlem başı maks. kaybınıza göre adet ve PASS/BLOCK kontrolü.
+- **Beklenen:** aralık içinde bekleyen ORB'ler (tetiğe uzaklık) ve tetiğe yakın günlük kurulumlar (zirve/dip kırılımına %2, ortalamaya %1,5 yakın, bayrak şekilleniyor, RSI 30–35).
+- **Zaman Makinesi:** son 60 günün tam seanslarından 10.000 tekrar (tohum 19) ve aynı kuralın geçmiş seanslarda gerçekte ne yaptığı; başabaş eşiğine göre karar. Paketin TSLA örneğini birebir yeniden üretir (`test/setups.test.ts`).
+
+Paketin 11 skill'i `.claude/skills/trader-*` altında; depo Claude Code ile açılınca `/trader-scanner`, `/trader-news`, `/trader-timemachine` vb. doğrudan çalışır. Çıktıları `trader/` klasörüne yazılır (git'e girmez). Bu sayfa hiçbir koşulda emir göndermez.
+
 ## Likidasyon & OI (http://localhost:4173/likidasyon)
 
 BTC ve ETH için ücretsiz, Kingfisher / Coinglass benzeri üç görünüm. Veri OKX'in herkese açık API'sinden (anahtar gerekmez), 5 dakikada bir yenilenir. Binance ve Bybit API'leri Netlify'ın çalıştığı ABD'den engelli olduğu için yalnız OKX kullanılır.

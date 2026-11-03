@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Setup Tarayıcı</title>
+<link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><div><b>Özgürlük Rotası</b><small id="meta">Day-trade setup tarayıcı</small></div></div>
+    <nav class="nav"><a href="/">Panel</a><a href="/portfoy.html">Portföyüm</a><a href="/haberler.html">Haberler &amp; AI</a><a href="/setuplar.html" aria-current="page">Setuplar</a><a href="/likidasyon.html">Likidasyon &amp; OI</a><a href="/takvim.html">Aylık Takvim</a></nav>
+    <div class="top-actions">
+      <span class="pill" id="freshness"><i class="dot"></i><span>Yükleniyor…</span></span>
+      <button class="btn" id="refresh" title="Yeniden tara"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg><span>Yeniden tara</span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="staleBanner"></div>
+
+  <section class="card hero reveal" aria-labelledby="stTitle">
+    <div class="hero-head">
+      <div>
+        <h1 id="stTitle">Girilebilir ve beklenen setuplar</h1>
+        <p class="lead">Day Trader skill paketinin kurallarıyla tarama: açılış aralığı kırılımı (ORB), 20 günlük kırılım, bayrak, ortalamayı geri alma, aşırı satım dönüşü ve bunların short aynaları. Her setup için stop, hedef, pozisyon büyüklüğü ve isteğe bağlı Zaman Makinesi olasılıkları. Hiçbir şey emir göndermez.</p>
+      </div>
+      <div class="signal-box" id="counts"></div>
+    </div>
+    <div class="controls">
+      <label class="field"><span>Grup</span><span class="chips" id="groupChips"></span></label>
+      <label class="field"><span>Yön</span><span class="seg" id="sideSeg"><button data-v="all" aria-pressed="true">İkisi</button><button data-v="long" aria-pressed="false">Long</button><button data-v="short" aria-pressed="false">Short</button></span></label>
+      <label class="field"><span>Hesap ($)</span><input type="number" id="account" min="0" step="100" value="5000" /></label>
+      <label class="field"><span>İşlem başı en fazla kayıp ($)</span><input type="number" id="maxLoss" min="0" step="5" value="50" /></label>
+    </div>
+    <p class="note" id="clock"></p>
+  </section>
+
+  <section class="card reveal" aria-labelledby="readyTitle">
+    <div class="sec-head"><div><h2 id="readyTitle">Şimdi girilebilir</h2><p class="lead">Kuralı tetiklenmiş, giriş penceresi açık ve stop/hedefe henüz değmemiş setuplar. ORB'de "taze" son kapanmış barda tetiklenmiş demektir; daha eski tetik geç giriştir ve farklı bir işlemdir.</p></div></div>
+    <div class="st-grid" id="ready"><div class="skeleton"></div><div class="skeleton"></div></div>
+  </section>
+
+  <section class="card reveal" aria-labelledby="watchTitle">
+    <div class="sec-head"><div><h2 id="watchTitle">Beklenen setuplar</h2><p class="lead">Henüz tetiklenmedi; tetik seviyesine yakınlığa göre sıralı. Tetik koşulu her kartta yazıyor.</p></div></div>
+    <div class="st-grid" id="watch"><div class="skeleton"></div></div>
+  </section>
+
+  <section class="card reveal">
+    <details class="fold big"><summary>Son seansın ORB sonuçları ve süresi dolanlar</summary>
+      <p class="note">Kapanmış seanslarda tetiklenen kırılımlar ve sonrasında ne oldukları (stop önce kontrol edilir). Giriş için geçerli değildir; kuralın nasıl çalıştığını görmek içindir.</p>
+      <div class="scroll" id="past"></div>
+    </details>
+    <details class="fold big"><summary>Claude Code'da 11 trader skill'i</summary>
+      <div class="md" id="skills"></div>
+    </details>
+  </section>
+
+  <section class="card reveal">
+    <h2>Notlar</h2>
+    <ul class="note">
+      <li id="source"></li>
+      <li>Bir setup bir kural eşleşmesidir; alım ya da satım önerisi değildir. Gün içi işlem yapanların çoğu para kaybeder.</li>
+      <li>Stop bir plandır, garanti değildir: hızlı piyasada ya da boşlukta stop emri fiyatının ötesinde dolabilir. Gösterilen en fazla kayıp, stop fiyatındaki kayıptır.</li>
+      <li>Zaman Makinesi, sembolün son 60 günündeki 5 dakikalık barlardan yapılmış bir simülasyondur, tahmin değildir. Bilanço, haber ya da işlem durdurma bu 60 günde olmayanı yapabilir.</li>
+      <li>Short setuplar paketin long kurallarının aynasıdır (OKX perp için eklendi). Kaldıraç, short ve marj sizin kararınızdır; paket varsayılanı yalnız long'dur.</li>
+    </ul>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="setuplar.js"></script>
+</body>
+</html>

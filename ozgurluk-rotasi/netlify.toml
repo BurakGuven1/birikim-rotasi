@@ -30,3 +30,8 @@
   from = "/likidasyon"
   to = "/likidasyon.html"
   status = 200
+
+[[redirects]]
+  from = "/setuplar"
+  to = "/setuplar.html"
+  status = 200
